@@ -1,0 +1,6 @@
+{
+  "name": "Nexus Explorer Pro",
+  "description": "Premium TV File Manager controlled via mobile browser (iPhone/PWA) using iOS 18 style, Ktor server, and zero-crash robust D-Pad navigation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
