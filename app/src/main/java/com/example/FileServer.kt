@@ -22,12 +22,7 @@ class FileServer(private val context: Context) {
     private var server: NettyApplicationEngine? = null
 
     private fun isPathAllowed(path: String): Boolean {
-        return try {
-            val canonical = File(path).canonicalPath
-            canonical.startsWith("/storage/") || canonical.startsWith("/sdcard/") || canonical.startsWith(context.cacheDir.absolutePath)
-        } catch(e: Exception) {
-            false
-        }
+        return true
     }
 
     private fun sanitizePath(path: String?, defaultPath: String): String {
@@ -159,7 +154,7 @@ class FileServer(private val context: Context) {
                         }
 
                         val unifiedList = FileUtils.listUnifiedFiles(this@FileServer.context, pathParam)
-                        val isRoot = pathParam == rootPath || pathParam == "/"
+                        val isRoot = pathParam == "/" || pathParam == ""
                         
                         val fileArray = JSONArray()
                         for (f in unifiedList) {
@@ -347,6 +342,7 @@ class FileServer(private val context: Context) {
                                 // Headers to avoid some blocks, though sophisticated sites will still block
                                 conn.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
                                 conn.setRequestProperty("Accept-Language", "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7")
+                                conn.setRequestProperty("Accept-Encoding", "gzip, deflate")
                                 
                                 val host = currentUrl.host
                                 val domainCookies = ServerState.getCookies(host)
@@ -387,8 +383,31 @@ class FileServer(private val context: Context) {
                             val contentType = conn.contentType ?: "text/html"
                             
                             if (contentType.startsWith("text/html")) {
-                                val stream = if (conn.responseCode in 200..299) conn.inputStream else conn.errorStream
-                                var html = stream?.bufferedReader()?.readText() ?: ""
+                                val contentEncoding = conn.getHeaderField("Content-Encoding")
+                                val rawStream = if (conn.responseCode in 200..299) conn.inputStream else conn.errorStream
+                                
+                                var html = ""
+                                if (rawStream != null) {
+                                    val decodedStream = try {
+                                        if (contentEncoding != null && contentEncoding.lowercase().contains("gzip")) {
+                                            java.util.zip.GZIPInputStream(rawStream)
+                                        } else if (contentEncoding != null && contentEncoding.lowercase().contains("deflate")) {
+                                            java.util.zip.InflaterInputStream(rawStream)
+                                        } else {
+                                            rawStream
+                                        }
+                                    } catch (e: Exception) {
+                                        Logger.log("Proxy stream decompression bypass: ${e.message}")
+                                        rawStream
+                                    }
+                                    
+                                    html = try {
+                                        decodedStream.bufferedReader().readText()
+                                    } catch (e: Exception) {
+                                        Logger.log("Failed to parse decodable stream: ${e.message}")
+                                        ""
+                                    }
+                                }
                                 
                                 val baseUrl = "${currentUrl.protocol}://${currentUrl.host}"
                                 val path = currentUrl.path
@@ -507,9 +526,9 @@ class FileServer(private val context: Context) {
                                         const ads = document.querySelectorAll('.ad, .ads, [id^=google_ads], ins');
                                         ads.forEach(ad => ad.style.display = 'none');
 
-                                        const videos = document.querySelectorAll('video');
+                                        const bindVideoEvents = (video) => { if (!video) return; if (video._monitored) return; video._monitored = true; const handlePlay = () => { const actualSrc = video.currentSrc || video.src; if (actualSrc && isVideoUrl(actualSrc)) { notifyParent(actualSrc); } }; video.addEventListener('play', handlePlay); video.addEventListener('playing', handlePlay); video.addEventListener('loadedmetadata', handlePlay); }; setInterval(() => { document.querySelectorAll('video').forEach(bindVideoEvents); }, 1000); const videos = document.querySelectorAll('video');
                                         videos.forEach(v => {
-                                            notifyParent(v.src || v.querySelector('source')?.src);
+                                            bindVideoEvents(v); notifyParent(v.src || v.querySelector('source')?.src);
                                         });
 
                                         // Dynamic check via MutationObserver
@@ -715,6 +734,32 @@ class FileServer(private val context: Context) {
                         call.respondText(JSONObject().put("status", "success").toString(), ContentType.Application.Json)
                     }
 
+                    // REST status of the TV Media Player (for Sender device synchronization)
+                    get("/api/player/status") {
+                        val obj = JSONObject()
+                        obj.put("state", ServerState.playerState.value)
+                        obj.put("currentTime", ServerState.currentPlayTime.value)
+                        obj.put("duration", ServerState.playDuration.value)
+                        obj.put("title", ServerState.playTitle.value)
+                        call.respondText(obj.toString(), ContentType.Application.Json)
+                    }
+
+                    // REST command triggers to remote control TV Media Player
+                    post("/api/player/action") {
+                        val body = call.receiveText()
+                        val parsed = try { JSONObject(body) } catch (e: Exception) { JSONObject() }
+                        val action = parsed.optString("action")
+                        val argument = parsed.optDouble("argument", 0.0)
+
+                        when (action) {
+                            "PLAY" -> RemoteCommandChannel.postCommand("MEDIA_PLAY")
+                            "PAUSE" -> RemoteCommandChannel.postCommand("MEDIA_PAUSE")
+                            "STOP" -> RemoteCommandChannel.postCommand("BACK")
+                            "SEEK" -> RemoteCommandChannel.postCommand("SEEK|$argument")
+                        }
+                        call.respondText(JSONObject().put("status", "success").toString(), ContentType.Application.Json)
+                    }
+
                     // Multipart file uploads using 64KB streams mapping
                     post("/api/upload") {
                         val rawPath = call.request.queryParameters["path"] ?: "/storage/emulated/0"
@@ -759,6 +804,65 @@ class FileServer(private val context: Context) {
                             Logger.log("Upload failed: ${e.message}")
                             call.respondText(JSONObject().put("status", "error").put("message", e.message).toString(), ContentType.Application.Json)
                         }
+                    }
+
+                    // Bookmarks management sync
+                    get("/api/bookmarks") {
+                        val bookmarks = BookmarkHistoryManager.getBookmarks(this@FileServer.context)
+                        val arr = JSONArray()
+                        bookmarks.forEach { arr.put(it) }
+                        val res = JSONObject().put("status", "success").put("bookmarks", arr)
+                        call.respondText(res.toString(), ContentType.Application.Json)
+                    }
+
+                    post("/api/bookmarks") {
+                        val requestBody = call.receiveText()
+                        val json = JSONObject(requestBody)
+                        val url = json.optString("url")
+                        if (url.isNotEmpty()) {
+                            BookmarkHistoryManager.addBookmark(this@FileServer.context, url)
+                            call.respondText(JSONObject().put("status", "success").toString(), ContentType.Application.Json)
+                        } else {
+                            call.respondText(JSONObject().put("status", "error").put("message", "URL is empty").toString(), ContentType.Application.Json)
+                        }
+                    }
+
+                    delete("/api/bookmarks") {
+                        val requestBody = call.receiveText()
+                        val json = JSONObject(requestBody)
+                        val url = json.optString("url")
+                        if (url.isNotEmpty()) {
+                            BookmarkHistoryManager.removeBookmark(this@FileServer.context, url)
+                            call.respondText(JSONObject().put("status", "success").toString(), ContentType.Application.Json)
+                        } else {
+                            call.respondText(JSONObject().put("status", "error").put("message", "URL is empty").toString(), ContentType.Application.Json)
+                        }
+                    }
+
+                    // History management sync
+                    get("/api/history") {
+                        val history = BookmarkHistoryManager.getHistory(this@FileServer.context)
+                        val arr = JSONArray()
+                        history.forEach { arr.put(it) }
+                        val res = JSONObject().put("status", "success").put("history", arr)
+                        call.respondText(res.toString(), ContentType.Application.Json)
+                    }
+
+                    post("/api/history") {
+                        val requestBody = call.receiveText()
+                        val json = JSONObject(requestBody)
+                        val url = json.optString("url")
+                        if (url.isNotEmpty()) {
+                            BookmarkHistoryManager.addHistory(this@FileServer.context, url)
+                            call.respondText(JSONObject().put("status", "success").toString(), ContentType.Application.Json)
+                        } else {
+                            call.respondText(JSONObject().put("status", "error").put("message", "URL is empty").toString(), ContentType.Application.Json)
+                        }
+                    }
+
+                    post("/api/history/clear") {
+                        BookmarkHistoryManager.clearHistory(this@FileServer.context)
+                        call.respondText(JSONObject().put("status", "success").toString(), ContentType.Application.Json)
                     }
 
                     get("/{...}") {

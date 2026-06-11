@@ -93,6 +93,20 @@ fun BrowserScreen(
                     }
 
                     webViewClient = object : WebViewClient() {
+                        override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                            val urlString = request?.url?.toString() ?: ""
+                            val lowerUrl = urlString.lowercase()
+                            
+                            val isVideo = lowerUrl.endsWith(".mp4") || lowerUrl.endsWith(".m3u8") || lowerUrl.endsWith(".mpd") || lowerUrl.endsWith(".webm") || lowerUrl.endsWith(".mkv") ||
+                                          lowerUrl.contains("googlevideo.com") || lowerUrl.contains("/get_video") || lowerUrl.contains(".m3u8?") || lowerUrl.contains(".mp4?")
+                                          
+                            if (isVideo) {
+                                AppState.castVideoUrl.value = "Vídeo do Navegador|$urlString"
+                                return true
+                            }
+                            return false
+                        }
+
                         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                             super.onPageStarted(view, url, favicon)
                             url?.let { currentUrl = it }

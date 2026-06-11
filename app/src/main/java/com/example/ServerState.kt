@@ -35,6 +35,11 @@ object ServerState {
 
     val uploadNotification = MutableStateFlow<String?>(null)
 
+    val playerState = MutableStateFlow("IDLE")
+    val currentPlayTime = MutableStateFlow(0.0)
+    val playDuration = MutableStateFlow(0.0)
+    val playTitle = MutableStateFlow("")
+
     fun postUploadNotification(message: String) {
         uploadNotification.value = message
     }

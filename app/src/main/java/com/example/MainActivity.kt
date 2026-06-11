@@ -68,6 +68,7 @@ import androidx.activity.compose.BackHandler
 
 object AppState {
     val browserUrl = MutableStateFlow<String?>(null)
+    val castVideoUrl = MutableStateFlow<String?>(null)
     val isDarkTheme = MutableStateFlow(true)
     val isGridLayout = MutableStateFlow(true)
     val tvSearchQuery = MutableStateFlow("")
@@ -140,6 +141,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val browserUrl by AppState.browserUrl.collectAsState()
+            val castVideoUrl by AppState.castVideoUrl.collectAsState()
             val discoveredIp by nsdHelper?.discoveredIp?.collectAsState(initial = null) ?: remember { mutableStateOf(null) }
             var showSplash by remember { mutableStateOf(isTv) }
 
@@ -158,6 +160,22 @@ class MainActivity : ComponentActivity() {
                     if (isTv) {
                         if (showSplash) {
                             TvSplashScreen()
+                        } else if (castVideoUrl != null) {
+                            val parts = castVideoUrl!!.split("|", limit = 2)
+                            val title = parts.getOrNull(0) ?: "Vídeo Transmitido"
+                            val videoUrl = parts.getOrNull(1) ?: parts[0]
+                            val ext = if (videoUrl.lowercase().contains(".m3u8")) "m3u8" else "mp4"
+                            val virtualFile = UnifiedFile(
+                                name = title,
+                                absolutePath = videoUrl,
+                                isDirectory = false,
+                                length = 0L,
+                                extension = ext
+                            )
+                            InternalMediaViewer(
+                                file = virtualFile,
+                                onClose = { AppState.castVideoUrl.value = null }
+                            )
                         } else if (browserUrl != null) {
                             BrowserScreen(
                                 initialUrl = browserUrl!!,
@@ -2155,11 +2173,15 @@ fun TvFilesBrowser(
 
     LaunchedEffect(files) {
         if (shouldFocusFirstItem && files.isNotEmpty()) {
-            kotlinx.coroutines.delay(150)
-            try {
-                listFirstItemFocusRequester.requestFocus()
-            } catch (e: Exception) {}
             shouldFocusFirstItem = false
+            // Robust focus retry loop to handle layout composition on slow TV processors
+            for (i in 1..6) {
+                kotlinx.coroutines.delay(100)
+                try {
+                    listFirstItemFocusRequester.requestFocus()
+                    break
+                } catch (e: Exception) {}
+            }
         }
     }
     
@@ -3100,7 +3122,7 @@ fun InternalMediaViewer(file: UnifiedFile, onClose: () -> Unit) {
     val context = LocalContext.current
     val ext = file.extension.lowercase()
     val isImage = ext in listOf("jpg", "jpeg", "png", "webp", "gif", "bmp")
-    val isVideo = ext in listOf("mp4", "mkv", "avi", "mov", "webm", "3gp")
+    val isVideo = ext in listOf("mp4", "mkv", "avi", "mov", "webm", "3gp", "m3u8", "mpd")
     val isAudio = ext in listOf("mp3", "wav", "flac", "ogg", "m4a", "aac")
     
     var videoViewInstance by remember { mutableStateOf<android.widget.VideoView?>(null) }
@@ -3108,6 +3130,36 @@ fun InternalMediaViewer(file: UnifiedFile, onClose: () -> Unit) {
     var currentPosState by remember { mutableStateOf(0) }
     var durationState by remember { mutableStateOf(0) }
     var controlsVisible by remember { mutableStateOf(true) }
+
+    DisposableEffect(Unit) {
+        ServerState.playerState.value = "PLAYING"
+        ServerState.playTitle.value = file.name
+        onDispose {
+            ServerState.playerState.value = "IDLE"
+            ServerState.currentPlayTime.value = 0.0
+            ServerState.playDuration.value = 0.0
+            ServerState.playTitle.value = ""
+        }
+    }
+
+    // Capture remote playback actions sent via REST API or remote control
+    LaunchedEffect(videoViewInstance) {
+        if (videoViewInstance != null) {
+            RemoteCommandChannel.commands.collect { cmd ->
+                if (cmd.startsWith("SEEK|")) {
+                    val sec = cmd.substringAfter("SEEK|").toDoubleOrNull() ?: 0.0
+                    val ms = (sec * 1000).toInt()
+                    videoViewInstance?.seekTo(ms)
+                } else if (cmd == "MEDIA_PLAY" || cmd == "PLAY") {
+                    videoViewInstance?.start()
+                    isPlayingState = true
+                } else if (cmd == "MEDIA_PAUSE" || cmd == "PAUSE") {
+                    videoViewInstance?.pause()
+                    isPlayingState = false
+                }
+            }
+         }
+    }
 
     // D-Pad Back Button support inside player
     BackHandler(enabled = true) {
@@ -3127,8 +3179,14 @@ fun InternalMediaViewer(file: UnifiedFile, onClose: () -> Unit) {
         if (videoViewInstance != null) {
             while (true) {
                 try {
-                    currentPosState = videoViewInstance!!.currentPosition
-                    durationState = videoViewInstance!!.duration
+                    val pos = videoViewInstance!!.currentPosition
+                    val dur = videoViewInstance!!.duration
+                    currentPosState = pos
+                    durationState = dur
+                    
+                    ServerState.playerState.value = if (isPlayingState) "PLAYING" else "PAUSED"
+                    ServerState.currentPlayTime.value = pos.toDouble() / 1000.0
+                    ServerState.playDuration.value = dur.toDouble() / 1000.0
                 } catch (e: Exception) {}
                 delay(250)
             }
@@ -3194,7 +3252,13 @@ fun InternalMediaViewer(file: UnifiedFile, onClose: () -> Unit) {
             AndroidView(
                 factory = { ctx ->
                     android.widget.VideoView(ctx).apply {
-                        val uri = if (file.uriString != null) Uri.parse(file.uriString) else Uri.fromFile(File(file.absolutePath))
+                        val uri = if (file.absolutePath.startsWith("http://") || file.absolutePath.startsWith("https://")) {
+                            Uri.parse(file.absolutePath)
+                        } else if (file.uriString != null) {
+                            Uri.parse(file.uriString)
+                        } else {
+                            Uri.fromFile(File(file.absolutePath))
+                        }
                         setVideoURI(uri)
                         setOnPreparedListener { mp ->
                             mp.isLooping = true

@@ -13,16 +13,17 @@ object WebInterface {
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
-            --liquid-bg: #000000;
-            --liquid-card: #1C1C1E;
-            --liquid-card-hover: #2C2C2E;
+            --liquid-bg: #090a0f;
+            --liquid-card: rgba(26, 28, 36, 0.55);
+            --liquid-card-hover: rgba(50, 54, 70, 0.75);
             --liquid-blue: #0A84FF;
-            --liquid-gray: #8E8E93;
-            --liquid-border: rgba(255, 255, 255, 0.1);
-            --liquid-tint: rgba(255, 255, 255, 0.05);
+            --liquid-gray: #ABAFB8;
+            --liquid-border: rgba(255, 255, 255, 0.08);
+            --liquid-tint: rgba(255, 255, 255, 0.02);
+            --liquid-red: #FF3B30;
         }
         body {
-            background: var(--liquid-bg);
+            background: radial-gradient(circle at 50% 10%, #171d3a 0%, #030408 80%);
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
             color: #FFFFFF;
             user-select: none;
@@ -35,13 +36,14 @@ object WebInterface {
             height: 100vh;
         }
         .liquid-header {
-            font-weight: 700;
-            font-size: 34px;
-            letter-spacing: 0.3px;
-            padding: 16px 20px 8px;
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+            font-weight: 800;
+            font-size: 30px;
+            letter-spacing: -0.5px;
+            padding: 18px 24px 12px;
+            background: rgba(10, 10, 15, 0.5);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border-bottom: 0.5px solid var(--liquid-border);
             position: sticky;
             top: 0;
             z-index: 50;
@@ -51,16 +53,20 @@ object WebInterface {
         }
         .liquid-list {
             background: var(--liquid-card);
-            border-radius: 12px;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--liquid-border);
+            border-radius: 18px;
             margin: 0 16px 16px;
             overflow: hidden;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
         }
         .liquid-list-item {
             display: flex;
             align-items: center;
-            padding: 12px 16px;
+            padding: 14px 20px;
             border-bottom: 0.5px solid var(--liquid-border);
-            transition: background 0.15s;
+            transition: background 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .liquid-list-item:last-child {
             border-bottom: none;
@@ -71,8 +77,8 @@ object WebInterface {
         
         .liquid-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(95px, 1fr));
-            gap: 20px 12px;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 16px 12px;
             padding: 16px;
         }
         .liquid-grid-item {
@@ -80,52 +86,65 @@ object WebInterface {
             flex-direction: column;
             align-items: center;
             text-align: center;
-            background: transparent;
-            border-radius: 12px;
-            padding: 4px;
-            transition: transform 0.1s, background 0.15s;
+            background: var(--liquid-card);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid var(--liquid-border);
+            border-radius: 18px;
+            padding: 16px 10px;
+            transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background 0.15s, box-shadow 0.2s;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.25);
         }
         .liquid-grid-item:active {
-            transform: scale(0.92);
-            background: rgba(255, 255, 255, 0.05);
+            transform: scale(0.93) translateY(2px);
+            background: var(--liquid-card-hover);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         
         .liquid-icon-box {
-            width: 65px;
-            height: 65px;
-            background: var(--liquid-bg);
-            border-radius: 16px;
+            width: 70px;
+            height: 70px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 6px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            font-size: 32px;
+            margin-bottom: 10px;
+            box-shadow: inset 0 0 10px rgba(255,255,255,0.05), 0 8px 16px rgba(0,0,0,0.3);
+            font-size: 36px;
             overflow: hidden;
+            transition: transform 0.2s;
         }
-        .liquid-folder { color: #81D4FA; } /* Light blue for folder */
+        .liquid-grid-item:active .liquid-icon-box {
+            transform: scale(0.92);
+        }
+        .liquid-folder { color: #54c1ff; text-shadow: 0 2px 10px rgba(84,193,255,0.3); }
         .liquid-file-title {
             font-size: 13px;
-            font-weight: 500;
-            line-height: 1.2;
-            word-break: break-word;
+            font-weight: 600;
+            color: #F5F5F7;
+            line-height: 1.35;
+            word-break: break-all;
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
             width: 100%;
-            max-width: 90px;
+            padding: 0 4px;
         }
         .liquid-file-subtitle {
             font-size: 11px;
             color: var(--liquid-gray);
-            margin-top: 2px;
+            margin-top: 4px;
+            font-weight: 500;
         }
 
         .tab-bar {
-            background: rgba(44, 44, 46, 0.95);
-            backdrop-filter: blur(25px);
-            -webkit-backdrop-filter: blur(25px);
+            background: rgba(20, 20, 28, 0.45);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             display: flex;
             justify-content: space-around;
             padding: 6px;
@@ -133,11 +152,11 @@ object WebInterface {
             bottom: calc(16px + env(safe-area-inset-bottom));
             left: 50%;
             transform: translateX(-50%);
-            width: 85%;
-            max-width: 380px;
-            border-radius: 30px;
+            width: 90%;
+            max-width: 400px;
+            border-radius: 35px;
             z-index: 100;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            box-shadow: 0 16px 40px rgba(0,0,0,0.6);
         }
         .tab-item {
             display: flex;
@@ -145,31 +164,47 @@ object WebInterface {
             align-items: center;
             color: var(--liquid-gray);
             font-size: 11px;
-            font-weight: 500;
+            font-weight: 700;
             padding: 8px 16px;
-            border-radius: 20px;
-            transition: all 0.2s;
+            border-radius: 25px;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
             flex: 1;
         }
         .tab-item i {
-            font-size: 24px;
-            margin-bottom: 4px;
+            font-size: 22px;
+            margin-bottom: 2px;
+            transition: transform 0.2s;
+        }
+        .tab-item:active i {
+            transform: scale(0.85);
         }
         .tab-item.active {
-            color: var(--liquid-blue);
-            background: rgba(255, 255, 255, 0.1);
+            color: #FFFFFF;
+            background: var(--liquid-blue);
+            box-shadow: 0 4px 15px rgba(10,132,255,0.4);
         }
 
         .toolbar {
             display: flex;
             align-items: center;
-            padding: 8px 16px;
-            background: var(--liquid-bg);
+            padding: 10px 20px;
+            background: transparent;
         }
         .toolbar-btn {
             color: var(--liquid-blue);
             font-size: 22px;
-            padding: 4px 12px;
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.15s, transform 0.15s;
+        }
+        .toolbar-btn:active {
+            background: rgba(255, 255, 255, 0.12);
+            transform: scale(0.95);
         }
 
         /* Context Menu */
@@ -792,45 +827,60 @@ object WebInterface {
         }
 
         function saveToHistory(url) {
-            let history = JSON.parse(localStorage.getItem('browser_history') || '[]');
-            history = history.filter(item => item !== url); // Remove duplicate
-            history.unshift(url);
-            if(history.length > 20) history.pop();
-            localStorage.setItem('browser_history', JSON.stringify(history));
+            fetch('/api/history', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: url })
+            }).catch(console.error);
         }
 
         function addBookmark() {
             let url = document.getElementById('browser-url').value.trim();
             if(!url || !url.startsWith('http')) return;
-            let bookmarks = JSON.parse(localStorage.getItem('browser_bookmarks') || '[]');
             
-            const idx = bookmarks.indexOf(url);
-            if(idx > -1) {
-                bookmarks.splice(idx, 1);
-                showNotification("Removido dos favoritos");
-            } else {
-                bookmarks.unshift(url);
-                showNotification("Adicionado aos favoritos!");
-            }
-            localStorage.setItem('browser_bookmarks', JSON.stringify(bookmarks));
-            loadStartPage();
+            fetch('/api/bookmarks')
+                .then(res => res.json())
+                .then(data => {
+                    const bookmarks = data.bookmarks || [];
+                    const isBookmarked = bookmarks.includes(url);
+                    const method = isBookmarked ? 'DELETE' : 'POST';
+                    const msg = isBookmarked ? "Removido dos favoritos" : "Adicionado aos favoritos!";
+                    
+                    fetch('/api/bookmarks', {
+                        method: method,
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url: url })
+                    })
+                    .then(r => r.json())
+                    .then(() => {
+                        showNotification(msg);
+                        loadStartPage();
+                    });
+                });
         }
 
         function loadStartPage() {
-            let bookmarks = JSON.parse(localStorage.getItem('browser_bookmarks') || '[]');
-            let history = JSON.parse(localStorage.getItem('browser_history') || '[]');
-            
-            const bList = document.getElementById('bookmarks-list');
-            bList.innerHTML = bookmarks.length === 0 ? '<div class="p-4 text-center text-gray-500 text-sm">Nenhum favorito</div>' : '';
-            bookmarks.forEach(url => {
-                bList.innerHTML += '<div onclick="openUrl(\'' + url + '\')" class="liquid-list-item justify-between cursor-pointer"><span class="truncate pr-4">' + url + '</span><i class="fa-solid fa-chevron-right text-gray-500"></i></div>';
-            });
+            fetch('/api/bookmarks')
+                .then(res => res.json())
+                .then(data => {
+                    const bookmarks = data.bookmarks || [];
+                    const bList = document.getElementById('bookmarks-list');
+                    bList.innerHTML = bookmarks.length === 0 ? '<div class="p-4 text-center text-gray-500 text-sm">Nenhum favorito</div>' : '';
+                    bookmarks.forEach(url => {
+                        bList.innerHTML += '<div onclick="openUrl(\'' + url + '\')" class="liquid-list-item justify-between cursor-pointer"><span class="truncate pr-4 text-sm font-semibold text-white/95">' + url + '</span><i class="fa-solid fa-angle-right text-white/40"></i></div>';
+                    });
+                }).catch(console.error);
 
-            const hList = document.getElementById('history-list');
-            hList.innerHTML = history.length === 0 ? '<div class="p-4 text-center text-gray-500 text-sm">Nenhum histórico</div>' : '';
-            history.forEach(url => {
-                hList.innerHTML += '<div onclick="openUrl(\'' + url + '\')" class="liquid-list-item justify-between cursor-pointer"><span class="truncate pr-4">' + url + '</span><i class="fa-solid fa-chevron-right text-gray-500"></i></div>';
-            });
+            fetch('/api/history')
+                .then(res => res.json())
+                .then(data => {
+                    const history = data.history || [];
+                    const hList = document.getElementById('history-list');
+                    hList.innerHTML = history.length === 0 ? '<div class="p-4 text-center text-gray-500 text-sm">Nenhum histórico</div>' : '';
+                    history.forEach(url => {
+                        hList.innerHTML += '<div onclick="openUrl(\'' + url + '\')" class="liquid-list-item justify-between cursor-pointer"><span class="truncate pr-4 text-sm text-white/70">' + url + '</span><i class="fa-solid fa-angle-right text-white/30"></i></div>';
+                    });
+                }).catch(console.error);
         }
         
         function openUrl(url) {
@@ -902,7 +952,6 @@ object WebInterface {
             }).catch(err => showNotification('Erro na conexão', true));
         }
 
-
         function fetchFiles() {
             fetch('/api/files?path=' + encodeURIComponent(currentPath))
                 .then(res => res.json())
@@ -911,12 +960,19 @@ object WebInterface {
                     let pathParts = currentPath.split('/');
                     let folderName = pathParts[pathParts.length - 1];
                     if (currentPath === "/storage/emulated/0") folderName = "Na minha TV";
+                    else if (currentPath === "/storage") folderName = "Dispositivos da TV";
+                    else if (currentPath === "/" || currentPath === "") folderName = "Dispositivo";
                     
                     document.getElementById('path-title').textContent = folderName;
                     
                     const backBtn = document.getElementById('back-btn');
-                    if (data.isRoot) backBtn.style.visibility = 'hidden';
-                    else backBtn.style.visib                    // Update hardware metrics overlay
+                    if (currentPath === "/storage/emulated/0") {
+                        backBtn.style.visibility = 'hidden';
+                    } else {
+                        backBtn.style.visibility = 'visible';
+                    }
+                    
+                    // Update hardware metrics overlay
                     if (data.ramPercent !== undefined) {
                         document.getElementById('tv-ram-badge').textContent = data.ramPercent + "% Carregada";
                         document.getElementById('tv-ram-ring').textContent = data.ramPercent + "%";
@@ -1153,11 +1209,11 @@ object WebInterface {
 
         function navigateBack() {
             doVibrate(30);
-            const parent = currentPath.substring(0, currentPath.lastIndexOf('/'));
-            if (parent.trim().length > 0 && parent !== "/storage") {
-                currentPath = parent;
-                fetchFiles();
-            }
+            if (currentPath === "/storage" || currentPath === "/" || currentPath === "" || currentPath === "Na minha TV") return;
+            let parent = currentPath.substring(0, currentPath.lastIndexOf('/'));
+            if (parent === "" || parent === "/storage/emulated") parent = "/storage";
+            currentPath = parent;
+            fetchFiles();
         }
 
         function requestOpenFile(absolutePath) {
