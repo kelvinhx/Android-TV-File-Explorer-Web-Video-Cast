@@ -5,7 +5,7 @@ import androidx.compose.ui.graphics.Color
 object AppConfig {
     const val PORT = 8080
     
-    // Premium iOS 18 Liquid Dark colors
+    // Premium Liquid Dark colors
     val BackgroundDark = Color(0xFF08080A)
     val CardBackground = Color(0xFF121216)
     val PrimaryBlue = Color(0xFF0A84FF)

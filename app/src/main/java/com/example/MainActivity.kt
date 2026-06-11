@@ -867,7 +867,7 @@ fun TvHomeDashboardScreen(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Gerenciador iOS 26 • Conectado à sua TV local",
+                    text = "Gerenciador Nexus Glass • Conectado à sua TV local",
                     color = Color.Gray,
                     fontSize = 14.sp
                 )
@@ -1492,7 +1492,7 @@ fun TvDashboardScreen(
                 }
             }
 
-            // Floating "Menu Locais 🧭" Pill styled as iOS 26 Liquid Glass
+            // Floating "Menu Locais 🧭" Pill styled as Liquid Glass
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)

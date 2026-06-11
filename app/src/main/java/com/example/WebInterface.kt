@@ -13,16 +13,16 @@ object WebInterface {
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
-            --ios-bg: #000000;
-            --ios-card: #1C1C1E;
-            --ios-card-hover: #2C2C2E;
-            --ios-blue: #0A84FF;
-            --ios-gray: #8E8E93;
-            --ios-border: rgba(255, 255, 255, 0.1);
-            --ios-tint: rgba(255, 255, 255, 0.05);
+            --liquid-bg: #000000;
+            --liquid-card: #1C1C1E;
+            --liquid-card-hover: #2C2C2E;
+            --liquid-blue: #0A84FF;
+            --liquid-gray: #8E8E93;
+            --liquid-border: rgba(255, 255, 255, 0.1);
+            --liquid-tint: rgba(255, 255, 255, 0.05);
         }
         body {
-            background: var(--ios-bg);
+            background: var(--liquid-bg);
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
             color: #FFFFFF;
             user-select: none;
@@ -34,7 +34,7 @@ object WebInterface {
             flex-direction: column;
             height: 100vh;
         }
-        .ios-header {
+        .liquid-header {
             font-weight: 700;
             font-size: 34px;
             letter-spacing: 0.3px;
@@ -49,33 +49,33 @@ object WebInterface {
             justify-content: space-between;
             align-items: center;
         }
-        .ios-list {
-            background: var(--ios-card);
+        .liquid-list {
+            background: var(--liquid-card);
             border-radius: 12px;
             margin: 0 16px 16px;
             overflow: hidden;
         }
-        .ios-list-item {
+        .liquid-list-item {
             display: flex;
             align-items: center;
             padding: 12px 16px;
-            border-bottom: 0.5px solid var(--ios-border);
+            border-bottom: 0.5px solid var(--liquid-border);
             transition: background 0.15s;
         }
-        .ios-list-item:last-child {
+        .liquid-list-item:last-child {
             border-bottom: none;
         }
-        .ios-list-item:active {
-            background: var(--ios-card-hover);
+        .liquid-list-item:active {
+            background: var(--liquid-card-hover);
         }
         
-        .ios-grid {
+        .liquid-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(95px, 1fr));
             gap: 20px 12px;
             padding: 16px;
         }
-        .ios-grid-item {
+        .liquid-grid-item {
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -85,15 +85,15 @@ object WebInterface {
             padding: 4px;
             transition: transform 0.1s, background 0.15s;
         }
-        .ios-grid-item:active {
+        .liquid-grid-item:active {
             transform: scale(0.92);
             background: rgba(255, 255, 255, 0.05);
         }
         
-        .ios-icon-box {
+        .liquid-icon-box {
             width: 65px;
             height: 65px;
-            background: var(--ios-bg);
+            background: var(--liquid-bg);
             border-radius: 16px;
             display: flex;
             align-items: center;
@@ -103,8 +103,8 @@ object WebInterface {
             font-size: 32px;
             overflow: hidden;
         }
-        .ios-folder { color: #81D4FA; } /* Light blue for iOS folder */
-        .ios-file-title {
+        .liquid-folder { color: #81D4FA; } /* Light blue for folder */
+        .liquid-file-title {
             font-size: 13px;
             font-weight: 500;
             line-height: 1.2;
@@ -116,9 +116,9 @@ object WebInterface {
             width: 100%;
             max-width: 90px;
         }
-        .ios-file-subtitle {
+        .liquid-file-subtitle {
             font-size: 11px;
-            color: var(--ios-gray);
+            color: var(--liquid-gray);
             margin-top: 2px;
         }
 
@@ -143,7 +143,7 @@ object WebInterface {
             display: flex;
             flex-direction: column;
             align-items: center;
-            color: var(--ios-gray);
+            color: var(--liquid-gray);
             font-size: 11px;
             font-weight: 500;
             padding: 8px 16px;
@@ -156,7 +156,7 @@ object WebInterface {
             margin-bottom: 4px;
         }
         .tab-item.active {
-            color: var(--ios-blue);
+            color: var(--liquid-blue);
             background: rgba(255, 255, 255, 0.1);
         }
 
@@ -164,10 +164,10 @@ object WebInterface {
             display: flex;
             align-items: center;
             padding: 8px 16px;
-            background: var(--ios-bg);
+            background: var(--liquid-bg);
         }
         .toolbar-btn {
-            color: var(--ios-blue);
+            color: var(--liquid-blue);
             font-size: 22px;
             padding: 4px 12px;
         }
@@ -202,7 +202,7 @@ object WebInterface {
             background: rgba(255, 255, 255, 0.1);
         }
         .context-item.danger {
-            color: var(--ios-red);
+            color: var(--liquid-red);
         }
 
         .main-content {
@@ -212,14 +212,14 @@ object WebInterface {
         }
 
         .search-bar {
-            background: var(--ios-card);
+            background: var(--liquid-card);
             border-radius: 10px;
             margin: 0 16px 16px;
             padding: 8px 12px;
             display: flex;
             align-items: center;
             gap: 8px;
-            color: var(--ios-gray);
+            color: var(--liquid-gray);
         }
         .search-bar input {
             background: transparent;
@@ -230,7 +230,7 @@ object WebInterface {
             outline: none;
         }
 
-        /* iOS Modal setup */
+        /* Premium Modal setup */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -240,7 +240,7 @@ object WebInterface {
             align-items: flex-end;
         }
         .modal-sheet {
-            background: var(--ios-card);
+            background: var(--liquid-card);
             border-top-left-radius: 20px;
             border-top-right-radius: 20px;
             width: 100%;
@@ -257,7 +257,7 @@ object WebInterface {
         .dpad-container {
             width: 260px;
             height: 260px;
-            background: var(--ios-card);
+            background: var(--liquid-card);
             border-radius: 50%;
             position: relative;
             margin: 40px auto;
@@ -271,7 +271,7 @@ object WebInterface {
             align-items: center;
             justify-content: center;
             font-size: 24px;
-            color: var(--ios-gray);
+            color: var(--liquid-gray);
         }
         .dpad-btn:active {
             color: white;
@@ -284,7 +284,7 @@ object WebInterface {
         .dpad-ok {
             top: 33.3%; left: 33.3%;
             border-radius: 50%;
-            background: var(--ios-bg);
+            background: var(--liquid-bg);
             box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1);
             color: white;
             font-weight: 600;
@@ -297,12 +297,12 @@ object WebInterface {
 <body>
 
     <!-- Header -->
-    <header class="ios-header" id="main-header">
+    <header class="liquid-header" id="main-header">
         <div class="flex items-center gap-2">
             <span>Navegar</span>
             <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-[pulse_1.5s_infinite] shadow-[0_0_8px_#10b981]" title="Conectado à TV"></span>
         </div>
-        <button class="text-[var(--ios-blue)] text-lg" onclick="openSettingsModal()"><i class="fa-solid fa-ellipsis-circle"></i></button>
+        <button class="text-[var(--liquid-blue)] text-lg" onclick="openSettingsModal()"><i class="fa-solid fa-ellipsis-circle"></i></button>
     </header>
 
     <!-- Toolbar for Files -->
@@ -327,18 +327,18 @@ object WebInterface {
 
             <!-- TV Health status bar -->
             <div id="tv-status-bar" class="grid grid-cols-2 gap-3 mx-4 mb-4">
-                <div class="bg-[var(--ios-card)] px-3 py-2.5 rounded-xl border border-[rgba(255,255,255,0.05)] flex items-center justify-between">
+                <div class="bg-[var(--liquid-card)] px-3 py-2.5 rounded-xl border border-[rgba(255,255,255,0.05)] flex items-center justify-between">
                     <div>
-                        <div class="text-[10px] text-[var(--ios-gray)] font-semibold uppercase tracking-wider">Memória da TV</div>
+                        <div class="text-[10px] text-[var(--liquid-gray)] font-semibold uppercase tracking-wider">Memória da TV</div>
                         <div class="text-[12px] font-bold mt-0.5 text-white" id="tv-ram-badge">RAM Carregada</div>
                     </div>
-                    <div class="w-8 h-8 rounded-full border-2 border-stone-800 flex items-center justify-center text-[9px] font-extrabold text-[var(--ios-blue)]" id="tv-ram-ring">
+                    <div class="w-8 h-8 rounded-full border-2 border-stone-800 flex items-center justify-center text-[9px] font-extrabold text-[var(--liquid-blue)]" id="tv-ram-ring">
                         --
                     </div>
                 </div>
-                <div class="bg-[var(--ios-card)] px-3 py-2.5 rounded-xl border border-[rgba(255,255,255,0.05)] flex items-center justify-between">
+                <div class="bg-[var(--liquid-card)] px-3 py-2.5 rounded-xl border border-[rgba(255,255,255,0.05)] flex items-center justify-between">
                     <div>
-                        <div class="text-[10px] text-[var(--ios-gray)] font-semibold uppercase tracking-wider">Armazenamento</div>
+                        <div class="text-[10px] text-[var(--liquid-gray)] font-semibold uppercase tracking-wider">Armazenamento</div>
                         <div class="text-[11px] font-bold mt-0.5 text-emerald-400 truncate max-w-[80px]" id="tv-storage-badge">Status do Disco</div>
                     </div>
                     <div class="w-8 h-8 rounded-full border-2 border-stone-800 flex items-center justify-center text-[9px] font-extrabold text-[#34C759]" id="tv-storage-ring">
@@ -347,15 +347,15 @@ object WebInterface {
                 </div>
             </div>
             
-            <div id="upload-progress-container" class="hidden ios-list mb-4 p-4 text-sm font-medium">
+            <div id="upload-progress-container" class="hidden liquid-list mb-4 p-4 text-sm font-medium">
                 <div class="flex justify-between mb-2"><span>Enviando...</span><span id="upload-percent">0%</span></div>
                 <div class="h-1.5 bg-stone-800 rounded-full overflow-hidden">
-                    <div id="upload-bar" class="h-full bg-[var(--ios-blue)] w-0 transition-all"></div>
+                    <div id="upload-bar" class="h-full bg-[var(--liquid-blue)] w-0 transition-all"></div>
                 </div>
             </div>
 
-            <!-- iOS Grid View -->
-            <div class="ios-grid" id="files-list">
+            <!-- Liquid Grid View -->
+            <div class="liquid-grid" id="files-list">
                 <!-- Dynamically populated files -->
             </div>
         </div>
@@ -406,12 +406,12 @@ object WebInterface {
                     </div>
 
                     <h3 class="font-bold text-gray-400 mb-3 text-sm uppercase px-2">Favoritos</h3>
-                    <div class="ios-list mb-8 bg-[#2C2C2E] rounded-xl overflow-hidden" id="bookmarks-list">
+                    <div class="liquid-list mb-8 bg-[#2C2C2E] rounded-xl overflow-hidden" id="bookmarks-list">
                         <!-- Populated by JS -->
                     </div>
 
                     <h3 class="font-bold text-gray-400 mb-3 text-sm uppercase px-2">Histórico Recente</h3>
-                    <div class="ios-list bg-[#2C2C2E] rounded-xl overflow-hidden" id="history-list">
+                    <div class="liquid-list bg-[#2C2C2E] rounded-xl overflow-hidden" id="history-list">
                         <!-- Populated by JS -->
                     </div>
                 </div>
@@ -426,7 +426,7 @@ object WebInterface {
                 </div>
             </div>
             
-            <!-- Safari iOS Bottom Bar -->
+            <!-- Safari-style Bottom Bar -->
             <div class="bg-[#1C1C1E] border-t border-[rgba(255,255,255,0.05)] h-[83px] w-full shrink-0 flex items-start justify-between px-6 pt-2 pb-[max(env(safe-area-inset-bottom),20px)] z-10 transition-transform duration-300">
                 <button onclick="document.getElementById('internal-browser').contentWindow.history.back()" class="text-blue-500 text-3xl active:opacity-50 disabled:opacity-30"><i class="fa-solid fa-angle-left"></i></button>
                 <button onclick="document.getElementById('internal-browser').contentWindow.history.forward()" class="text-blue-500 text-3xl active:opacity-50 disabled:opacity-30"><i class="fa-solid fa-angle-right"></i></button>
@@ -497,9 +497,9 @@ object WebInterface {
     </div>
 
     <!-- Floating Clipboard Bar -->
-    <div id="clipboard-bar" class="hidden fixed bottom-24 left-4 right-4 bg-[#1C1C1E] border border-[var(--ios-blue)] rounded-xl p-3 flex justify-between items-center shadow-2xl z-50">
+    <div id="clipboard-bar" class="hidden fixed bottom-24 left-4 right-4 bg-[#1C1C1E] border border-[var(--liquid-blue)] rounded-xl p-3 flex justify-between items-center shadow-2xl z-50">
         <div class="flex items-center gap-3">
-            <i class="fa-solid fa-scissors text-[var(--ios-blue)] text-lg animate-pulse" id="clipboard-icon"></i>
+            <i class="fa-solid fa-scissors text-[var(--liquid-blue)] text-lg animate-pulse" id="clipboard-icon"></i>
             <div class="text-xs">
                 <div class="font-bold text-white text-ellipsis overflow-hidden max-w-[150px]" id="clipboard-item-name">Item</div>
                 <div class="text-gray-400" id="clipboard-mode-text">Pronto para mover</div>
@@ -507,7 +507,7 @@ object WebInterface {
         </div>
         <div class="flex gap-2">
             <button onclick="clearClipboard()" class="bg-stone-800 text-stone-300 font-semibold px-3 py-1.5 rounded-lg text-xs">Cancelar</button>
-            <button onclick="pasteClipboard()" class="bg-[var(--ios-blue)] text-white font-semibold px-4 py-1.5 rounded-lg text-xs flex items-center gap-1">
+            <button onclick="pasteClipboard()" class="bg-[var(--liquid-blue)] text-white font-semibold px-4 py-1.5 rounded-lg text-xs flex items-center gap-1">
                 <i class="fa-solid fa-paste"></i>
                 <span>Colar</span>
             </button>
@@ -517,43 +517,43 @@ object WebInterface {
     <!-- Streaming Video/Audio Player & ImageViewer Modal Sheet -->
     <div id="media-modal" class="modal-overlay" onclick="closeMediaModal(event)">
         <div class="modal-sheet" onclick="event.stopPropagation()">
-            <div class="w-10 h-1.5 bg-[var(--ios-gray)] rounded-full mx-auto mb-4"></div>
+            <div class="w-10 h-1.5 bg-[var(--liquid-gray)] rounded-full mx-auto mb-4"></div>
             <h3 class="text-lg font-bold mb-3 text-center truncate" id="media-title">Transmitindo</h3>
             <div class="bg-black rounded-xl overflow-hidden w-full flex items-center justify-center min-h-[220px]" id="media-container">
                 <!-- Dynamic target player goes here -->
             </div>
-            <button onclick="closeMediaModal('close')" class="w-full bg-[var(--ios-card-hover)] py-3 rounded-xl text-white font-bold text-lg mt-6">Fechar Reprodutor</button>
+            <button onclick="closeMediaModal('close')" class="w-full bg-[var(--liquid-card-hover)] py-3 rounded-xl text-white font-bold text-lg mt-6">Fechar Reprodutor</button>
         </div>
     </div>
 
     <!-- Settings Modal Sheet -->
     <div id="settings-modal" class="modal-overlay" onclick="closeSettingsModal(event)">
         <div class="modal-sheet" onclick="event.stopPropagation()">
-            <div class="w-10 h-1.5 bg-[var(--ios-gray)] rounded-full mx-auto mb-6"></div>
+            <div class="w-10 h-1.5 bg-[var(--liquid-gray)] rounded-full mx-auto mb-6"></div>
             <h2 class="text-xl font-bold mb-4">Configurações</h2>
-            <div class="ios-list bg-[var(--ios-bg)] border border-[rgba(255,255,255,0.1)]">
-                <div class="ios-list-item justify-between">
+            <div class="liquid-list bg-[var(--liquid-bg)] border border-[rgba(255,255,255,0.1)]">
+                <div class="liquid-list-item justify-between">
                     <span>Mostrar Itens Ocultos</span>
-                    <input type="checkbox" id="toggle-hidden" class="accent-[var(--ios-blue)] scale-125">
+                    <input type="checkbox" id="toggle-hidden" class="accent-[var(--liquid-blue)] scale-125">
                 </div>
-                <div class="ios-list-item justify-between">
+                <div class="liquid-list-item justify-between">
                     <span>Visualização em Grade</span>
-                    <input type="checkbox" id="toggle-grid" checked class="accent-[var(--ios-blue)] scale-125">
+                    <input type="checkbox" id="toggle-grid" checked class="accent-[var(--liquid-blue)] scale-125">
                 </div>
             </div>
             
             <h2 class="text-sm font-bold text-gray-400 mt-6 mb-2">Sistema da Android TV</h2>
-            <div class="ios-list bg-[var(--ios-bg)] border border-[rgba(255,255,255,0.1)]">
-                <div onclick="sendRemoteCmd('SETTINGS'); closeSettingsModal('close');" class="ios-list-item justify-between cursor-pointer active:bg-[rgba(255,255,255,0.1)]">
+            <div class="liquid-list bg-[var(--liquid-bg)] border border-[rgba(255,255,255,0.1)]">
+                <div onclick="sendRemoteCmd('SETTINGS'); closeSettingsModal('close');" class="liquid-list-item justify-between cursor-pointer active:bg-[rgba(255,255,255,0.1)]">
                     <span>Abrir Configurações da TV</span>
                     <i class="fa-solid fa-chevron-right text-gray-500"></i>
                 </div>
-                <div onclick="sendRemoteCmd('HOME'); closeSettingsModal('close');" class="ios-list-item justify-between cursor-pointer active:bg-[rgba(255,255,255,0.1)]">
+                <div onclick="sendRemoteCmd('HOME'); closeSettingsModal('close');" class="liquid-list-item justify-between cursor-pointer active:bg-[rgba(255,255,255,0.1)]">
                     <span>Ir para Tela Inicial da TV</span>
                     <i class="fa-solid fa-chevron-right text-gray-500"></i>
                 </div>
             </div>
-            <button onclick="closeSettingsModal('close')" class="w-full bg-[var(--ios-card)] py-3 rounded-xl text-[var(--ios-blue)] font-bold text-lg mt-4">Concluído</button>
+            <button onclick="closeSettingsModal('close')" class="w-full bg-[var(--liquid-card)] py-3 rounded-xl text-[var(--liquid-blue)] font-bold text-lg mt-4">Concluído</button>
         </div>
     </div>
 
@@ -632,8 +632,8 @@ object WebInterface {
             document.getElementById('path-title').style.display = 'block';
             document.getElementById('files-list').innerHTML = `
                 <div class="col-span-full text-center py-20">
-                    <i class="fa-solid fa-circle-notch fa-spin text-3xl text-[var(--ios-blue)] mb-4"></i>
-                    <div class="text-[var(--ios-gray)] text-sm">Procurando no sistema...</div>
+                    <i class="fa-solid fa-circle-notch fa-spin text-3xl text-[var(--liquid-blue)] mb-4"></i>
+                    <div class="text-[var(--liquid-gray)] text-sm">Procurando no sistema...</div>
                 </div>
             `;
             
@@ -823,13 +823,13 @@ object WebInterface {
             const bList = document.getElementById('bookmarks-list');
             bList.innerHTML = bookmarks.length === 0 ? '<div class="p-4 text-center text-gray-500 text-sm">Nenhum favorito</div>' : '';
             bookmarks.forEach(url => {
-                bList.innerHTML += '<div onclick="openUrl(\'' + url + '\')" class="ios-list-item justify-between cursor-pointer"><span class="truncate pr-4">' + url + '</span><i class="fa-solid fa-chevron-right text-gray-500"></i></div>';
+                bList.innerHTML += '<div onclick="openUrl(\'' + url + '\')" class="liquid-list-item justify-between cursor-pointer"><span class="truncate pr-4">' + url + '</span><i class="fa-solid fa-chevron-right text-gray-500"></i></div>';
             });
 
             const hList = document.getElementById('history-list');
             hList.innerHTML = history.length === 0 ? '<div class="p-4 text-center text-gray-500 text-sm">Nenhum histórico</div>' : '';
             history.forEach(url => {
-                hList.innerHTML += '<div onclick="openUrl(\'' + url + '\')" class="ios-list-item justify-between cursor-pointer"><span class="truncate pr-4">' + url + '</span><i class="fa-solid fa-chevron-right text-gray-500"></i></div>';
+                hList.innerHTML += '<div onclick="openUrl(\'' + url + '\')" class="liquid-list-item justify-between cursor-pointer"><span class="truncate pr-4">' + url + '</span><i class="fa-solid fa-chevron-right text-gray-500"></i></div>';
             });
         }
         
@@ -939,7 +939,7 @@ object WebInterface {
 
             if (!filesArray || filesArray.length === 0) {
                 list.innerHTML = `
-                    <div class="col-span-full text-center py-20 text-[var(--ios-gray)]">
+                    <div class="col-span-full text-center py-20 text-[var(--liquid-gray)]">
                         <span class="text-sm">A pasta ou busca está vazia.</span>
                     </div>
                 `;
@@ -948,7 +948,7 @@ object WebInterface {
 
             filesArray.forEach(file => {
                 const card = document.createElement('div');
-                card.className = "ios-grid-item";
+                card.className = "liquid-grid-item";
                 
                 // Set up haptic touch event logic for Long Press menu
                 card.addEventListener('touchstart', (e) => {
@@ -977,41 +977,39 @@ object WebInterface {
                     } else {
                         requestOpenFile(file.path || file.absolutePath);
                     }
-                });
-
                 let iconClass = "fa-solid fa-file";
-                let iconColor = "text-[#8E8E93]"; // iOS Gray
+                let iconColor = "text-[#8E8E93]"; // Gray
                 let isImg = false;
 
                 const nameLower = file.name.toLowerCase();
                 const absolutePath = file.path || file.absolutePath;
                 if (file.isDirectory) {
                     iconClass = "fa-solid fa-folder";
-                    iconColor = "ios-folder";
+                    iconColor = "liquid-folder";
                 } else if (nameLower.endsWith('.apk')) {
                     iconClass = "fa-brands fa-android";
-                    iconColor = "text-[#34C759]"; // iOS Green
+                    iconColor = "text-[#34C759]"; // Green
                 } else if (['.mp4', '.mkv', '.webm', '.mov', '.avi', '.ts', '.m3u8'].some(el => nameLower.endsWith(el))) {
                     iconClass = "fa-solid fa-circle-play";
-                    iconColor = "text-[#AF52DE]"; // iOS Purple
+                    iconColor = "text-[#AF52DE]"; // Purple
                 } else if (['.mp3', '.wav', '.aac', '.flac', '.ogg', '.m4a'].some(el => nameLower.endsWith(el))) {
                     iconClass = "fa-solid fa-music";
-                    iconColor = "text-[#FF2D55]"; // iOS Pink
+                    iconColor = "text-[#FF2D55]"; // Pink
                 } else if (['.zip', '.rar', '.7z', '.tar', '.gz'].some(el => nameLower.endsWith(el))) {
                     iconClass = "fa-solid fa-file-zipper";
-                    iconColor = "text-[#FF9500]"; // iOS Amber
+                    iconColor = "text-[#FF9500]"; // Amber
                 } else if (nameLower.endsWith('.pdf')) {
                     iconClass = "fa-solid fa-file-pdf";
-                    iconColor = "text-[#FF3B30]"; // iOS Red
+                    iconColor = "text-[#FF3B30]"; // Red
                 } else if (['.txt', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.json', '.xml', '.html', '.css', '.js', '.kt'].some(el => nameLower.endsWith(el))) {
                     iconClass = "fa-solid fa-file-lines";
-                    iconColor = "text-[#0A84FF]"; // iOS Blue
+                    iconColor = "text-[#0A84FF]"; // Blue
                 } else if (['.jpg', '.jpeg', '.png', '.webp', '.gif'].some(el => nameLower.endsWith(el))) {
                     isImg = true;
                 }
 
                 let iconHtml = "";
-                let iconWrapperClass = "ios-icon-box";
+                let iconWrapperClass = "liquid-icon-box";
 
                 if (file.isDirectory) {
                     iconWrapperClass = "w-[65px] h-[65px] flex items-center justify-center mb-1.5 drop-shadow-md";
@@ -1019,7 +1017,7 @@ object WebInterface {
                 } else if (isImg) {
                     iconHtml = '<img src="/api/download?path=' + encodeURIComponent(absolutePath) + '" class="w-full h-full object-cover rounded shadow-sm">';
                 } else {
-                    iconWrapperClass = "ios-icon-box shadow-md";
+                    iconWrapperClass = "liquid-icon-box shadow-md";
                     iconHtml = '<i class="' + iconClass + ' ' + iconColor + ' text-3xl"></i>';
                 }
 
@@ -1031,8 +1029,8 @@ object WebInterface {
 '                            <div class="' + iconWrapperClass + '">\n' +
 '                                ' + iconHtml + '\n' +
 '                            </div>\n' +
-'                            <div class="ios-file-title text-[#E5E5E5] font-semibold tracking-wide">' + file.name + '</div>\n' +
-'                            <div class="ios-file-subtitle leading-tight text-[#989899]">' + subtitleLine + '</div>\n' +
+'                            <div class="liquid-file-title text-[#E5E5E5] font-semibold tracking-wide">' + file.name + '</div>\n' +
+'                            <div class="liquid-file-subtitle leading-tight text-[#989899]">' + subtitleLine + '</div>\n' +
 '                        ';
                 list.appendChild(card);
             });

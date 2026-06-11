@@ -399,7 +399,7 @@ class FileServer(private val context: Context) {
                                 
                                 val inject = """
                                     <style>
-                                    /* Premium iOS 18 / 26 Inspired Style Injection to force hide ads and banners */
+                                    /* Premium Liquid Glass Inspired Style Injection to force hide ads and banners */
                                     .ad, .ads, .ad-box, .advertisement, #ad-container, [id^=google_ads_],
                                     iframe[src*="doubleclick.net"], iframe[src*="adservice"], iframe[src*="popads"], iframe[src*="propeller"],
                                     .popunder, .widget-ad, .banner-ad, .taboola, .outbrain, .adsbygoogle,
