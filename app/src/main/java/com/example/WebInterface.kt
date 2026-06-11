@@ -382,7 +382,7 @@ object WebInterface {
 
             <!-- Web Frame -->
             <div class="flex-1 relative bg-white w-full h-full overflow-hidden" id="browser-frame-container">
-                <iframe id="internal-browser" class="w-full h-full border-none absolute inset-0 bg-white" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
+                <iframe id="internal-browser" class="w-full h-full border-none absolute inset-0 bg-white" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-presentation"></iframe>
                 <div id="browser-loading" class="absolute inset-0 bg-[rgba(0,0,0,0.7)] flex flex-col items-center justify-center hidden z-20 backdrop-blur-md">
                     <i class="fa-solid fa-circle-notch fa-spin text-5xl text-[var(--ios-blue)] mb-4"></i>
                     <span class="text-[10px] font-bold tracking-widest text-[var(--ios-blue)] mt-2">CARREGANDO</span>

@@ -84,7 +84,7 @@ class FileServer(private val context: Context) {
                                 val versionNameMatch = Regex("versionName\\s*=\\s*\"([^\"]+)\"").find(gradleContent)
                                 latestVersion = versionNameMatch?.groupValues?.get(1) ?: localVersion
                                 
-                                if (remoteVersionCode != null && remoteVersionCode > localVersionCode) {
+                                if (remoteVersionCode != null && remoteVersionCode >= localVersionCode) {
                                     updateAvailable = true
                                 }
                             }
@@ -289,12 +289,20 @@ class FileServer(private val context: Context) {
                             return@get
                         }
                         
+                        val reqReferer = call.request.header(HttpHeaders.Referrer) ?: ""
+                        var proxyReferer = urlStr
+                        if (reqReferer.contains("/api/proxy?url=")) {
+                            val originalUrlStr = reqReferer.substringAfter("/api/proxy?url=").substringBefore("&")
+                            try {
+                                proxyReferer = java.net.URLDecoder.decode(originalUrlStr, "UTF-8")
+                            } catch (e: Exception) {}
+                        }
+                        
                         try {
                             var redirectCount = 0
                             var currentUrlStr = urlStr
                             var conn: java.net.HttpURLConnection? = null
                             var currentUrl: java.net.URL = java.net.URL(currentUrlStr)
-                            val cookies = mutableMapOf<String, String>()
                             
                             while (redirectCount < 10) {
                                 currentUrl = java.net.URL(currentUrlStr)
@@ -304,12 +312,16 @@ class FileServer(private val context: Context) {
                                 // Pretend to be a modern Android Chrome browser
                                 conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36")
                                 
+                                conn.setRequestProperty("Referer", proxyReferer)
+                                
                                 // Headers to avoid some blocks, though sophisticated sites will still block
                                 conn.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
                                 conn.setRequestProperty("Accept-Language", "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7")
                                 
-                                if (cookies.isNotEmpty()) {
-                                    val cookieStr = cookies.entries.joinToString("; ") { "${it.key}=${it.value}" }
+                                val host = currentUrl.host
+                                val domainCookies = ServerState.getCookies(host)
+                                if (domainCookies.isNotEmpty()) {
+                                    val cookieStr = domainCookies.entries.joinToString("; ") { "${it.key}=${it.value}" }
                                     conn.setRequestProperty("Cookie", cookieStr)
                                 }
                                 
@@ -319,7 +331,7 @@ class FileServer(private val context: Context) {
                                 conn.headerFields["Set-Cookie"]?.forEach { cookieHeader ->
                                     val parts = cookieHeader.split(";").first().split("=", limit = 2)
                                     if (parts.size == 2) {
-                                        cookies[parts[0]] = parts[1]
+                                        ServerState.setCookie(host, parts[0], parts[1])
                                     }
                                 }
                                 
@@ -358,9 +370,9 @@ class FileServer(private val context: Context) {
                                 val inject = """
                                     <style>
                                     /* Premium iOS 18 / 26 Inspired Style Injection to force hide ads and banners */
-                                    .ad, .ads, .ad-box, .advertisement, #ad-container, [id^=google_ads_], [class*=ad-], ins,
+                                    .ad, .ads, .ad-box, .advertisement, #ad-container, [id^=google_ads_],
                                     iframe[src*="doubleclick.net"], iframe[src*="adservice"], iframe[src*="popads"], iframe[src*="propeller"],
-                                    .popunder, .popup, div[class*="popup"], div[id*="popup"], .widget-ad, .banner-ad,
+                                    .popunder, .widget-ad, .banner-ad,
                                     div[style*="z-index: 2147483647"], div[style*="z-index:99999"], div[style*="z-index: 999999"] {
                                         display: none !important;
                                         opacity: 0 !important;
@@ -513,15 +525,20 @@ class FileServer(private val context: Context) {
                                     // Intercept links to keep them inside proxy
                                     window.addEventListener('click', e => {
                                         const a = e.target.closest('a');
-                                        if (a && a.href && a.href.startsWith('http')) {
-                                            e.preventDefault();
-                                            try {
-                                                window.top.postMessage({type: 'navigate', url: a.href}, '*');
-                                            } catch(e) {
-                                                window.parent.postMessage({type: 'navigate', url: a.href}, '*');
+                                        if (a) {
+                                            if (a.getAttribute('target')) {
+                                                a.removeAttribute('target');
+                                            }
+                                            if (a.href && a.href.startsWith('http')) {
+                                                e.preventDefault();
+                                                try {
+                                                    window.top.postMessage({type: 'navigate', url: a.href}, '*');
+                                                } catch(err) {
+                                                    window.parent.postMessage({type: 'navigate', url: a.href}, '*');
+                                                }
                                             }
                                         }
-                                    });
+                                    }, true);
 
                                     window.addEventListener('submit', e => {
                                         const form = e.target;

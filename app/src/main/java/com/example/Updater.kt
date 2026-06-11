@@ -41,8 +41,8 @@ object Updater {
                             pInfo.versionCode.toLong()
                         }
                         
-                        // Compare the codes -> ONLY indicate update if remote is strictly greater
-                        return@withContext remoteVersionCode > localVersionCode
+                        // Compare the codes -> indicate update if remote is >= local
+                        return@withContext remoteVersionCode >= localVersionCode
                     }
                 }
             } catch (e: Exception) {

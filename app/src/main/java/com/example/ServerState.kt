@@ -16,6 +16,23 @@ object ServerState {
     private val _serverIp = MutableStateFlow("127.0.0.1")
     val serverIp: StateFlow<String> = _serverIp
 
+    private val globalCookies = mutableMapOf<String, MutableMap<String, String>>()
+    
+    fun getCookies(host: String): Map<String, String> {
+        val matchingCookies = mutableMapOf<String, String>()
+        globalCookies.forEach { (domain, domainCookies) ->
+            if (host.endsWith(domain)) {
+                matchingCookies.putAll(domainCookies)
+            }
+        }
+        return matchingCookies
+    }
+    
+    fun setCookie(host: String, name: String, value: String) {
+        val domainCookies = globalCookies.getOrPut(host) { mutableMapOf() }
+        domainCookies[name] = value
+    }
+
     val uploadNotification = MutableStateFlow<String?>(null)
 
     fun postUploadNotification(message: String) {
