@@ -294,20 +294,34 @@ class FileServer(private val context: Context) {
                             var currentUrlStr = urlStr
                             var conn: java.net.HttpURLConnection? = null
                             var currentUrl: java.net.URL = java.net.URL(currentUrlStr)
+                            val cookies = mutableMapOf<String, String>()
                             
                             while (redirectCount < 10) {
                                 currentUrl = java.net.URL(currentUrlStr)
                                 conn = currentUrl.openConnection() as java.net.HttpURLConnection
                                 conn.requestMethod = "GET"
                                 conn.instanceFollowRedirects = false
-                                // Pretend to be a mobile browser
-                                conn.setRequestProperty("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1")
+                                // Pretend to be a modern Android Chrome browser
+                                conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36")
                                 
                                 // Headers to avoid some blocks, though sophisticated sites will still block
                                 conn.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
                                 conn.setRequestProperty("Accept-Language", "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7")
                                 
+                                if (cookies.isNotEmpty()) {
+                                    val cookieStr = cookies.entries.joinToString("; ") { "${it.key}=${it.value}" }
+                                    conn.setRequestProperty("Cookie", cookieStr)
+                                }
+                                
                                 conn.connect()
+                                
+                                // Extract cookies
+                                conn.headerFields["Set-Cookie"]?.forEach { cookieHeader ->
+                                    val parts = cookieHeader.split(";").first().split("=", limit = 2)
+                                    if (parts.size == 2) {
+                                        cookies[parts[0]] = parts[1]
+                                    }
+                                }
                                 
                                 val status = conn.responseCode
                                 if (status == java.net.HttpURLConnection.HTTP_MOVED_TEMP

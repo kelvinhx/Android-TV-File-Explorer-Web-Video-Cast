@@ -649,8 +649,14 @@ object WebInterface {
         let sniffedVideoUrl = null;
         let isStartPage = false;
         
-        function toggleStartPage(forceShow = false) {
-            isStartPage = forceShow || !isStartPage;
+        function toggleStartPage(forceShow = null) {
+            if (forceShow === true) {
+                isStartPage = true;
+            } else if (forceShow === false) {
+                isStartPage = false;
+            } else {
+                isStartPage = !isStartPage;
+            }
             if (isStartPage) {
                 document.getElementById('browser-frame-container').classList.add('hidden');
                 document.getElementById('browser-start-page').classList.remove('hidden');
@@ -670,7 +676,7 @@ object WebInterface {
                 if(url.includes('.') && !url.includes(' ')) {
                     url = 'https://' + url;
                 } else {
-                    url = 'https://www.google.com/search?q=' + encodeURIComponent(url);
+                    url = 'https://html.duckduckgo.com/html/?q=' + encodeURIComponent(url);
                 }
             }
             
