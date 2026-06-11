@@ -67,6 +67,7 @@ object AppState {
     val browserUrl = MutableStateFlow<String?>(null)
     val isDarkTheme = MutableStateFlow(true)
     val isGridLayout = MutableStateFlow(true)
+    val tvSearchQuery = MutableStateFlow("")
 }
 
 class MainActivity : ComponentActivity() {
@@ -332,7 +333,407 @@ fun PhoneDiscoveryScreen(modifier: Modifier = Modifier) {
         Spacer(modifier = Modifier.height(16.dp))
         Text("Procurando Nexus TV na rede local...", color = Color.White, fontSize = 16.sp)
         Spacer(modifier = Modifier.height(8.dp))
-        Text("Certifique-se de que a TV está conectada ao mesmo Wi-Fi.", color = Color.Gray, fontSize = 12.sp)
+    }
+}
+
+data class DetailedStorageStats(
+    val title: String,
+    val path: String,
+    val freeBytes: Long,
+    val totalBytes: Long,
+    val freeFormatted: String,
+    val totalFormatted: String,
+    val usedFormatted: String,
+    val percentUsed: Float
+)
+
+fun getDetailedRamStats(context: Context): DetailedStorageStats {
+    val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+    val memoryInfo = android.app.ActivityManager.MemoryInfo()
+    activityManager.getMemoryInfo(memoryInfo)
+    val total = memoryInfo.totalMem
+    val free = memoryInfo.availMem
+    val used = total - free
+    val pct = if (total > 0) used.toFloat() / total.toFloat() else 0f
+    
+    return DetailedStorageStats(
+        title = "Memória RAM",
+        path = "Sistema",
+        freeBytes = free,
+        totalBytes = total,
+        freeFormatted = formatTvFileSize(free),
+        totalFormatted = formatTvFileSize(total),
+        usedFormatted = formatTvFileSize(used),
+        percentUsed = pct
+    )
+}
+
+fun getDetailedStorageStats(title: String, path: String): DetailedStorageStats {
+    return try {
+        val stat = android.os.StatFs(path)
+        val blockSize = stat.blockSizeLong
+        val totalBlocks = stat.blockCountLong
+        val availableBlocks = stat.availableBlocksLong
+        
+        val total = totalBlocks * blockSize
+        val free = availableBlocks * blockSize
+        val used = total - free
+        val pct = if (total > 0) used.toFloat() / total.toFloat() else 0f
+        
+        DetailedStorageStats(
+            title = title,
+            path = path,
+            freeBytes = free,
+            totalBytes = total,
+            freeFormatted = formatTvFileSize(free),
+            totalFormatted = formatTvFileSize(total),
+            usedFormatted = formatTvFileSize(used),
+            percentUsed = pct
+        )
+    } catch (e: Exception) {
+        DetailedStorageStats(
+            title = title,
+            path = path,
+            freeBytes = 0L,
+            totalBytes = 1L,
+            freeFormatted = "0 B",
+            totalFormatted = "0 B",
+            usedFormatted = "0 B",
+            percentUsed = 0f
+        )
+    }
+}
+
+@Composable
+fun TvDashboardStorageCard(
+    stats: DetailedStorageStats,
+    icon: ImageVector,
+    barColor: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var isFocused by remember { mutableStateOf(false) }
+    val scale = animateFloatAsState(targetValue = if (isFocused) 1.04f else 1.0f).value
+    val outlineColor = if (isFocused) Color(0xFF007AFF) else Color.Transparent
+    val isSystemOnly = stats.title == "Memória RAM"
+
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = if (isFocused) Color(0xFF2C2C2E) else Color(0xFF1C1C1E)
+        ),
+        shape = RoundedCornerShape(16.dp),
+        border = if (isFocused) BorderStroke(2.dp, outlineColor) else null,
+        modifier = modifier
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .onFocusChanged { isFocused = it.isFocused }
+            .focusable()
+            .clickable(enabled = !isSystemOnly) { onClick() }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stats.title,
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = if (isSystemOnly) "Memória Volátil" else stats.path,
+                        color = Color.Gray,
+                        fontSize = 11.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(barColor.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = barColor,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Text(
+                text = "${stats.usedFormatted} usados de ${stats.totalFormatted}",
+                color = Color.LightGray,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF2C2C2E))
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .fillMaxWidth(fraction = stats.percentUsed.coerceIn(0f, 1f))
+                        .clip(CircleShape)
+                        .background(barColor)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            val freePct = ((1f - stats.percentUsed) * 100).toInt()
+            Text(
+                text = "${freePct}% livre (${stats.freeFormatted} disponíveis)",
+                color = barColor,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+    }
+}
+
+@Composable
+fun TvDashboardCategoryCard(
+    title: String,
+    color: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var isFocused by remember { mutableStateOf(false) }
+    val scale = animateFloatAsState(targetValue = if (isFocused) 1.04f else 1.0f).value
+    val outlineColor = if (isFocused) Color(0xFF007AFF) else Color.Transparent
+
+    val icon = when (title) {
+        "Vídeos" -> Icons.Default.PlayArrow
+        "Músicas" -> Icons.Default.Star
+        "Fotos" -> Icons.Default.Info
+        "APKs" -> Icons.Default.Build
+        "Documentos" -> Icons.Default.List
+        else -> Icons.Default.Share
+    }
+
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = if (isFocused) Color(0xFF2C2C2E) else Color(0xFF1C1C1E)
+        ),
+        shape = RoundedCornerShape(14.dp),
+        border = if (isFocused) BorderStroke(2.dp, outlineColor) else null,
+        modifier = modifier
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .onFocusChanged { isFocused = it.isFocused }
+            .focusable()
+            .clickable { onClick() }
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(46.dp)
+                    .clip(CircleShape)
+                    .background(color.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = color,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
+                Text(
+                    text = title,
+                    color = Color.White,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                val desc = when (title) {
+                    "Vídeos" -> "Filmes, vídeos e gravações"
+                    "Músicas" -> "Faixas de áudio e músicas"
+                    "Fotos" -> "Imagens e capturas"
+                    "APKs" -> "Instaladores de aplicativos"
+                    "Documentos" -> "PDF, TXT e documentos"
+                    else -> "Pasta de downloads"
+                }
+                Text(
+                    text = desc,
+                    color = Color.Gray,
+                    fontSize = 11.sp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun TvHomeDashboardScreen(
+    context: Context,
+    onNavigateToPath: (String) -> Unit,
+    onSearchCategory: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var ramStats by remember { mutableStateOf(getDetailedRamStats(context)) }
+    var storageStats by remember { mutableStateOf(getDetailedStorageStats("Armazenamento Interno", "/storage/emulated/0")) }
+    val externalStorages = remember { FileUtils.getExternalStorageRoots(context) }
+    var usbStatsList by remember { mutableStateOf<List<DetailedStorageStats>>(emptyList()) }
+
+    LaunchedEffect(Unit) {
+        while(true) {
+            ramStats = getDetailedRamStats(context)
+            storageStats = getDetailedStorageStats("Armazenamento Interno", "/storage/emulated/0")
+            usbStatsList = externalStorages.filter { it != "/storage/emulated/0" }.mapIndexed { index, path ->
+                getDetailedStorageStats("USB $index", path)
+            }
+            delay(5000)
+        }
+    }
+
+    LazyColumn(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 32.dp, vertical = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(30.dp),
+        contentPadding = PaddingValues(bottom = 64.dp)
+    ) {
+        item {
+            Column {
+                Text(
+                    text = "Arquivos da TV",
+                    color = Color.White,
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = (-0.5).sp
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Gerenciador iOS 26 • Conectado à sua TV local",
+                    color = Color.Gray,
+                    fontSize = 14.sp
+                )
+            }
+        }
+
+        item {
+            Column {
+                Text(
+                    text = "Armazenamento",
+                    color = Color.LightGray,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    TvDashboardStorageCard(
+                        stats = storageStats,
+                        icon = Icons.Default.Home,
+                        barColor = Color(0xFF007AFF),
+                        onClick = { onNavigateToPath("/storage/emulated/0") },
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    TvDashboardStorageCard(
+                        stats = ramStats,
+                        icon = Icons.Default.Info,
+                        barColor = Color(0xFFAF52DE),
+                        onClick = { },
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    if (usbStatsList.isNotEmpty()) {
+                        usbStatsList.forEach { usb ->
+                            TvDashboardStorageCard(
+                                stats = usb,
+                                icon = Icons.Default.List,
+                                barColor = Color(0xFF34C759),
+                                onClick = { onNavigateToPath(usb.path) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            Column {
+                Text(
+                    text = "Biblioteca",
+                    color = Color.LightGray,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+
+                val categories = listOf(
+                    Triple("Vídeos", "mp4", Color(0xFFFF453A)),
+                    Triple("Músicas", "mp3", Color(0xFF30D158)),
+                    Triple("Fotos", "jpg", Color(0xFFFF9F0A)),
+                    Triple("APKs", "apk", Color(0xFFBF5AF2)),
+                    Triple("Documentos", "pdf", Color(0xFF64D2FF)),
+                    Triple("Downloads", "Download", Color(0xFF0A84FF))
+                )
+
+                val chunked = categories.chunked(3)
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    chunked.forEach { rowItems ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            rowItems.forEach { cat ->
+                                TvDashboardCategoryCard(
+                                    title = cat.first,
+                                    color = cat.third,
+                                    onClick = {
+                                        if (cat.first == "Downloads") {
+                                            onNavigateToPath("/storage/emulated/0/Download")
+                                        } else {
+                                            onSearchCategory(cat.second)
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -444,6 +845,7 @@ fun TvDashboardScreen(
     }
 
     var selectedSidebarItem by remember { mutableStateOf("On My TV") }
+    var tvBrowsingPath by remember { mutableStateOf<String?>(null) }
     val isDarkTheme by AppState.isDarkTheme.collectAsState()
     val externalDirs = remember { FileUtils.getExternalStorageRoots(context) }
     
@@ -477,7 +879,7 @@ fun TvDashboardScreen(
                 text = "Na minha TV",
                 icon = Icons.Default.Home,
                 isSelected = selectedSidebarItem == "On My TV",
-                onClick = { selectedSidebarItem = "On My TV" }
+                onClick = { tvBrowsingPath = null; selectedSidebarItem = "On My TV" }
             )
             
             externalDirs.forEachIndexed { index, path ->
@@ -487,7 +889,7 @@ fun TvDashboardScreen(
                         text = "USB ${index}",
                         icon = Icons.Default.List,
                         isSelected = selectedSidebarItem == "USB_$index",
-                        onClick = { AppState.browserUrl.value = null; selectedSidebarItem = "USB_$index" }
+                        onClick = { AppState.browserUrl.value = null; selectedSidebarItem = "USB_$index"; tvBrowsingPath = path }
                     )
                 }
             }
@@ -551,11 +953,32 @@ fun TvDashboardScreen(
                         } else {
                             "/storage/emulated/0"
                         }
-                        TvFilesBrowser(
-                            context = context,
-                            basePath = path,
-                            onRequestAndroidDataPermission = onRequestAndroidDataPermission
-                        )
+
+                        if (selectedSidebarItem == "On My TV" && tvBrowsingPath == null) {
+                            TvHomeDashboardScreen(
+                                context = context,
+                                onNavigateToPath = { target ->
+                                    tvBrowsingPath = target
+                                },
+                                onSearchCategory = { ext ->
+                                    AppState.tvSearchQuery.value = ext
+                                    selectedSidebarItem = "Search"
+                                }
+                            )
+                        } else {
+                            val currentRoutePath = tvBrowsingPath ?: path
+                            TvFilesBrowser(
+                                context = context,
+                                basePath = currentRoutePath,
+                                onRequestAndroidDataPermission = onRequestAndroidDataPermission,
+                                onBackToDashboard = {
+                                    if (selectedSidebarItem.startsWith("USB_")) {
+                                        selectedSidebarItem = "On My TV"
+                                    }
+                                    tvBrowsingPath = null
+                                }
+                            )
+                        }
                     } else {
                         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -916,6 +1339,15 @@ fun IosFileIcon(modifier: Modifier = Modifier, extension: String) {
 @Composable
 fun TvSearchScreen(context: Context) {
     var query by remember { mutableStateOf("") }
+    val globalSearchQuery by AppState.tvSearchQuery.collectAsState()
+    
+    LaunchedEffect(globalSearchQuery) {
+        if (globalSearchQuery.isNotEmpty()) {
+            query = globalSearchQuery
+            AppState.tvSearchQuery.value = ""
+        }
+    }
+    
     var results by remember { mutableStateOf<List<UnifiedFile>?>(null) }
     var isSearching by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
@@ -1013,7 +1445,8 @@ fun TvSearchScreen(context: Context) {
 fun TvFilesBrowser(
     context: Context,
     basePath: String = "/storage/emulated/0",
-    onRequestAndroidDataPermission: () -> Unit
+    onRequestAndroidDataPermission: () -> Unit,
+    onBackToDashboard: (() -> Unit)? = null
 ) {
     var currentPath by remember { mutableStateOf(basePath) }
     
@@ -1098,6 +1531,16 @@ fun TvFilesBrowser(
                         } else {
                             currentPath = "/storage/emulated/0"
                         }
+                    }
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+            } else if (onBackToDashboard != null) {
+                DpadTvButton(
+                    text = "Voltar",
+                    icon = Icons.Default.ArrowBack,
+                    tint = AppConfig.PrimaryBlue,
+                    onClick = {
+                        onBackToDashboard()
                     }
                 )
                 Spacer(modifier = Modifier.width(16.dp))
