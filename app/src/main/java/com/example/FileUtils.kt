@@ -290,11 +290,21 @@ object FileUtils {
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
-            context.startActivity(intent)
-            Logger.log("Successfully dispatched View Intent for: $path")
-            true
+            try {
+                context.startActivity(intent)
+                Logger.log("Successfully dispatched View Intent for: $path")
+                true
+            } catch (e: android.content.ActivityNotFoundException) {
+                Logger.log("No default app found for $mime. Falling back to chooser.")
+                val chooser = Intent.createChooser(intent, "Abrir com").apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(chooser)
+                true
+            }
         } catch (e: Exception) {
             Logger.log("Failed to open file: ${e.message}")
+            android.widget.Toast.makeText(context, "Erro ao abrir: Nenhum app suportado encontrado.", android.widget.Toast.LENGTH_LONG).show()
             false
         }
     }

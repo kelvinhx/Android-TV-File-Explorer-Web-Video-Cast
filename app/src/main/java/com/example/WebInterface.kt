@@ -794,7 +794,9 @@ object WebInterface {
                             } else {
                                 requestOpenFile(file.absolutePath);
                             }
-                                        let iconClass = "fa-solid fa-file";
+                        });
+
+                        let iconClass = "fa-solid fa-file";
                         let iconColor = "text-[#8E8E93]"; // iOS Gray
                         let isImg = false;
 

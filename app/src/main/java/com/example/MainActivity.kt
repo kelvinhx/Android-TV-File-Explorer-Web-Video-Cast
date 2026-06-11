@@ -77,9 +77,12 @@ class MainActivity : ComponentActivity() {
                         Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                 contentResolver.takePersistableUriPermission(uri, takeFlags)
                 Logger.log("Android/data folder permission granted successfully!")
+                android.widget.Toast.makeText(this, "Permissão concedida!", android.widget.Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
                 Logger.log("Failed to persist Android/data folder permission: ${e.message}")
             }
+        } else {
+            android.widget.Toast.makeText(this, "Permissão negada ou bloqueada pelo Android 13+", android.widget.Toast.LENGTH_LONG).show()
         }
     }
 
@@ -777,8 +780,11 @@ fun TvFilesBrowser(
                         TvFileGridItem(
                             file = file,
                             onClick = {
-                                fileToManage = file
-                                showContextMenu = true
+                                if (file.isDirectory) {
+                                    currentPath = file.absolutePath
+                                } else {
+                                    FileUtils.openFile(context, file.absolutePath)
+                                }
                             },
                             onLongClick = {
                                 fileToManage = file
@@ -1125,10 +1131,36 @@ fun TvFileGridItem(file: UnifiedFile, onClick: () -> Unit, onLongClick: () -> Un
             .clip(RoundedCornerShape(12.dp))
             .background(if (isFocused) Color(0xFF2C2C2E) else Color.Transparent)
             .onFocusChanged { isFocused = it.isFocused }
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongClick
-            )
+            .focusable()
+            .onKeyEvent { keyEvent ->
+                if (keyEvent.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN) {
+                    when (keyEvent.nativeKeyEvent.keyCode) {
+                        android.view.KeyEvent.KEYCODE_DPAD_CENTER,
+                        android.view.KeyEvent.KEYCODE_ENTER,
+                        android.view.KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                            if (keyEvent.nativeKeyEvent.repeatCount == 0) {
+                                onClick()
+                                true
+                            } else {
+                                false
+                            }
+                        }
+                        android.view.KeyEvent.KEYCODE_MENU -> {
+                            onLongClick()
+                            true
+                        }
+                        else -> false
+                    }
+                } else if (keyEvent.nativeKeyEvent.action == android.view.KeyEvent.ACTION_UP) {
+                    if (keyEvent.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_CENTER) {
+                        if (keyEvent.nativeKeyEvent.flags and android.view.KeyEvent.FLAG_LONG_PRESS != 0) {
+                            onLongClick()
+                            true
+                        } else false
+                    } else false
+                } else false
+            }
+            .clickable(onClick = onClick)
             .border(if (isFocused) BorderStroke(2.dp, Color.White) else BorderStroke(0.dp, Color.Transparent), RoundedCornerShape(12.dp))
             .padding(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
