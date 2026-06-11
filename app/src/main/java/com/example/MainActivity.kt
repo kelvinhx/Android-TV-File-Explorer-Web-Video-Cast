@@ -531,39 +531,62 @@ fun TvDashboardScreen(
                                 onClick = {
                                     if (!isUpdating) {
                                         isUpdating = true
-                                        // Usar nightly.link para acessar artefatos do GitHub Actions sem autenticação
                                         val repoOwner = "kelvinhx"
                                         val repoName = "Android-TV-File-Explorer-Web-Video-Cast"
-                                        val workflowFile = "build.yml"
-                                        val branch = "main"
                                         val artifactName = "app-debug"
                                         
                                         scope.launch {
-                                            Updater.downloadExtractAndInstall(
-                                                context = context,
-                                                repoOwner = repoOwner,
-                                                repoName = repoName,
-                                                artifactName = artifactName,
-                                                onProgress = { msg ->
-                                                    updateMessage = msg
-                                                    if (msg.isEmpty() || msg.startsWith("Erro") || msg.startsWith("Iniciando")) {
-                                                        if (msg.isEmpty() || msg.startsWith("Iniciando")) {
-                                                            isUpdating = false
-                                                        } else {
-                                                            // leave error visible briefly, then revert
-                                                            scope.launch {
-                                                                kotlinx.coroutines.delay(4000)
-                                                                if (updateMessage == msg) {
-                                                                    isUpdating = false
+                                            updateMessage = "Verificando se há atualizações no GitHub..."
+                                            val isAvailable = Updater.isUpdateAvailable(context)
+                                            if (isAvailable) {
+                                                Updater.downloadExtractAndInstall(
+                                                    context = context,
+                                                    repoOwner = repoOwner,
+                                                    repoName = repoName,
+                                                    artifactName = artifactName,
+                                                    onProgress = { msg ->
+                                                        updateMessage = msg
+                                                        if (msg.isEmpty() || msg.startsWith("Erro") || msg.startsWith("Iniciando")) {
+                                                            if (msg.isEmpty() || msg.startsWith("Iniciando")) {
+                                                                isUpdating = false
+                                                            } else {
+                                                                scope.launch {
+                                                                    kotlinx.coroutines.delay(4000)
+                                                                    if (updateMessage == msg) {
+                                                                        isUpdating = false
+                                                                    }
                                                                 }
                                                             }
                                                         }
                                                     }
+                                                )
+                                            } else {
+                                                updateMessage = "O aplicativo já está na versão mais recente!"
+                                                scope.launch {
+                                                    kotlinx.coroutines.delay(4000)
+                                                    isUpdating = false
                                                 }
-                                            )
+                                            }
                                         }
                                     }
                                 }
+                            )
+                            
+                            Spacer(modifier = Modifier.height(16.dp))
+                            
+                            val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+                            val localVersionName = pInfo.versionName ?: "1.0"
+                            val localVersionCode = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                                pInfo.longVersionCode
+                            } else {
+                                pInfo.versionCode.toLong()
+                            }
+                            
+                            Text(
+                                "Versão: $localVersionName (Build $localVersionCode)", 
+                                color = Color.Gray, 
+                                fontSize = 12.sp,
+                                modifier = Modifier.padding(top = 8.dp)
                             )
                             
                             if (isUpdating) {

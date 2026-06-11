@@ -382,7 +382,7 @@ class FileServer(private val context: Context) {
                                             lower.includes('supervideo') || lower.includes('pobreflix') || lower.includes('megacloud') ||
                                             lower.includes('gdriveplayer') || lower.includes('uqload') || lower.includes('voe.sx') ||
                                             lower.includes('/api/source/') || lower.includes('manifest.mpd') || lower.includes('master.m3u8') ||
-                                            lower.includes('/get_video') || lower.includes('blob:http')
+                                            lower.includes('/get_video') || lower.includes('/playlist.m3u8') || lower.includes('blob:http')
                                         ) {
                                             return true;
                                         }
@@ -390,9 +390,13 @@ class FileServer(private val context: Context) {
                                     };
 
                                     const notifyParent = (src) => {
-                                        if(src && isVideoUrl(src)) {
+                                        if (src && isVideoUrl(src)) {
                                             console.log("Sniffed Video URL:", src);
-                                            window.parent.postMessage({type: 'video_found', url: src}, '*');
+                                            try {
+                                                window.top.postMessage({type: 'video_found', url: src}, '*');
+                                            } catch(e) {
+                                                window.parent.postMessage({type: 'video_found', url: src}, '*');
+                                            }
                                         }
                                     };
 
@@ -511,7 +515,11 @@ class FileServer(private val context: Context) {
                                         const a = e.target.closest('a');
                                         if (a && a.href && a.href.startsWith('http')) {
                                             e.preventDefault();
-                                            window.parent.postMessage({type: 'navigate', url: a.href}, '*');
+                                            try {
+                                                window.top.postMessage({type: 'navigate', url: a.href}, '*');
+                                            } catch(e) {
+                                                window.parent.postMessage({type: 'navigate', url: a.href}, '*');
+                                            }
                                         }
                                     });
 
@@ -520,25 +528,15 @@ class FileServer(private val context: Context) {
                                         if (form && form.action) {
                                             e.preventDefault();
                                             let action = form.action.startsWith('http') ? form.action : new URL(form.action, window.location.href).href;
-                                            if (form.method.toUpperCase() === 'GET') {
-                                                const formData = new FormData(form);
-                                                const params = new URLSearchParams(formData);
-                                                let urlObj = new URL(action);
-                                                for (const [key, value] of params.entries()) {
-                                                    urlObj.searchParams.append(key, value);
-                                                }
-                                                window.parent.postMessage({type: 'navigate', url: urlObj.href}, '*');
-                                            } else {
-                                                // Support POST if needed, but DuckDuckGo lite uses POST and requires form-urlencoded data. We can pass it to a proxy POST endpoint, 
-                                                // or just fallback to GET for duckduckgo lite. Duckduckgo lite search form actually uses POST.
-                                                // Let's proxy all forms as GETs just in case, or inform the parent to use POST.
-                                                // Actually duckduckgo /lite/ supports GET !q=... 
-                                                const formData = new FormData(form);
-                                                const params = new URLSearchParams(formData);
-                                                let urlObj = new URL(action);
-                                                for (const [key, value] of params.entries()) {
-                                                    urlObj.searchParams.append(key, value);
-                                                }
+                                            const formData = new FormData(form);
+                                            const params = new URLSearchParams(formData);
+                                            let urlObj = new URL(action);
+                                            for (const [key, value] of params.entries()) {
+                                                urlObj.searchParams.append(key, value);
+                                            }
+                                            try {
+                                                window.top.postMessage({type: 'navigate', url: urlObj.href}, '*');
+                                            } catch(e) {
                                                 window.parent.postMessage({type: 'navigate', url: urlObj.href}, '*');
                                             }
                                         }
@@ -710,6 +708,42 @@ class FileServer(private val context: Context) {
                         } catch (e: Exception) {
                             Logger.log("Upload failed: ${e.message}")
                             call.respondText(JSONObject().put("status", "error").put("message", e.message).toString(), ContentType.Application.Json)
+                        }
+                    }
+
+                    get("/{...}") {
+                        val path = call.request.path()
+                        val referer = call.request.header(HttpHeaders.Referrer) ?: ""
+                        if (referer.contains("/api/proxy?url=")) {
+                            val originalUrlStr = referer.substringAfter("/api/proxy?url=").substringBefore("&")
+                            try {
+                                val decodedUrl = java.net.URLDecoder.decode(originalUrlStr, "UTF-8")
+                                val baseUri = java.net.URI(decodedUrl)
+                                val targetUri = baseUri.resolve(path).toString()
+                                call.respondRedirect("/api/proxy?url=" + java.net.URLEncoder.encode(targetUri, "UTF-8"))
+                            } catch (e: Exception) {
+                                call.respond(HttpStatusCode.NotFound)
+                            }
+                        } else {
+                            call.respond(HttpStatusCode.NotFound)
+                        }
+                    }
+
+                    post("/{...}") {
+                        val path = call.request.path()
+                        val referer = call.request.header(HttpHeaders.Referrer) ?: ""
+                        if (referer.contains("/api/proxy?url=")) {
+                            val originalUrlStr = referer.substringAfter("/api/proxy?url=").substringBefore("&")
+                            try {
+                                val decodedUrl = java.net.URLDecoder.decode(originalUrlStr, "UTF-8")
+                                val baseUri = java.net.URI(decodedUrl)
+                                val targetUri = baseUri.resolve(path).toString()
+                                call.respondRedirect("/api/proxy?url=" + java.net.URLEncoder.encode(targetUri, "UTF-8")) // fallback to GET
+                            } catch (e: Exception) {
+                                call.respond(HttpStatusCode.NotFound)
+                            }
+                        } else {
+                            call.respond(HttpStatusCode.NotFound)
                         }
                     }
                 }
