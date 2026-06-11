@@ -188,6 +188,8 @@ fun TvDashboardScreen(
     val context = LocalContext.current
     var hasStoragePermission by remember { mutableStateOf(false) }
 
+    val uploadNotification by ServerState.uploadNotification.collectAsState()
+
     LaunchedEffect(Unit) {
         while (true) {
             hasStoragePermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -196,6 +198,13 @@ fun TvDashboardScreen(
                 ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
             }
             delay(2000)
+        }
+    }
+
+    LaunchedEffect(uploadNotification) {
+        if (!uploadNotification.isNullOrEmpty()) {
+            delay(6000)
+            ServerState.postUploadNotification("")
         }
     }
 
@@ -292,6 +301,46 @@ fun TvDashboardScreen(
                                 tint = AppConfig.AccentGold,
                                 onClick = onRequestPermissions
                             )
+                        }
+                    }
+                }
+            }
+
+            androidx.compose.animation.AnimatedVisibility(
+                visible = !uploadNotification.isNullOrEmpty(),
+                enter = fadeIn() + slideInVertically(initialOffsetY = { -it }),
+                exit = fadeOut() + slideOutVertically(targetOffsetY = { -it }),
+                modifier = Modifier.align(Alignment.TopCenter)
+            ) {
+                uploadNotification?.let { msg ->
+                    if (msg.isNotEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .padding(top = 24.dp)
+                                .clip(RoundedCornerShape(32.dp))
+                                .background(Color(0xFF1C1C1E).copy(alpha = 0.95f))
+                                .border(BorderStroke(1.5.dp, Color(0xFF007AFF)), RoundedCornerShape(32.dp))
+                                .shadow(12.dp, RoundedCornerShape(32.dp))
+                                .padding(vertical = 12.dp, horizontal = 24.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = Color(0xFF34C759),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = msg,
+                                    color = Color.White,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
                 }
@@ -421,7 +470,7 @@ fun TvFileGridItem(file: File, onClick: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         val icon = if (file.isDirectory) Icons.Default.List else Icons.Default.Info
-        val iconTint = if (file.isDirectory) Color(0xFF81D4FA) else Color.Gray
+        val iconTint = if (file.isDirectory) Color(0xFF007AFF) else Color(0xFF8E8E93)
 
         Box(
             modifier = Modifier

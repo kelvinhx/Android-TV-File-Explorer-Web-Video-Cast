@@ -292,7 +292,10 @@ object WebInterface {
 
     <!-- Header -->
     <header class="ios-header" id="main-header">
-        <span>Browse</span>
+        <div class="flex items-center gap-2">
+            <span>Browse</span>
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-[pulse_1.5s_infinite] shadow-[0_0_8px_#10b981]" title="Connected to TV"></span>
+        </div>
         <button class="text-[var(--ios-blue)] text-lg" onclick="openSettingsModal()"><i class="fa-solid fa-ellipsis-circle"></i></button>
     </header>
 
@@ -312,8 +315,30 @@ object WebInterface {
         <div id="view-files">
             <div class="search-bar">
                 <i class="fa-solid fa-magnifying-glass"></i>
-                <input type="text" placeholder="Search">
+                <input type="text" id="search-input" placeholder="Search files...">
                 <i class="fa-solid fa-microphone"></i>
+            </div>
+
+            <!-- TV Health status bar -->
+            <div id="tv-status-bar" class="grid grid-cols-2 gap-3 mx-4 mb-4">
+                <div class="bg-[var(--ios-card)] px-3 py-2.5 rounded-xl border border-[rgba(255,255,255,0.05)] flex items-center justify-between">
+                    <div>
+                        <div class="text-[10px] text-[var(--ios-gray)] font-semibold uppercase tracking-wider">TV Memory</div>
+                        <div class="text-[12px] font-bold mt-0.5 text-white" id="tv-ram-badge">RAM Loaded</div>
+                    </div>
+                    <div class="w-8 h-8 rounded-full border-2 border-stone-800 flex items-center justify-center text-[9px] font-extrabold text-[var(--ios-blue)]" id="tv-ram-ring">
+                        --
+                    </div>
+                </div>
+                <div class="bg-[var(--ios-card)] px-3 py-2.5 rounded-xl border border-[rgba(255,255,255,0.05)] flex items-center justify-between">
+                    <div>
+                        <div class="text-[10px] text-[var(--ios-gray)] font-semibold uppercase tracking-wider">TV Storage</div>
+                        <div class="text-[11px] font-bold mt-0.5 text-emerald-400 truncate max-w-[80px]" id="tv-storage-badge">Disk Status</div>
+                    </div>
+                    <div class="w-8 h-8 rounded-full border-2 border-stone-800 flex items-center justify-center text-[9px] font-extrabold text-[#34C759]" id="tv-storage-ring">
+                        --
+                    </div>
+                </div>
             </div>
             
             <div id="upload-progress-container" class="hidden ios-list mb-4 p-4 text-sm font-medium">
@@ -422,23 +447,68 @@ object WebInterface {
         
         <button onclick="execContextAction('OPEN')" class="context-item">
             <span>Play on TV</span>
-            <i class="fa-solid fa-play"></i>
+            <i class="fa-solid fa-play text-[var(--ios-blue)]"></i>
+        </button>
+        <div class="h-[1px] bg-[rgba(255,255,255,0.1)] w-full"></div>
+        <button onclick="execContextAction('STREAM')" class="context-item">
+            <span>View on iPhone</span>
+            <i class="fa-solid fa-mobile-screen-button text-purple-400"></i>
         </button>
         <div class="h-[1px] bg-[rgba(255,255,255,0.1)] w-full"></div>
         <button id="context-download-btn" onclick="execContextAction('DOWNLOAD')" class="context-item">
             <span>Download</span>
-            <i class="fa-solid fa-cloud-arrow-down"></i>
+            <i class="fa-solid fa-cloud-arrow-down text-emerald-400"></i>
+        </button>
+        <div class="h-[1px] bg-[rgba(255,255,255,0.1)] w-full"></div>
+        <button onclick="execContextAction('CUT')" class="context-item">
+            <span>Cut (Recortar)</span>
+            <i class="fa-solid fa-scissors text-amber-500"></i>
+        </button>
+        <div class="h-[1px] bg-[rgba(255,255,255,0.1)] w-full"></div>
+        <button onclick="execContextAction('COPY')" class="context-item">
+            <span>Copy (Copiar)</span>
+            <i class="fa-solid fa-copy text-teal-400"></i>
         </button>
         <div class="h-[1px] bg-[rgba(255,255,255,0.1)] w-full"></div>
         <button onclick="execContextAction('RENAME')" class="context-item">
             <span>Rename</span>
-            <i class="fa-solid fa-pen"></i>
+            <i class="fa-solid fa-pen text-sky-400"></i>
         </button>
         <div class="h-[1px] bg-[rgba(255,255,255,0.1)] w-full"></div>
         <button onclick="execContextAction('DELETE')" class="context-item danger">
             <span>Delete</span>
-            <i class="fa-solid fa-trash-can"></i>
+            <i class="fa-solid fa-trash-can text-red-500"></i>
         </button>
+    </div>
+
+    <!-- Floating Clipboard Bar -->
+    <div id="clipboard-bar" class="hidden fixed bottom-24 left-4 right-4 bg-[#1C1C1E] border border-[var(--ios-blue)] rounded-xl p-3 flex justify-between items-center shadow-2xl z-50">
+        <div class="flex items-center gap-3">
+            <i class="fa-solid fa-scissors text-[var(--ios-blue)] text-lg animate-pulse" id="clipboard-icon"></i>
+            <div class="text-xs">
+                <div class="font-bold text-white text-ellipsis overflow-hidden max-w-[150px]" id="clipboard-item-name">Item</div>
+                <div class="text-gray-400" id="clipboard-mode-text">Ready to move</div>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="clearClipboard()" class="bg-stone-800 text-stone-300 font-semibold px-3 py-1.5 rounded-lg text-xs">Cancel</button>
+            <button onclick="pasteClipboard()" class="bg-[var(--ios-blue)] text-white font-semibold px-4 py-1.5 rounded-lg text-xs flex items-center gap-1">
+                <i class="fa-solid fa-paste"></i>
+                <span>Paste</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Streaming Video/Audio Player & ImageViewer Modal Sheet -->
+    <div id="media-modal" class="modal-overlay" onclick="closeMediaModal(event)">
+        <div class="modal-sheet" onclick="event.stopPropagation()">
+            <div class="w-10 h-1.5 bg-[var(--ios-gray)] rounded-full mx-auto mb-4"></div>
+            <h3 class="text-lg font-bold mb-3 text-center truncate" id="media-title">Streaming File</h3>
+            <div class="bg-black rounded-xl overflow-hidden w-full flex items-center justify-center min-h-[220px]" id="media-container">
+                <!-- Dynamic target player goes here -->
+            </div>
+            <button onclick="closeMediaModal('close')" class="w-full bg-[var(--ios-card-hover)] py-3 rounded-xl text-white font-bold text-lg mt-6">Close Player</button>
+        </div>
     </div>
 
     <!-- Settings Modal Sheet -->
@@ -465,14 +535,29 @@ object WebInterface {
         let activeView = "files";
         let longPressTimer = null;
         let isLongPressActive = false;
+        let clipboard = null; // Stores { action: 'COPY'|'MOVE', path: '..', name: '..' }
 
         document.addEventListener('DOMContentLoaded', () => {
             fetchFiles();
             
+            // Real-time search filter
+            document.getElementById('search-input').addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase().trim();
+                const items = document.querySelectorAll('.ios-grid-item');
+                items.forEach(item => {
+                    const titleText = item.querySelector('.ios-file-title').textContent.toLowerCase();
+                    if (titleText.includes(query)) {
+                        item.style.display = 'flex';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            });
+
             // Close context menu on anywhere click
             document.addEventListener('click', (e) => {
                 const menu = document.getElementById('context-menu');
-                if (!menu.contains(e.target)) {
+                if (menu && !menu.contains(e.target)) {
                     menu.style.display = 'none';
                 }
             });
@@ -566,6 +651,14 @@ object WebInterface {
                     if (data.isRoot) backBtn.style.visibility = 'hidden';
                     else backBtn.style.visibility = 'visible';
 
+                    // Update hardware metrics overlay
+                    if (data.ramPercent !== undefined) {
+                        document.getElementById('tv-ram-badge').textContent = data.ramPercent + "% Loaded";
+                        document.getElementById('tv-ram-ring').textContent = data.ramPercent + "%";
+                        document.getElementById('tv-storage-badge').textContent = data.storageFreeFormatted + " Free";
+                        document.getElementById('tv-storage-ring').textContent = data.storagePercent + "%";
+                    }
+
                     const list = document.getElementById('files-list');
                     list.innerHTML = "";
 
@@ -611,30 +704,38 @@ object WebInterface {
 
                         let iconClass = "fa-solid fa-file";
                         let iconColor = "text-[#8E8E93]"; // iOS Gray
+                        let isImg = false;
+
                         if (file.isDirectory) {
                             iconClass = "fa-solid fa-folder";
                             iconColor = "ios-folder";
                         } else if (file.name.endsWith('.apk')) {
                             iconClass = "fa-brands fa-android";
                             iconColor = "text-[#34C759]"; // iOS Green
-                        } else if (file.name.endsWith('.mp4') || file.name.endsWith('.mkv')) {
+                        } else if (file.name.endsWith('.mp4') || file.name.endsWith('.mkv') || file.name.endsWith('.webm') || file.name.endsWith('.mov')) {
                             iconClass = "fa-solid fa-circle-play";
                             iconColor = "text-[#AF52DE]"; // iOS Purple
-                        } else if (file.name.endsWith('.mp3')) {
+                        } else if (file.name.endsWith('.mp3') || file.name.endsWith('.wav') || file.name.endsWith('.aac')) {
                             iconClass = "fa-solid fa-music";
                             iconColor = "text-[#FF2D55]"; // iOS Pink
-                        } else if (file.name.endsWith('.jpg') || file.name.endsWith('.png') || file.name.endsWith('.webp')) {
-                            iconClass = "fa-solid fa-image";
-                            iconColor = "text-[#0A84FF]";
+                        } else if (file.name.endsWith('.jpg') || file.name.endsWith('.jpeg') || file.name.endsWith('.png') || file.name.endsWith('.webp') || file.name.endsWith('.gif')) {
+                            isImg = true;
                         }
 
-                        card.innerHTML = `
-                            <div class="ios-icon-box">
-                                <i class="${'$'}{iconClass} ${'$'}{iconColor}"></i>
-                            </div>
-                            <div class="ios-file-title">${'$'}{file.name}</div>
-                            <div class="ios-file-subtitle">${'$'}{file.sizeFormatted}</div>
-                        `;
+                        let iconHtml = "";
+                        if (isImg) {
+                            iconHtml = '<img src="/api/download?path=' + encodeURIComponent(file.absolutePath) + '" class="w-full h-full object-cover rounded-lg">';
+                        } else {
+                            iconHtml = '<i class="' + iconClass + ' ' + iconColor + '"></i>';
+                        }
+
+                        card.innerHTML = '\n' +
+'                            <div class="ios-icon-box">\n' +
+'                                ' + iconHtml + '\n' +
+'                            </div>\n' +
+'                            <div class="ios-file-title">' + file.name + '</div>\n' +
+'                            <div class="ios-file-subtitle">' + file.sizeFormatted + '</div>\n' +
+'                        ';
                         list.appendChild(card);
                     });
                 }).catch(console.error);
@@ -679,13 +780,79 @@ object WebInterface {
             menu.style.display = 'none';
             doVibrate(50);
 
+            const parts = absolutePath.split('/');
+            const fileName = parts[parts.length - 1];
+
             if (action === 'OPEN') requestOpenFile(absolutePath);
+            else if (action === 'STREAM') playOnPhone(absolutePath, fileName);
             else if (action === 'DOWNLOAD') window.open('/api/download?path=' + encodeURIComponent(absolutePath), '_blank');
-            else if (action === 'RENAME') {
+            else if (action === 'CUT' || action === 'COPY') {
+                clipboard = { action: action, path: absolutePath, name: fileName };
+                document.getElementById('clipboard-item-name').textContent = fileName;
+                document.getElementById('clipboard-mode-text').textContent = action === 'CUT' ? 'Ready to Move' : 'Ready to Copy';
+                document.getElementById('clipboard-icon').className = action === 'CUT' ? 'fa-solid fa-scissors text-[var(--ios-blue)] text-lg animate-pulse' : 'fa-solid fa-copy text-[var(--ios-blue)] text-lg animate-pulse';
+                document.getElementById('clipboard-bar').classList.remove('hidden');
+            } else if (action === 'RENAME') {
                 const newName = prompt("Rename to:");
                 if (newName) processFileAction('RENAME', absolutePath, newName.trim());
             } else if (action === 'DELETE') {
                 if (confirm("Delete this item?")) processFileAction('DELETE', absolutePath);
+            }
+        }
+
+        function clearClipboard() {
+            doVibrate(30);
+            clipboard = null;
+            document.getElementById('clipboard-bar').classList.add('hidden');
+        }
+
+        function pasteClipboard() {
+            if (!clipboard) return;
+            doVibrate(65);
+            const dstDir = currentPath;
+            const actionType = clipboard.action;
+            const apiAction = actionType === 'CUT' ? 'MOVE' : 'COPY';
+            
+            processFileAction(apiAction, dstDir, clipboard.path);
+            clearClipboard();
+        }
+
+        function playOnPhone(path, name) {
+            document.getElementById('media-title').textContent = name;
+            const container = document.getElementById('media-container');
+            container.innerHTML = "";
+            const ext = name.split('.').pop().toLowerCase();
+            const streamUrl = '/api/download?path=' + encodeURIComponent(path);
+            
+            if (['mp4', 'mkv', 'webm', 'mov', 'avi'].includes(ext)) {
+                container.innerHTML = '<video src="' + streamUrl + '" controls autoplay class="w-full h-auto max-h-[400px] rounded-lg"></video>';
+            } else if (['mp3', 'wav', 'ogg', 'aac', 'flac'].includes(ext)) {
+                container.innerHTML = '\n' +
+'                    <div class="flex flex-col items-center justify-center py-6 w-full">\n' +
+'                        <i class="fa-solid fa-music text-5xl text-[var(--ios-blue)] mb-4 animate-bounce"></i>\n' +
+'                        <audio src="' + streamUrl + '" controls autoplay class="w-full px-4"></audio>\n' +
+'                    </div>\n' +
+'                ';
+            } else if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) {
+                container.innerHTML = '<img src="' + streamUrl + '" class="max-w-full max-h-[400px] object-contain rounded-lg shadow-xl">';
+            } else {
+                container.innerHTML = '<div class="text-gray-400 p-6 text-center"><i class="fa-solid fa-file text-5xl mb-3"></i><br>Format not streamable on phone. Download or Play on TV instead!</div>';
+            }
+            
+            document.getElementById('media-modal').style.display = 'flex';
+            setTimeout(() => {
+                document.getElementById('media-modal').classList.add('active');
+            }, 10);
+        }
+
+        function closeMediaModal(e) {
+            if (e === 'close' || e.target.id === 'media-modal') {
+                const container = document.getElementById('media-container');
+                container.innerHTML = ""; // Stop audio/video
+                document.getElementById('media-modal').classList.remove('active');
+                setTimeout(() => {
+                    document.getElementById('media-modal').style.display = 'none';
+                }, 300);
             }
         }
 

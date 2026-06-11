@@ -16,6 +16,12 @@ object ServerState {
     private val _serverIp = MutableStateFlow("127.0.0.1")
     val serverIp: StateFlow<String> = _serverIp
 
+    val uploadNotification = MutableStateFlow<String?>(null)
+
+    fun postUploadNotification(message: String) {
+        uploadNotification.value = message
+    }
+
     fun setClientConnected(connected: Boolean, ip: String? = null) {
         _isClientConnected.value = connected
         _clientIp.value = ip

@@ -87,10 +87,24 @@ class FileServer(private val context: Context) {
 
                         val sortedJsonArray = JSONArray(sortedList)
 
+                        val stat = try {
+                            android.os.StatFs("/storage/emulated/0")
+                        } catch (e: Exception) {
+                            null
+                        }
+                        val bytesAvailable = stat?.let { it.blockSizeLong * it.availableBlocksLong } ?: 0L
+                        val bytesTotal = stat?.let { it.blockSizeLong * it.blockCountLong } ?: 0L
+                        val bytesUsed = bytesTotal - bytesAvailable
+                        val storagePercent = if (bytesTotal > 0) ((bytesUsed.toDouble() / bytesTotal.toDouble()) * 100).toInt() else 0
+
                         val response = JSONObject()
                         response.put("currentPath", dir.absolutePath)
                         response.put("isRoot", isRoot)
                         response.put("files", sortedJsonArray)
+                        response.put("ramPercent", Logger.getRamTelemetry().percentageUsed)
+                        response.put("storageFreeFormatted", FileUtils.formatSize(bytesAvailable))
+                        response.put("storageTotalFormatted", FileUtils.formatSize(bytesTotal))
+                        response.put("storagePercent", storagePercent)
 
                         call.respondText(response.toString(), ContentType.Application.Json)
                     }
@@ -196,6 +210,55 @@ class FileServer(private val context: Context) {
                                         message = "Target name must be provided"
                                     }
                                 }
+                                "COPY" -> {
+                                    if (argument.isNotEmpty()) {
+                                        val srcFile = File(argument)
+                                        val destFile = File(file, srcFile.name)
+                                        if (srcFile.exists()) {
+                                            success = if (srcFile.isDirectory) {
+                                                srcFile.copyRecursively(destFile, overwrite = true)
+                                            } else {
+                                                srcFile.copyTo(destFile, overwrite = true)
+                                                true
+                                            }
+                                            if (success) Logger.log("Copied: ${srcFile.name} to ${destFile.absolutePath}")
+                                            else message = "Copy failed"
+                                        } else {
+                                            message = "Source file does not exist"
+                                        }
+                                    } else {
+                                        message = "Source path must be provided"
+                                    }
+                                }
+                                "MOVE" -> {
+                                    if (argument.isNotEmpty()) {
+                                        val srcFile = File(argument)
+                                        val destFile = File(file, srcFile.name)
+                                        if (srcFile.exists()) {
+                                            success = srcFile.renameTo(destFile)
+                                            if (!success) {
+                                                try {
+                                                    if (srcFile.isDirectory) {
+                                                        srcFile.copyRecursively(destFile, overwrite = true)
+                                                        srcFile.deleteRecursively()
+                                                    } else {
+                                                        srcFile.copyTo(destFile, overwrite = true)
+                                                        srcFile.delete()
+                                                    }
+                                                    success = true
+                                                } catch (e: Exception) {
+                                                    success = false
+                                                    message = "Move failed: ${e.message}"
+                                                }
+                                            }
+                                            if (success) Logger.log("Moved: ${srcFile.name} to ${destFile.absolutePath}")
+                                        } else {
+                                            message = "Source file does not exist"
+                                        }
+                                    } else {
+                                        message = "Source path must be provided"
+                                    }
+                                }
                                 else -> {
                                     message = "Unsupported target action: $action"
                                 }
@@ -256,6 +319,7 @@ class FileServer(private val context: Context) {
                                         }
                                     }
                                     Logger.log("Stored file: ${dst.name} (${FileUtils.formatSize(dst.length())})")
+                                    ServerState.postUploadNotification("Received file '${dst.name}' from your iPhone successfully!")
                                     count++
                                 }
                                 part.dispose()
