@@ -60,29 +60,32 @@ class FileServer(private val context: Context) {
                         
                         val pInfo = this@FileServer.context.packageManager.getPackageInfo(this@FileServer.context.packageName, 0)
                         val localVersion = pInfo.versionName ?: "1.0"
+                        val localVersionCode = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                            pInfo.longVersionCode
+                        } else {
+                            pInfo.versionCode.toLong()
+                        }
                         
                         var updateAvailable = false
+                        var remoteVersionCode: Long? = null
                         var latestVersion = localVersion
                         
                         try {
-                            val url = java.net.URL("https://api.github.com/repos/$repoOwner/$repoName/releases/latest")
+                            val url = java.net.URL("https://raw.githubusercontent.com/$repoOwner/$repoName/main/app/build.gradle.kts")
                             val conn = url.openConnection() as java.net.HttpURLConnection
-                            conn.setRequestProperty("Accept", "application/vnd.github.v3+json")
                             conn.connect()
                             
                             if (conn.responseCode in 200..299) {
-                                val jsonStr = conn.inputStream.bufferedReader().readText()
-                                val json = JSONObject(jsonStr)
-                                val tagName = json.optString("tag_name", "")
+                                val gradleContent = conn.inputStream.bufferedReader().readText()
                                 
-                                if (tagName.isNotEmpty()) {
-                                    val cleanTag = tagName.replace(Regex("[^0-9.]"), "")
-                                    val cleanLocal = localVersion.replace(Regex("[^0-9.]"), "")
-                                    
-                                    if (cleanTag != cleanLocal && cleanTag.isNotEmpty()) {
-                                        updateAvailable = true
-                                        latestVersion = tagName
-                                    }
+                                val versionCodeMatch = Regex("versionCode\\s*=\\s*(\\d+)").find(gradleContent)
+                                remoteVersionCode = versionCodeMatch?.groupValues?.get(1)?.toLongOrNull()
+                                
+                                val versionNameMatch = Regex("versionName\\s*=\\s*\"([^\"]+)\"").find(gradleContent)
+                                latestVersion = versionNameMatch?.groupValues?.get(1) ?: localVersion
+                                
+                                if (remoteVersionCode != null && remoteVersionCode > localVersionCode) {
+                                    updateAvailable = true
                                 }
                             }
                         } catch(e: Exception) {
@@ -93,6 +96,8 @@ class FileServer(private val context: Context) {
                         response.put("updateAvailable", updateAvailable)
                         response.put("latestVersion", latestVersion)
                         response.put("localVersion", localVersion)
+                        response.put("remoteVersionCode", remoteVersionCode)
+                        response.put("localVersionCode", localVersionCode)
                         
                         call.respondText(response.toString(), ContentType.Application.Json)
                     }

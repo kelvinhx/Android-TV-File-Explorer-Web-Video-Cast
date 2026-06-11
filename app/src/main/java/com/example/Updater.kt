@@ -21,23 +21,31 @@ object Updater {
     suspend fun isUpdateAvailable(context: Context, repoOwner: String = "kelvinhx", repoName: String = "Android-TV-File-Explorer-Web-Video-Cast"): Boolean {
         return withContext(Dispatchers.IO) {
             try {
-                val url = java.net.URL("https://api.github.com/repos/$repoOwner/$repoName/actions/runs?status=success")
+                // Fetch the build.gradle.kts file from the repository
+                val url = java.net.URL("https://raw.githubusercontent.com/$repoOwner/$repoName/main/app/build.gradle.kts")
                 val connection = url.openConnection() as HttpURLConnection
-                connection.setRequestProperty("Accept", "application/vnd.github.v3+json")
+                connection.connect()
+
                 if (connection.responseCode in 200..299) {
-                    val jsonStr = connection.inputStream.bufferedReader().readText()
-                    val json = JSONObject(jsonStr)
-                    val runs = json.optJSONArray("workflow_runs")
-                    if (runs != null && runs.length() > 0) {
-                        val latestRun = runs.optJSONObject(0)
-                        val runId = latestRun.optLong("id")
+                    val gradleContent = connection.inputStream.bufferedReader().readText()
+                    
+                    // Parse versionCode from the gradle file
+                    val versionCodeMatch = Regex("versionCode\\s*=\\s*(\\d+)").find(gradleContent)
+                    val remoteVersionCode = versionCodeMatch?.groupValues?.get(1)?.toLongOrNull()
+                    
+                    if (remoteVersionCode != null) {
+                        val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+                        val localVersionCode = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                            pInfo.longVersionCode
+                        } else {
+                            pInfo.versionCode.toLong()
+                        }
                         
-                        val prefs = context.getSharedPreferences("updater_prefs", Context.MODE_PRIVATE)
-                        val lastRunId = prefs.getLong("last_installed_run_id", 0L)
-                        
-                        if (runId > lastRunId) {
-                            prefs.edit().putLong("latest_available_run_id", runId).apply()
+                        // Compare the codes
+                        if (remoteVersionCode > localVersionCode) {
                             return@withContext true
+                        } else {
+                            return@withContext false
                         }
                     }
                 }
@@ -50,10 +58,10 @@ object Updater {
 
     fun cleanUpOldUpdates() {
         try {
-            val nexusDir = File(Environment.getExternalStorageDirectory(), "Nexus")
+            val nexusDir = File(Environment.getExternalStorageDirectory(), "Nexus Explorer")
             if (nexusDir.exists() && nexusDir.isDirectory) {
                 nexusDir.listFiles()?.forEach { file ->
-                    if (file.name.endsWith(".apk") || file.name.endsWith(".zip")) {
+                    if (file.name.endsWith(".zip")) {
                         file.delete()
                     }
                 }
@@ -73,7 +81,7 @@ object Updater {
         withContext(Dispatchers.IO) {
             try {
                 onProgress("Verificando repositório GitHub...")
-                val nexusDir = File(Environment.getExternalStorageDirectory(), "Nexus")
+                val nexusDir = File(Environment.getExternalStorageDirectory(), "Nexus Explorer")
                 if (!nexusDir.exists()) nexusDir.mkdirs()
                 
                 val zipFile = File(nexusDir, "update.zip")
