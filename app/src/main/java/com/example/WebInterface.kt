@@ -319,7 +319,7 @@ object WebInterface {
             <div class="search-bar">
                 <i class="fa-solid fa-magnifying-glass"></i>
                 <input type="text" id="search-input" placeholder="Buscar arquivos...">
-                <i class="fa-solid fa-microphone"></i>
+                <i class="fa-solid fa-microphone" id="mic-btn" style="cursor: pointer;" onclick="startSpeechRecognition()"></i>
             </div>
 
             <!-- TV Health status bar -->
@@ -581,21 +581,33 @@ object WebInterface {
         let isLongPressActive = false;
         let clipboard = null; // Stores { action: 'COPY'|'MOVE', path: '..', name: '..' }
 
+        let searchTimeout = null;
+
         document.addEventListener('DOMContentLoaded', () => {
             fetchFiles();
             
-            // Real-time search filter
+            // Server-side search filter
             document.getElementById('search-input').addEventListener('input', (e) => {
-                const query = e.target.value.toLowerCase().trim();
-                const items = document.querySelectorAll('.ios-grid-item');
-                items.forEach(item => {
-                    const titleText = item.querySelector('.ios-file-title').textContent.toLowerCase();
-                    if (titleText.includes(query)) {
-                        item.style.display = 'flex';
-                    } else {
-                        item.style.display = 'none';
-                    }
-                });
+                const query = e.target.value.trim();
+                clearTimeout(searchTimeout);
+                if (query === '') {
+                    document.getElementById('path-title').style.display = 'block';
+                    fetchFiles();
+                    return;
+                }
+                
+                searchTimeout = setTimeout(() => {
+                    doSearch(query);
+                }, 800);
+            });
+
+            document.getElementById('search-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    clearTimeout(searchTimeout);
+                    const query = e.target.value.trim();
+                    if (query !== '') doSearch(query);
+                    e.target.blur();
+                }
             });
 
             // Close context menu on anywhere click
@@ -606,6 +618,64 @@ object WebInterface {
                 }
             });
         });
+
+        function doSearch(query) {
+            document.getElementById('path-title').textContent = "Buscando...";
+            document.getElementById('path-title').style.display = 'block';
+            document.getElementById('files-list').innerHTML = `
+                <div class="col-span-full text-center py-20">
+                    <i class="fa-solid fa-circle-notch fa-spin text-3xl text-[var(--ios-blue)] mb-4"></i>
+                    <div class="text-[var(--ios-gray)] text-sm">Procurando no sistema...</div>
+                </div>
+            `;
+            
+            fetch('/api/search?q=' + encodeURIComponent(query))
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('path-title').textContent = "Resultados da Busca";
+                    const backBtn = document.getElementById('back-btn');
+                    backBtn.style.visibility = 'visible';
+                    // clear currentPath so back button resets
+                    currentPath = "/storage/emulated/0"; 
+                    
+                    renderFileList(data.status, data.message, data.files);
+                }).catch(err => {
+                    document.getElementById('path-title').textContent = "Erro na Busca";
+                    renderFileList("error", "Erro de conexão", []);
+                });
+        }
+        
+        function startSpeechRecognition() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                showNotification("Busca por voz não suportada neste navegador.", true);
+                return;
+            }
+            
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'pt-BR';
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+            
+            const micBtn = document.getElementById('mic-btn');
+            micBtn.style.color = '#ff3b30';
+            
+            recognition.onresult = (event) => {
+                const query = event.results[0][0].transcript;
+                document.getElementById('search-input').value = query;
+                doSearch(query);
+            };
+            
+            recognition.onerror = (event) => {
+                showNotification("Erro na captura de voz.", true);
+            };
+            
+            recognition.onend = () => {
+                micBtn.style.color = '';
+            };
+            
+            recognition.start();
+        }
 
         function doVibrate(duration = 60) {
             if ("vibrate" in navigator) {
@@ -838,9 +908,7 @@ object WebInterface {
                     
                     const backBtn = document.getElementById('back-btn');
                     if (data.isRoot) backBtn.style.visibility = 'hidden';
-                    else backBtn.style.visibility = 'visible';
-
-                    // Update hardware metrics overlay
+                    else backBtn.style.visib                    // Update hardware metrics overlay
                     if (data.ramPercent !== undefined) {
                         document.getElementById('tv-ram-badge').textContent = data.ramPercent + "% Carregada";
                         document.getElementById('tv-ram-ring').textContent = data.ramPercent + "%";
@@ -848,106 +916,114 @@ object WebInterface {
                         document.getElementById('tv-storage-ring').textContent = data.storagePercent + "%";
                     }
 
-                    const list = document.getElementById('files-list');
-                    list.innerHTML = "";
+                    renderFileList(data.status, data.message, data.files);
+                }).catch(console.error);
+        }
 
-                    if (data.status === 'error') {
-                        document.getElementById('files-list').innerHTML = `<div class="col-span-full text-center py-20 text-red-500 font-bold">${"$"}{data.message}</div>`;
+        function renderFileList(status, message, filesArray) {
+            const list = document.getElementById('files-list');
+            list.innerHTML = "";
+
+            if (status === 'error') {
+                document.getElementById('files-list').innerHTML = `<div class="col-span-full text-center py-20 text-red-500 font-bold">${"$"}{message || 'Erro'}</div>`;
+                return;
+            }
+
+            if (!filesArray || filesArray.length === 0) {
+                list.innerHTML = `
+                    <div class="col-span-full text-center py-20 text-[var(--ios-gray)]">
+                        <span class="text-sm">A pasta ou busca está vazia.</span>
+                    </div>
+                `;
+                return;
+            }
+
+            filesArray.forEach(file => {
+                const card = document.createElement('div');
+                card.className = "ios-grid-item";
+                
+                // Set up haptic touch event logic for Long Press menu
+                card.addEventListener('touchstart', (e) => {
+                    isLongPressActive = false;
+                    longPressTimer = setTimeout(() => {
+                        isLongPressActive = true;
+                        doVibrate(65);
+                        showContextMenu(e, file);
+                    }, 500);
+                }, { passive: true });
+
+                card.addEventListener('touchend', () => clearTimeout(longPressTimer), { passive: true });
+                card.addEventListener('touchmove', () => clearTimeout(longPressTimer), { passive: true });
+
+                card.addEventListener('click', (e) => {
+                    if (isLongPressActive) {
+                        isLongPressActive = false;
                         return;
                     }
-
-                    if (!data.files || data.files.length === 0) {
-                        list.innerHTML = `
-                            <div class="col-span-full text-center py-20 text-[var(--ios-gray)]">
-                                <span class="text-sm">A pasta está vazia.</span>
-                            </div>
-                        `;
-                        return;
+                    doVibrate(30);
+                    if (file.isDirectory) {
+                        const searchInput = document.getElementById('search-input');
+                        if (searchInput) searchInput.value = "";
+                        currentPath = file.path || file.absolutePath;
+                        fetchFiles();
+                    } else {
+                        requestOpenFile(file.path || file.absolutePath);
                     }
+                });
 
-                    data.files.forEach(file => {
-                        const card = document.createElement('div');
-                        card.className = "ios-grid-item";
-                        
-                        // Set up haptic touch event logic for Long Press menu
-                        card.addEventListener('touchstart', (e) => {
-                            isLongPressActive = false;
-                            longPressTimer = setTimeout(() => {
-                                isLongPressActive = true;
-                                doVibrate(65);
-                                showContextMenu(e, file);
-                            }, 500);
-                        }, { passive: true });
+                let iconClass = "fa-solid fa-file";
+                let iconColor = "text-[#8E8E93]"; // iOS Gray
+                let isImg = false;
 
-                        card.addEventListener('touchend', () => clearTimeout(longPressTimer), { passive: true });
-                        card.addEventListener('touchmove', () => clearTimeout(longPressTimer), { passive: true });
+                const nameLower = file.name.toLowerCase();
+                const absolutePath = file.path || file.absolutePath;
+                if (file.isDirectory) {
+                    iconClass = "fa-solid fa-folder";
+                    iconColor = "ios-folder";
+                } else if (nameLower.endsWith('.apk')) {
+                    iconClass = "fa-brands fa-android";
+                    iconColor = "text-[#34C759]"; // iOS Green
+                } else if (['.mp4', '.mkv', '.webm', '.mov', '.avi', '.ts', '.m3u8'].some(el => nameLower.endsWith(el))) {
+                    iconClass = "fa-solid fa-circle-play";
+                    iconColor = "text-[#AF52DE]"; // iOS Purple
+                } else if (['.mp3', '.wav', '.aac', '.flac', '.ogg', '.m4a'].some(el => nameLower.endsWith(el))) {
+                    iconClass = "fa-solid fa-music";
+                    iconColor = "text-[#FF2D55]"; // iOS Pink
+                } else if (['.zip', '.rar', '.7z', '.tar', '.gz'].some(el => nameLower.endsWith(el))) {
+                    iconClass = "fa-solid fa-file-zipper";
+                    iconColor = "text-[#FF9500]"; // iOS Amber
+                } else if (nameLower.endsWith('.pdf')) {
+                    iconClass = "fa-solid fa-file-pdf";
+                    iconColor = "text-[#FF3B30]"; // iOS Red
+                } else if (['.txt', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.json', '.xml', '.html', '.css', '.js', '.kt'].some(el => nameLower.endsWith(el))) {
+                    iconClass = "fa-solid fa-file-lines";
+                    iconColor = "text-[#0A84FF]"; // iOS Blue
+                } else if (['.jpg', '.jpeg', '.png', '.webp', '.gif'].some(el => nameLower.endsWith(el))) {
+                    isImg = true;
+                }
 
-                        card.addEventListener('click', (e) => {
-                            if (isLongPressActive) {
-                                isLongPressActive = false;
-                                return;
-                            }
-                            doVibrate(30);
-                            if (file.isDirectory) {
-                                currentPath = file.absolutePath;
-                                fetchFiles();
-                            } else {
-                                requestOpenFile(file.absolutePath);
-                            }
-                        });
+                let iconHtml = "";
+                if (isImg) {
+                    iconHtml = '<img src="/api/download?path=' + encodeURIComponent(absolutePath) + '" class="w-full h-full object-cover rounded-lg">';
+                } else {
+                    iconHtml = '<i class="' + iconClass + ' ' + iconColor + '"></i>';
+                }
 
-                        let iconClass = "fa-solid fa-file";
-                        let iconColor = "text-[#8E8E93]"; // iOS Gray
-                        let isImg = false;
-
-                        const nameLower = file.name.toLowerCase();
-                        if (file.isDirectory) {
-                            iconClass = "fa-solid fa-folder";
-                            iconColor = "ios-folder";
-                        } else if (nameLower.endsWith('.apk')) {
-                            iconClass = "fa-brands fa-android";
-                            iconColor = "text-[#34C759]"; // iOS Green
-                        } else if (['.mp4', '.mkv', '.webm', '.mov', '.avi', '.ts', '.m3u8'].some(el => nameLower.endsWith(el))) {
-                            iconClass = "fa-solid fa-circle-play";
-                            iconColor = "text-[#AF52DE]"; // iOS Purple
-                        } else if (['.mp3', '.wav', '.aac', '.flac', '.ogg', '.m4a'].some(el => nameLower.endsWith(el))) {
-                            iconClass = "fa-solid fa-music";
-                            iconColor = "text-[#FF2D55]"; // iOS Pink
-                        } else if (['.zip', '.rar', '.7z', '.tar', '.gz'].some(el => nameLower.endsWith(el))) {
-                            iconClass = "fa-solid fa-file-zipper";
-                            iconColor = "text-[#FF9500]"; // iOS Amber
-                        } else if (nameLower.endsWith('.pdf')) {
-                            iconClass = "fa-solid fa-file-pdf";
-                            iconColor = "text-[#FF3B30]"; // iOS Red
-                        } else if (['.txt', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.json', '.xml', '.html', '.css', '.js', '.kt'].some(el => nameLower.endsWith(el))) {
-                            iconClass = "fa-solid fa-file-lines";
-                            iconColor = "text-[#0A84FF]"; // iOS Blue
-                        } else if (['.jpg', '.jpeg', '.png', '.webp', '.gif'].some(el => nameLower.endsWith(el))) {
-                            isImg = true;
-                        }
-
-                        let iconHtml = "";
-                        if (isImg) {
-                            iconHtml = '<img src="/api/download?path=' + encodeURIComponent(file.absolutePath) + '" class="w-full h-full object-cover rounded-lg">';
-                        } else {
-                            iconHtml = '<i class="' + iconClass + ' ' + iconColor + '"></i>';
-                        }
-
-                        card.innerHTML = '\n' +
+                const displaySize = file.isDirectory ? "Pasta" : (file.lengthFormatted || file.sizeFormatted);
+                card.innerHTML = '\n' +
 '                            <div class="ios-icon-box">\n' +
 '                                ' + iconHtml + '\n' +
 '                            </div>\n' +
 '                            <div class="ios-file-title">' + file.name + '</div>\n' +
-'                            <div class="ios-file-subtitle">' + file.sizeFormatted + '</div>\n' +
+'                            <div class="ios-file-subtitle">' + displaySize + '</div>\n' +
 '                        ';
-                        list.appendChild(card);
-                    });
-                }).catch(console.error);
+                list.appendChild(card);
+            });
         }
 
         function showContextMenu(e, file) {
             const menu = document.getElementById('context-menu');
-            document.getElementById('context-file-path').value = file.absolutePath;
+            document.getElementById('context-file-path').value = file.absolutePath || file.path;
             document.getElementById('context-file-type').value = file.isDirectory ? 'dir' : 'file';
 
             const downloadBtn = document.getElementById('context-download-btn');

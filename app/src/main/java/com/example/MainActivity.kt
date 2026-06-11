@@ -495,6 +495,15 @@ fun TvDashboardScreen(
             Spacer(modifier = Modifier.height(8.dp))
             
             TvSidebarItem(
+                text = "Buscar",
+                icon = Icons.Default.Search,
+                isSelected = selectedSidebarItem == "Search",
+                onClick = { selectedSidebarItem = "Search" }
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            TvSidebarItem(
                 text = "Servidor Host",
                 icon = Icons.Default.Share,
                 isSelected = selectedSidebarItem == "Host Server",
@@ -562,6 +571,21 @@ fun TvDashboardScreen(
                                     tint = AppConfig.PrimaryBlue,
                                     onClick = onRequestPermissions
                                 )
+                            }
+                        }
+                    }
+                }
+                selectedSidebarItem == "Search" -> {
+                    if (hasStoragePermission) {
+                        TvSearchScreen(context = context)
+                    } else {
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.Lock, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(64.dp))
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text("Acesso ao Armazenamento Necessário", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text("Por favor, conceda permissão para buscar arquivos.", color = Color.Gray, fontSize = 14.sp)
                             }
                         }
                     }
@@ -886,6 +910,102 @@ fun IosFileIcon(modifier: Modifier = Modifier, extension: String) {
                 maxLines = 1
             )
         }
+    }
+}
+
+@Composable
+fun TvSearchScreen(context: Context) {
+    var query by remember { mutableStateOf("") }
+    var results by remember { mutableStateOf<List<UnifiedFile>?>(null) }
+    var isSearching by remember { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
+    val isDarkTheme by AppState.isDarkTheme.collectAsState()
+    val textColor = if (isDarkTheme) Color.White else Color.Black
+    var fileToPlay by remember { mutableStateOf<UnifiedFile?>(null) }
+
+    LaunchedEffect(query) {
+        if (query.trim().isEmpty()) {
+            results = null
+            return@LaunchedEffect
+        }
+        isSearching = true
+        // Debounce search slightly
+        delay(800)
+        results = FileUtils.searchFiles(context, query.trim())
+        isSearching = false
+    }
+
+    Column(modifier = Modifier.fillMaxSize().padding(32.dp)) {
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(focusRequester),
+            singleLine = true,
+            label = { Text("Buscar arquivos, pastas ou extensões (ex: mp3, apk, pdf)...", color = Color.Gray) },
+            colors = androidx.compose.material3.TextFieldDefaults.colors(
+                focusedTextColor = textColor,
+                unfocusedTextColor = textColor,
+                cursorColor = AppConfig.PrimaryBlue,
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent
+            )
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        if (isSearching) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = AppConfig.PrimaryBlue)
+            }
+        } else {
+            val res = results
+            if (res != null) {
+                if (res.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("Nenhum arquivo encontrado para '$query'.", color = Color.Gray)
+                    }
+                } else {
+                    Text("${res.size} resultados encontrados", color = Color.Gray, fontSize = 14.sp)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    LazyVerticalGrid(
+                        columns = GridCells.Adaptive(160.dp),
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(bottom = 32.dp)
+                    ) {
+                        items(res) { file ->
+                            TvFileGridItem(
+                                file = file,
+                                onClick = {
+                                    if (file.isDirectory) {
+                                        // cannot navigate easily here, so we do nothing for now
+                                        // or could set AppState.browserUrl... no, File Browser uses state
+                                    } else {
+                                        val intent = Intent(Intent.ACTION_VIEW)
+                                        intent.setDataAndType(Uri.fromFile(java.io.File(file.absolutePath)), "*/*")
+                                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                        try {
+                                            context.startActivity(intent)
+                                        } catch (e: Exception) {
+                                            fileToPlay = file
+                                        }
+                                    }
+                                },
+                                onLongClick = {}
+                            )
+                        }
+                    }
+                }
+            } else {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Digite algo para iniciar a busca global.", color = Color.Gray)
+                }
+            }
+        }
+    }
+    
+    if (fileToPlay != null) {
+        InternalMediaViewer(file = fileToPlay!!, onClose = { fileToPlay = null })
     }
 }
 

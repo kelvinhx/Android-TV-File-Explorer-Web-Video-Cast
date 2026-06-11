@@ -50,6 +50,39 @@ object FileUtils {
         return roots.distinct()
     }
 
+    suspend fun searchFiles(context: Context, query: String): List<UnifiedFile> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val results = mutableListOf<UnifiedFile>()
+        val q = query.lowercase().trim()
+        if (q.isEmpty()) return@withContext results
+        
+        val isExtensionSearch = q.startsWith(".") || listOf("mp3", "apk", "pdf", "mp4", "jpg", "png", "zip", "rar", "mkv").contains(q)
+        val extQuery = if (q.startsWith(".")) q.substring(1) else q
+
+        val roots = getExternalStorageRoots(context)
+        
+        for (root in roots) {
+            val rootFile = File(root)
+            if (!rootFile.exists() || !rootFile.canRead()) continue
+            
+            try {
+                rootFile.walkTopDown()
+                    .onEnter { it.name != "Android" && !it.isHidden && it.canRead() } // skip Android/data to save time and hidden folders
+                    .forEach { f ->
+                        if (!f.isDirectory) {
+                            val fName = f.name.lowercase()
+                            if (fName.contains(q)) {
+                                results.add(UnifiedFile(f.name, f.absolutePath, f.isDirectory, f.length(), f.extension))
+                            } else if (isExtensionSearch && f.extension.lowercase() == extQuery) {
+                                results.add(UnifiedFile(f.name, f.absolutePath, f.isDirectory, f.length(), f.extension))
+                            }
+                            if (results.size >= 150) return@withContext results
+                        }
+                    }
+            } catch (e: Exception) {}
+        }
+        return@withContext results
+    }
+
     fun hasAndroidDataPermission(context: Context): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return true
         val treeUri = Uri.parse("content://com.android.externalstorage.documents/tree/primary%3AAndroid%2Fdata")

@@ -103,6 +103,36 @@ class FileServer(private val context: Context) {
                     }
 
                     // Directory Discovery
+                    get("/api/search") {
+                        val query = call.request.queryParameters["q"] ?: ""
+                        if (query.isEmpty()) {
+                            call.respondText("{\"status\":\"error\", \"message\":\"Query was empty\"}", ContentType.Application.Json)
+                            return@get
+                        }
+                        
+                        val searchResults = FileUtils.searchFiles(this@FileServer.context, query)
+                        
+                        val jsonArray = JSONArray()
+                        searchResults.forEach { f ->
+                            val obj = JSONObject()
+                            obj.put("name", f.name)
+                            obj.put("absolutePath", f.absolutePath)
+                            obj.put("path", f.absolutePath)
+                            obj.put("isDirectory", f.isDirectory)
+                            if (f.isDirectory) {
+                                obj.put("sizeFormatted", "Pasta")
+                            } else {
+                                obj.put("sizeFormatted", FileUtils.formatSize(f.length))
+                            }
+                            jsonArray.put(obj)
+                        }
+                        
+                        val response = JSONObject()
+                        response.put("status", "success")
+                        response.put("files", jsonArray)
+                        call.respondText(response.toString(), ContentType.Application.Json)
+                    }
+
                     get("/api/files") {
                         val rootPath = "/storage/emulated/0"
                         val pathParam = sanitizePath(call.request.queryParameters["path"], rootPath)
