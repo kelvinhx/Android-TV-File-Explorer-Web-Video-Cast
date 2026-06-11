@@ -13,63 +13,181 @@ object WebInterface {
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
+            --ios-bg: #000000;
+            --ios-card: #1C1C1E;
+            --ios-card-hover: #2C2C2E;
             --ios-blue: #0A84FF;
-            --ios-green: #30D158;
-            --ios-red: #FF453A;
-            --ios-orange: #FF9F0A;
+            --ios-gray: #8E8E93;
+            --ios-border: rgba(255, 255, 255, 0.1);
+            --ios-tint: rgba(255, 255, 255, 0.05);
         }
         body {
-            background: #000000;
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
-            color: #F2F2F7;
+            background: var(--ios-bg);
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+            color: #FFFFFF;
             user-select: none;
             -webkit-user-select: none;
             overflow-x: hidden;
             padding-bottom: env(safe-area-inset-bottom);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
         }
-        .liquid-panel {
-            background: #1C1C1E;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 20px;
+        .ios-header {
+            font-weight: 700;
+            font-size: 34px;
+            letter-spacing: 0.3px;
+            padding: 16px 20px 8px;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        .liquid-card {
-            background: #1C1C1E;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 16px;
-            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        .ios-list {
+            background: var(--ios-card);
+            border-radius: 12px;
+            margin: 0 16px 16px;
+            overflow: hidden;
         }
-        .liquid-card:active {
-            transform: scale(0.96);
-            background: rgba(10, 132, 255, 0.15);
-            border-color: rgba(10, 132, 255, 0.3);
+        .ios-list-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 0.5px solid var(--ios-border);
+            transition: background 0.15s;
         }
-        /* Custom Context Menu */
+        .ios-list-item:last-child {
+            border-bottom: none;
+        }
+        .ios-list-item:active {
+            background: var(--ios-card-hover);
+        }
+        
+        .ios-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 16px;
+            padding: 16px;
+        }
+        .ios-grid-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            background: transparent;
+            border-radius: 12px;
+            padding: 8px;
+            transition: transform 0.1s, background 0.15s;
+        }
+        .ios-grid-item:active {
+            transform: scale(0.95);
+            background: var(--ios-tint);
+        }
+        
+        .ios-icon-box {
+            width: 60px;
+            height: 60px;
+            background: var(--ios-bg);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            font-size: 28px;
+            overflow: hidden;
+        }
+        .ios-folder { color: #81D4FA; } /* Light blue for iOS folder */
+        .ios-file-title {
+            font-size: 13px;
+            font-weight: 500;
+            word-break: break-word;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .ios-file-subtitle {
+            font-size: 11px;
+            color: var(--ios-gray);
+            margin-top: 2px;
+        }
+
+        .tab-bar {
+            background: rgba(28, 28, 30, 0.9);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 0.5px solid var(--ios-border);
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            z-index: 100;
+        }
+        .tab-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--ios-gray);
+            font-size: 10px;
+            font-weight: 500;
+            transition: color 0.2s;
+            width: 33%;
+        }
+        .tab-item i {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+        .tab-item.active {
+            color: var(--ios-blue);
+        }
+
+        .toolbar {
+            display: flex;
+            align-items: center;
+            padding: 8px 16px;
+            background: var(--ios-bg);
+        }
+        .toolbar-btn {
+            color: var(--ios-blue);
+            font-size: 22px;
+            padding: 4px 12px;
+        }
+
+        /* Context Menu */
         .context-menu {
             display: none;
-            position: absolute;
+            position: fixed;
             z-index: 1000;
-            background: rgba(28, 28, 35, 0.94);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(30, 30, 30, 0.85);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 0.5px solid rgba(255, 255, 255, 0.15);
             border-radius: 14px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
-            width: 220px;
-            animation: contextReveal 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            width: 250px;
+            animation: contextReveal 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         }
         @keyframes contextReveal {
-            from { transform: scale(0.92); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
+            from { transform: scale(0.9) translateY(10px); opacity: 0; }
+            to { transform: scale(1) translateY(0); opacity: 1; }
         }
         .context-item {
             display: flex;
+            justify-content: space-between;
             align-items: center;
             width: 100%;
-            padding: 12px 16px;
-            font-size: 15px;
-            font-weight: 500;
-            border-bottom: 0.5px solid rgba(255, 255, 255, 0.06);
-            transition: background 0.15s;
+            padding: 14px 16px;
+            font-size: 16px;
+            border-bottom: 0.5px solid rgba(255,255,255,0.1);
         }
         .context-item:last-child {
             border-bottom: none;
@@ -77,203 +195,271 @@ object WebInterface {
         .context-item:active {
             background: rgba(255, 255, 255, 0.1);
         }
-        /* Haptic active state */
-        .haptic-btn:active {
-            transform: scale(0.93);
-            filter: brightness(1.15);
-            transition: all 0.08s ease;
+        .context-item.danger {
+            color: var(--ios-red);
         }
-        /* Hide scrollbar */
-        ::-webkit-scrollbar {
+
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            padding-bottom: 80px;
+        }
+
+        .search-bar {
+            background: var(--ios-card);
+            border-radius: 10px;
+            margin: 0 16px 16px;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--ios-gray);
+        }
+        .search-bar input {
+            background: transparent;
+            border: none;
+            color: white;
+            flex: 1;
+            font-size: 16px;
+            outline: none;
+        }
+
+        /* iOS Modal setup */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.4);
+            z-index: 200;
             display: none;
+            align-items: flex-end;
         }
+        .modal-sheet {
+            background: var(--ios-card);
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            width: 100%;
+            padding: 20px;
+            padding-bottom: calc(20px + env(safe-area-inset-bottom));
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .modal-overlay.active .modal-sheet {
+            transform: translateY(0);
+        }
+
+        /* Remote D-Pad */
+        .dpad-container {
+            width: 260px;
+            height: 260px;
+            background: var(--ios-card);
+            border-radius: 50%;
+            position: relative;
+            margin: 40px auto;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05), 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .dpad-btn {
+            position: absolute;
+            width: 33%;
+            height: 33%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: var(--ios-gray);
+        }
+        .dpad-btn:active {
+            color: white;
+            background: rgba(255,255,255,0.1);
+        }
+        .dpad-up { top: 0; left: 33.3%; border-radius: 50% 50% 0 0; }
+        .dpad-down { bottom: 0; left: 33.3%; border-radius: 0 0 50% 50%; }
+        .dpad-left { top: 33.3%; left: 0; border-radius: 50% 0 0 50%; }
+        .dpad-right { top: 33.3%; right: 0; border-radius: 0 50% 50% 0; }
+        .dpad-ok {
+            top: 33.3%; left: 33.3%;
+            border-radius: 50%;
+            background: var(--ios-bg);
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1);
+            color: white;
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        ::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="p-4 safe-top select-none">
+<body>
 
-    <!-- Header / Brand -->
-    <header class="flex justify-between items-center mb-6">
-        <div>
-            <h1 class="text-2xl font-bold tracking-tight text-white mb-0.5">Nexus TV Controller</h1>
-            <p class="text-xs text-stone-400"><i class="fa-solid ref-icon fa-link text-blue-500 mr-1"></i> Connected to Android TV</p>
-        </div>
-        <button onclick="toggleView('remote')" class="haptic-btn w-10 h-10 rounded-full bg-blue-600/20 text-blue-400 flex items-center justify-center border border-blue-500/25">
-            <i class="fa-solid fa-gamepad text-lg"></i>
-        </button>
+    <!-- Header -->
+    <header class="ios-header" id="main-header">
+        <span>Browse</span>
+        <button class="text-[var(--ios-blue)] text-lg" onclick="openSettingsModal()"><i class="fa-solid fa-ellipsis-circle"></i></button>
     </header>
 
-    <!-- Navigation Tabs -->
-    <div class="flex gap-2 mb-6">
-        <button id="tab-files" onclick="toggleView('files')" class="flex-1 py-3 text-sm font-semibold rounded-xl text-center transition bg-white/10 text-white border border-white/5 shadow">
-            <i class="fa-solid fa-folder-open mr-1.5"></i> Storage
-        </button>
-        <button id="tab-remote" onclick="toggleView('remote')" class="flex-1 py-3 text-sm font-semibold rounded-xl text-center transition bg-stone-900/40 text-stone-400 border border-transparent">
-            <i class="fa-solid fa-gamepad mr-1.5"></i> D-Pad RC
-        </button>
-        <button id="tab-browser" onclick="toggleView('browser')" class="flex-1 py-3 text-sm font-semibold rounded-xl text-center transition bg-stone-900/40 text-stone-400 border border-transparent">
-            <i class="fa-solid fa-globe mr-1.5"></i> Cast Web
-        </button>
+    <!-- Toolbar for Files -->
+    <div class="toolbar" id="files-toolbar">
+        <button class="toolbar-btn" onclick="navigateBack()" id="back-btn"><i class="fa-solid fa-chevron-left"></i></button>
+        <div class="flex-1 text-center font-semibold text-[15px] truncate px-4" id="path-title">On My TV</div>
+        <input type="file" id="file-uploader" class="hidden" multiple onchange="handleUpload(this.files)">
+        <button class="toolbar-btn text-sm" onclick="document.getElementById('file-uploader').click()"><i class="fa-solid fa-plus text-xl"></i></button>
+        <button class="toolbar-btn text-sm" onclick="createNewFolder()"><i class="fa-solid fa-folder-plus text-xl"></i></button>
     </div>
 
-    <!-- MAIN VIEW: FILES & STORAGE -->
-    <div id="view-files">
-        <!-- Path Bar -->
-        <div class="liquid-panel px-4 py-3 mb-4 flex items-center gap-2 overflow-x-auto text-sm text-stone-300 font-mono">
-            <i class="fa-solid fa-hard-drive text-blue-500"></i>
-            <span id="current-path" class="whitespace-nowrap overflow-ellipsis">Loading storage...</span>
-        </div>
-
-        <!-- Toolbar / Direct Actions -->
-        <div class="grid grid-cols-2 gap-3 mb-5">
-            <label class="liquid-card px-4 py-3 flex flex-col items-center justify-center cursor-pointer">
-                <i class="fa-solid fa-cloud-arrow-up text-xl text-blue-400 mb-1"></i>
-                <span class="text-xs font-semibold text-stone-200">Upload Files</span>
-                <input type="file" id="file-uploader" class="hidden" multiple onchange="handleUpload(this.files)">
-            </label>
-            <button onclick="createNewFolder()" class="liquid-card px-4 py-3 flex flex-col items-center justify-center">
-                <i class="fa-solid fa-folder-plus text-xl text-green-400 mb-1"></i>
-                <span class="text-xs font-semibold text-stone-200">New Directory</span>
-            </button>
-        </div>
-
-        <!-- Upload Status Dashboard -->
-        <div id="upload-progress-container" class="hidden liquid-panel p-4 mb-4">
-            <div class="flex justify-between items-center text-xs text-stone-300 mb-1.5 font-semibold">
-                <span>Uploading...</span>
-                <span id="upload-percent">0%</span>
+    <!-- Main Content Area -->
+    <div class="main-content" id="content-area">
+        
+        <!-- Tab 1: Files -->
+        <div id="view-files">
+            <div class="search-bar">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" placeholder="Search">
+                <i class="fa-solid fa-microphone"></i>
             </div>
-            <div class="w-full bg-stone-800 h-2 rounded-full overflow-hidden">
-                <div id="upload-bar" class="bg-blue-500 h-full w-0 transition-all duration-100"></div>
+            
+            <div id="upload-progress-container" class="hidden ios-list mb-4 p-4 text-sm font-medium">
+                <div class="flex justify-between mb-2"><span>Uploading...</span><span id="upload-percent">0%</span></div>
+                <div class="h-1.5 bg-stone-800 rounded-full overflow-hidden">
+                    <div id="upload-bar" class="h-full bg-[var(--ios-blue)] w-0 transition-all"></div>
+                </div>
             </div>
-        </div>
 
-        <!-- Files List Container -->
-        <div class="mb-2">
-            <div id="back-btn-container" class="hidden mb-2">
-                <button onclick="navigateBack()" class="w-full py-2.5 px-4 rounded-xl bg-stone-900/45 text-amber-400 hover:text-amber-300 text-sm font-semibold flex items-center gap-2 border border-amber-500/15">
-                    <i class="fa-solid fa-backward"></i> Go Up / Back
-                </button>
-            </div>
-            <div id="files-list" class="space-y-2">
+            <!-- iOS Grid View -->
+            <div class="ios-grid" id="files-list">
                 <!-- Dynamically populated files -->
             </div>
         </div>
-    </div>
 
-    <!-- REMOTE CONTROLLER VIEW -->
-    <div id="view-remote" class="hidden">
-        <!-- Device Quick Control Center -->
-        <div class="liquid-panel p-5 text-center mb-6">
-            <h2 class="text-md font-bold text-stone-300 mb-4 tracking-wide"><i class="fa-solid fa-network-wired mr-1.5 text-blue-500"></i> ANDROID TV REMOTE CONTROL</h2>
-            
-            <!-- Context navigation commands -->
-            <div class="grid grid-cols-3 gap-3 mb-5">
-                <button onclick="sendRemoteCmd('BACK')" class="haptic-btn py-3 liquid-panel flex flex-col items-center justify-center text-stone-300">
-                    <i class="fa-solid fa-arrow-left text-lg text-amber-500 mb-1"></i>
-                    <span class="text-[11px] font-medium text-stone-400">Back</span>
-                </button>
-                <button onclick="sendRemoteCmd('SETTINGS')" class="haptic-btn py-3 liquid-panel flex flex-col items-center justify-center text-stone-300">
-                    <i class="fa-solid fa-gears text-lg text-stone-400 mb-1"></i>
-                    <span class="text-[11px] font-medium text-stone-400">Settings</span>
-                </button>
-                <button onclick="sendRemoteCmd('HOME')" class="haptic-btn py-3 liquid-panel flex flex-col items-center justify-center text-stone-300">
-                    <i class="fa-solid fa-house-chimney text-lg text-blue-500 mb-1"></i>
-                    <span class="text-[11px] font-medium text-stone-400">Home</span>
-                </button>
+        <!-- Tab 2: Remote -->
+        <div id="view-remote" class="hidden">
+            <div class="px-6 text-center">
+                <h2 class="text-xl font-bold mb-1">Apple TV Remote</h2>
+                <p class="text-xs text-[var(--ios-gray)] mb-6">Swipe or tap to control Android TV</p>
+
+                <!-- D-Pad -->
+                <div class="dpad-container">
+                    <button onclick="sendRemoteCmd('UP')" class="dpad-btn dpad-up"><i class="fa-solid fa-chevron-up"></i></button>
+                    <button onclick="sendRemoteCmd('DOWN')" class="dpad-btn dpad-down"><i class="fa-solid fa-chevron-down"></i></button>
+                    <button onclick="sendRemoteCmd('LEFT')" class="dpad-btn dpad-left"><i class="fa-solid fa-chevron-left"></i></button>
+                    <button onclick="sendRemoteCmd('RIGHT')" class="dpad-btn dpad-right"><i class="fa-solid fa-chevron-right"></i></button>
+                    <button onclick="sendRemoteCmd('OK')" class="dpad-btn dpad-ok">OK</button>
+                </div>
+
+                <!-- Auxiliary Buttons -->
+                <div class="flex justify-center gap-6 mt-8">
+                    <button onclick="sendRemoteCmd('BACK')" class="w-14 h-14 rounded-full bg-[var(--ios-card)] flex items-center justify-center text-[var(--ios-gray)]"><i class="fa-solid fa-arrow-left text-xl"></i></button>
+                    <button onclick="sendRemoteCmd('HOME')" class="w-14 h-14 rounded-full bg-[var(--ios-card)] flex items-center justify-center text-[var(--ios-gray)]"><i class="fa-solid fa-tv text-xl"></i></button>
+                    <button onclick="sendRemoteCmd('SETTINGS')" class="w-14 h-14 rounded-full bg-[var(--ios-card)] flex items-center justify-center text-[var(--ios-gray)]"><i class="fa-solid fa-gear text-xl"></i></button>
+                </div>
+                
+                <!-- Volume & Media -->
+                <div class="flex justify-center gap-4 mt-8">
+                    <div class="bg-[var(--ios-card)] rounded-xl flex items-center p-1">
+                        <button onclick="sendRemoteCmd('VOL_DOWN')" class="px-4 py-2 text-xl text-[var(--ios-gray)]"><i class="fa-solid fa-volume-low"></i></button>
+                        <div class="w-[1px] h-6 bg-[rgba(255,255,255,0.1)]"></div>
+                        <button onclick="sendRemoteCmd('VOL_UP')" class="px-4 py-2 text-xl text-[var(--ios-gray)]"><i class="fa-solid fa-volume-high"></i></button>
+                    </div>
+                </div>
             </div>
+        </div>
 
-            <!-- Authentic Apple D-Pad Circle layout -->
-            <div class="flex justify-center my-6">
-                <div class="relative w-56 h-56 bg-stone-900/30 rounded-full border border-stone-800 flex items-center justify-center p-2 shadow-2xl">
-                    <!-- UP Button -->
-                    <button onclick="sendRemoteCmd('UP')" class="haptic-btn absolute top-1.5 w-16 h-14 flex items-center justify-center text-stone-300 rounded-t-full">
-                        <i class="fa-solid fa-chevron-up text-2xl text-blue-500"></i>
-                    </button>
-                    <!-- DOWN Button -->
-                    <button onclick="sendRemoteCmd('DOWN')" class="haptic-btn absolute bottom-1.5 w-16 h-14 flex items-center justify-center text-stone-300 rounded-b-full">
-                        <i class="fa-solid fa-chevron-down text-2xl text-blue-500"></i>
-                    </button>
-                    <!-- LEFT Button -->
-                    <button onclick="sendRemoteCmd('LEFT')" class="haptic-btn absolute left-1.5 w-14 h-16 flex items-center justify-center text-stone-300 rounded-l-full">
-                        <i class="fa-solid fa-chevron-left text-2xl text-blue-500"></i>
-                    </button>
-                    <!-- RIGHT Button -->
-                    <button onclick="sendRemoteCmd('RIGHT')" class="haptic-btn absolute right-1.5 w-14 h-16 flex items-center justify-center text-stone-300 rounded-r-full">
-                        <i class="fa-solid fa-chevron-right text-2xl text-blue-500"></i>
-                    </button>
+        <!-- Tab 3: Browser Cast -->
+        <div id="view-browser" class="hidden">
+            <div class="px-6 mt-4">
+                <div class="ios-list p-4 mb-6">
+                    <div class="text-center">
+                        <div class="w-16 h-16 rounded-full bg-[#1C1C1E] mx-auto border border-[var(--ios-blue)] flex items-center justify-center shadow-[0_0_15px_rgba(10,132,255,0.3)] mb-4">
+                            <i class="fa-solid fa-wifi text-2xl text-[var(--ios-blue)]"></i>
+                        </div>
+                        <h2 class="text-lg font-bold mb-1">AirPlay to TV Mode</h2>
+                        <p class="text-xs text-[var(--ios-gray)] mb-4">Send any web link directly to the TV Browser.</p>
+                    </div>
+
+                    <input type="text" id="cast-url" placeholder="https://..." class="w-full bg-[var(--ios-bg)] border border-[rgba(255,255,255,0.1)] text-white px-4 py-3 rounded-lg text-sm mb-4 outline-none">
                     
-                    <!-- OK / CENTER SELECT -->
-                    <button onclick="sendRemoteCmd('OK')" class="haptic-btn w-24 h-24 rounded-full bg-blue-600 shadow-lg border border-blue-400 flex items-center justify-center text-white active:scale-90 font-bold text-lg">
-                        SELECT
+                    <button onclick="castUrl()" class="w-full bg-[var(--ios-blue)] text-white font-semibold py-3 rounded-xl mb-4">
+                        Cast via Network
+                    </button>
+                </div>
+
+                <h3 class="text-xs font-semibold text-[var(--ios-gray)] uppercase tracking-wider mb-2 px-2">Quick Apps</h3>
+                <div class="ios-list">
+                    <button onclick="document.getElementById('cast-url').value='https://youtube.com/tv'; castUrl();" class="ios-list-item w-full text-left">
+                        <img src="https://www.youtube.com/s/desktop/15e7ca63/img/favicon.ico" class="w-6 h-6 mr-3 rounded" onerror="this.src=''">
+                        <span class="flex-1">YouTube TV</span>
+                        <i class="fa-solid fa-chevron-right text-[var(--ios-gray)] text-sm"></i>
+                    </button>
+                    <button onclick="document.getElementById('cast-url').value='https://netflix.com'; castUrl();" class="ios-list-item w-full text-left">
+                        <div class="w-6 h-6 mr-3 rounded bg-red-600 text-white flex items-center justify-center font-bold text-xs">N</div>
+                        <span class="flex-1">Netflix</span>
+                        <i class="fa-solid fa-chevron-right text-[var(--ios-gray)] text-sm"></i>
                     </button>
                 </div>
             </div>
-
-            <!-- Quick TV System Actions -->
-            <div class="grid grid-cols-2 gap-4 mt-6">
-                <div class="p-3 bg-stone-950/40 rounded-xl border border-stone-900 flex items-center justify-between">
-                    <span class="text-xs font-semibold text-stone-300"><i class="fa-solid fa-volume-low text-blue-400 mr-2"></i> TV Audio</span>
-                    <div class="flex gap-1.5">
-                        <button onclick="sendRemoteCmd('VOL_DOWN')" class="haptic-btn w-8 h-8 rounded-lg bg-stone-800 text-stone-300 flex items-center justify-center"><i class="fa-solid fa-minus text-xs"></i></button>
-                        <button onclick="sendRemoteCmd('VOL_UP')" class="haptic-btn w-8 h-8 rounded-lg bg-stone-800 text-stone-300 flex items-center justify-center"><i class="fa-solid fa-plus text-xs"></i></button>
-                    </div>
-                </div>
-                <div class="p-3 bg-stone-950/40 rounded-xl border border-stone-900 flex items-center justify-between">
-                    <span class="text-xs font-semibold text-stone-300"><i class="fa-solid fa-play-pause text-blue-400 mr-2"></i> Media</span>
-                    <div class="flex gap-1.5">
-                        <button onclick="sendRemoteCmd('MEDIA_PREV')" class="haptic-btn w-8 h-8 rounded-lg bg-stone-800 text-stone-300 flex items-center justify-center"><i class="fa-solid fa-backward text-[10px]"></i></button>
-                        <button onclick="sendRemoteCmd('MEDIA_PLAY')" class="haptic-btn w-8 h-8 rounded-lg bg-stone-800 text-stone-300 flex items-center justify-center"><i class="fa-solid fa-play text-[10px]"></i></button>
-                    </div>
-                </div>
-            </div>
         </div>
+
     </div>
 
-    <!-- BROWSER / CAST VIEW -->
-    <div id="view-browser" class="hidden">
-        <div class="liquid-panel p-5 text-center mb-6">
-            <h2 class="text-md font-bold text-stone-300 mb-4 tracking-wide"><i class="fa-solid fa-earth-americas mr-1.5 text-blue-500"></i> WEB & VIDEO CASTING</h2>
-            <p class="text-xs text-stone-400 mb-4">Paste a URL here (YouTube, web page, video link) to instantly cast it to your Android TV's built-in browser. Ad-blocking is enabled on the TV.</p>
-            
-            <input type="text" id="cast-url" placeholder="https://youtube.com/..." class="w-full bg-stone-900 border border-stone-700 text-white p-3 rounded-lg text-sm mb-4 outline-none focus:border-blue-500">
-            
-            <button onclick="castUrl()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-xl shadow-lg border border-blue-400 active:scale-95 transition-all">
-                <i class="fa-solid fa-tv mr-2"></i> Cast to TV
-            </button>
-
-            <div class="mt-6 text-left">
-                <p class="text-xs font-semibold text-stone-500 mb-2 uppercase">Quick Cast Shortcuts</p>
-                <div class="grid grid-cols-2 gap-2">
-                    <button onclick="document.getElementById('cast-url').value='https://youtube.com'; castUrl();" class="p-2 bg-stone-800 rounded text-xs text-stone-300 border border-stone-700"><i class="fa-brands fa-youtube text-red-500"></i> YouTube</button>
-                    <button onclick="document.getElementById('cast-url').value='https://twitch.tv'; castUrl();" class="p-2 bg-stone-800 rounded text-xs text-stone-300 border border-stone-700"><i class="fa-brands fa-twitch text-purple-500"></i> Twitch</button>
-                    <button onclick="document.getElementById('cast-url').value='https://google.com'; castUrl();" class="p-2 bg-stone-800 rounded text-xs text-stone-300 border border-stone-700"><i class="fa-brands fa-google text-blue-400"></i> Google</button>
-                    <button onclick="document.getElementById('cast-url').value='https://netflix.com'; castUrl();" class="p-2 bg-stone-800 rounded text-xs text-stone-300 border border-stone-700"><i class="fa-solid fa-n text-red-600"></i> Netflix</button>
-                </div>
-            </div>
-        </div>
+    <!-- Tab Bar -->
+    <div class="tab-bar">
+        <button id="tab-files" onclick="toggleView('files')" class="tab-item active">
+            <i class="fa-solid fa-folder"></i>
+            <span>Browse</span>
+        </button>
+        <button id="tab-remote" onclick="toggleView('remote')" class="tab-item">
+            <i class="fa-solid fa-gamepad"></i>
+            <span>Remote</span>
+        </button>
+        <button id="tab-browser" onclick="toggleView('browser')" class="tab-item">
+            <i class="fa-solid fa-display"></i>
+            <span>Cast</span>
+        </button>
     </div>
 
-    <!-- Long Press Haptic Context Menu -->
+    <!-- Context Menu -->
     <div id="context-menu" class="context-menu">
-        <!-- Set context target dynamically -->
         <input type="hidden" id="context-file-path" value="">
         <input type="hidden" id="context-file-type" value="">
-        <div id="context-title" class="p-4 text-xs font-semibold uppercase tracking-wider text-stone-400 border-b border-stone-800 truncate">File Actions</div>
-        <button onclick="execContextAction('OPEN')" class="context-item text-blue-400">
-            <i class="fa-solid fa-play mr-3"></i> Open / Use on TV
+        
+        <button onclick="execContextAction('OPEN')" class="context-item">
+            <span>Play on TV</span>
+            <i class="fa-solid fa-play"></i>
         </button>
-        <button id="context-download-btn" onclick="execContextAction('DOWNLOAD')" class="context-item text-green-400">
-            <i class="fa-solid fa-download mr-3"></i> Download to Client
+        <div class="h-[1px] bg-[rgba(255,255,255,0.1)] w-full"></div>
+        <button id="context-download-btn" onclick="execContextAction('DOWNLOAD')" class="context-item">
+            <span>Download</span>
+            <i class="fa-solid fa-cloud-arrow-down"></i>
         </button>
-        <button onclick="execContextAction('RENAME')" class="context-item text-stone-300">
-            <i class="fa-solid fa-pen mr-3"></i> Rename File
+        <div class="h-[1px] bg-[rgba(255,255,255,0.1)] w-full"></div>
+        <button onclick="execContextAction('RENAME')" class="context-item">
+            <span>Rename</span>
+            <i class="fa-solid fa-pen"></i>
         </button>
-        <button onclick="execContextAction('DELETE')" class="context-item text-red-500">
-            <i class="fa-solid fa-trash-can mr-3"></i> Delete
+        <div class="h-[1px] bg-[rgba(255,255,255,0.1)] w-full"></div>
+        <button onclick="execContextAction('DELETE')" class="context-item danger">
+            <span>Delete</span>
+            <i class="fa-solid fa-trash-can"></i>
         </button>
     </div>
 
-    <!-- JavaScript logic -->
+    <!-- Settings Modal Sheet -->
+    <div id="settings-modal" class="modal-overlay" onclick="closeSettingsModal(event)">
+        <div class="modal-sheet" onclick="event.stopPropagation()">
+            <div class="w-10 h-1.5 bg-[var(--ios-gray)] rounded-full mx-auto mb-6"></div>
+            <h2 class="text-xl font-bold mb-4">Settings</h2>
+            <div class="ios-list bg-[var(--ios-bg)] border border-[rgba(255,255,255,0.1)]">
+                <div class="ios-list-item justify-between">
+                    <span>Show Hidden Files</span>
+                    <input type="checkbox" id="toggle-hidden" class="accent-[var(--ios-blue)] scale-125">
+                </div>
+                <div class="ios-list-item justify-between">
+                    <span>Grid View</span>
+                    <input type="checkbox" id="toggle-grid" checked class="accent-[var(--ios-blue)] scale-125">
+                </div>
+            </div>
+            <button onclick="closeSettingsModal('close')" class="w-full bg-[var(--ios-card)] py-3 rounded-xl text-[var(--ios-blue)] font-bold text-lg mt-4">Done</button>
+        </div>
+    </div>
+
     <script>
         let currentPath = "/storage/emulated/0";
         let activeView = "files";
@@ -298,33 +484,50 @@ object WebInterface {
             }
         }
 
+        function openSettingsModal() {
+            document.getElementById('settings-modal').style.display = 'flex';
+            setTimeout(() => {
+                document.getElementById('settings-modal').classList.add('active');
+            }, 10);
+        }
+
+        function closeSettingsModal(e) {
+            if (e === 'close' || e.target.id === 'settings-modal') {
+                document.getElementById('settings-modal').classList.remove('active');
+                setTimeout(() => {
+                    document.getElementById('settings-modal').style.display = 'none';
+                }, 300);
+            }
+        }
+
         function toggleView(view) {
             doVibrate(30);
             activeView = view;
             
-            // Hide all
             document.getElementById('view-files').classList.add('hidden');
             document.getElementById('view-remote').classList.add('hidden');
             document.getElementById('view-browser').classList.add('hidden');
             
-            // Reset tabs
-            const inactiveClass = "flex-1 py-3 text-sm font-semibold rounded-xl text-center transition bg-stone-900/40 text-stone-400 border border-transparent";
-            const activeClass = "flex-1 py-3 text-sm font-semibold rounded-xl text-center transition bg-white/10 text-white border border-white/5 shadow";
-            
-            document.getElementById('tab-files').className = inactiveClass;
-            document.getElementById('tab-remote').className = inactiveClass;
-            document.getElementById('tab-browser').className = inactiveClass;
+            document.getElementById('tab-files').classList.remove('active');
+            document.getElementById('tab-remote').classList.remove('active');
+            document.getElementById('tab-browser').classList.remove('active');
 
             if (view === 'files') {
                 document.getElementById('view-files').classList.remove('hidden');
-                document.getElementById('tab-files').className = activeClass;
+                document.getElementById('tab-files').classList.add('active');
+                document.getElementById('main-header').firstElementChild.textContent = "Browse";
+                document.getElementById('files-toolbar').style.display = "flex";
                 fetchFiles();
             } else if (view === 'remote') {
                 document.getElementById('view-remote').classList.remove('hidden');
-                document.getElementById('tab-remote').className = activeClass;
+                document.getElementById('tab-remote').classList.add('active');
+                document.getElementById('main-header').firstElementChild.textContent = "Remote";
+                document.getElementById('files-toolbar').style.display = "none";
             } else if (view === 'browser') {
                 document.getElementById('view-browser').classList.remove('hidden');
-                document.getElementById('tab-browser').className = activeClass;
+                document.getElementById('tab-browser').classList.add('active');
+                document.getElementById('main-header').firstElementChild.textContent = "Cast";
+                document.getElementById('files-toolbar').style.display = "none";
             }
         }
 
@@ -332,13 +535,8 @@ object WebInterface {
             doVibrate(50);
             const urlInput = document.getElementById('cast-url');
             let url = urlInput.value.trim();
-            if (!url) {
-                alert("Please enter a URL first.");
-                return;
-            }
-            if (!url.startsWith('http://') && !url.startsWith('https://')) {
-                url = 'https://' + url;
-            }
+            if (!url) return;
+            if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url;
             
             fetch('/api/cast', {
                 method: 'POST',
@@ -348,16 +546,9 @@ object WebInterface {
             .then(res => res.json())
             .then(data => {
                 if (data.status === 'success') {
-                    alert("Casting to TV! Look at the Android screen.");
                     urlInput.value = "";
-                } else {
-                    alert("Casting failed: " + data.message);
-                }
-            })
-            .catch(err => {
-                console.error("Cast API error", err);
-                alert("Error communicating with TV.");
-            });
+                } else alert("Casting failed: " + data.message);
+            }).catch(console.error);
         }
 
         function fetchFiles() {
@@ -365,23 +556,23 @@ object WebInterface {
                 .then(res => res.json())
                 .then(data => {
                     currentPath = data.currentPath;
-                    document.getElementById('current-path').textContent = currentPath;
+                    let pathParts = currentPath.split('/');
+                    let folderName = pathParts[pathParts.length - 1];
+                    if (currentPath === "/storage/emulated/0") folderName = "On My TV";
                     
-                    const backContainer = document.getElementById('back-btn-container');
-                    if (data.isRoot) {
-                        backContainer.classList.add('hidden');
-                    } else {
-                        backContainer.classList.remove('hidden');
-                    }
+                    document.getElementById('path-title').textContent = folderName;
+                    
+                    const backBtn = document.getElementById('back-btn');
+                    if (data.isRoot) backBtn.style.visibility = 'hidden';
+                    else backBtn.style.visibility = 'visible';
 
                     const list = document.getElementById('files-list');
                     list.innerHTML = "";
 
                     if (data.files.length === 0) {
                         list.innerHTML = `
-                            <div class="text-center py-12 text-stone-500">
-                                <i class="fa-regular fa-folder-open text-4xl mb-3 block"></i>
-                                <span class="text-sm">Empty Directory</span>
+                            <div class="col-span-full text-center py-20 text-[var(--ios-gray)]">
+                                <span class="text-sm">Folder corresponds to no items.</span>
                             </div>
                         `;
                         return;
@@ -389,7 +580,7 @@ object WebInterface {
 
                     data.files.forEach(file => {
                         const card = document.createElement('div');
-                        card.className = "liquid-card p-3.5 flex items-center justify-between";
+                        card.className = "ios-grid-item";
                         
                         // Set up haptic touch event logic for Long Press menu
                         card.addEventListener('touchstart', (e) => {
@@ -398,18 +589,12 @@ object WebInterface {
                                 isLongPressActive = true;
                                 doVibrate(65);
                                 showContextMenu(e, file);
-                            }, 600); // 600ms required for Long Press
+                            }, 500);
                         }, { passive: true });
 
-                        card.addEventListener('touchend', () => {
-                            clearTimeout(longPressTimer);
-                        }, { passive: true });
+                        card.addEventListener('touchend', () => clearTimeout(longPressTimer), { passive: true });
+                        card.addEventListener('touchmove', () => clearTimeout(longPressTimer), { passive: true });
 
-                        card.addEventListener('touchmove', () => {
-                            clearTimeout(longPressTimer);
-                        }, { passive: true });
-
-                        // Normal simple tap
                         card.addEventListener('click', (e) => {
                             if (isLongPressActive) {
                                 isLongPressActive = false;
@@ -420,133 +605,87 @@ object WebInterface {
                                 currentPath = file.absolutePath;
                                 fetchFiles();
                             } else {
-                                // Default open action on single click
                                 requestOpenFile(file.absolutePath);
                             }
                         });
 
-                        // Dynamic Icon or Thumbnail Generation
-                        let iconHtml = "";
-                        let iconClass = "fa-solid fa-file text-blue-400";
-                        let isImage = false;
+                        let iconClass = "fa-solid fa-file";
+                        let iconColor = "text-[#8E8E93]"; // iOS Gray
                         if (file.isDirectory) {
-                            iconClass = "fa-solid fa-folder text-amber-500";
+                            iconClass = "fa-solid fa-folder";
+                            iconColor = "ios-folder";
                         } else if (file.name.endsWith('.apk')) {
-                            iconClass = "fa-brands fa-android text-emerald-400";
-                        } else if (file.name.endsWith('.mp4') || file.name.endsWith('.mkv') || file.name.endsWith('.avi') || file.name.endsWith('.mov')) {
-                            iconClass = "fa-solid fa-video text-purple-400";
-                        } else if (file.name.endsWith('.mp3') || file.name.endsWith('.wav') || file.name.endsWith('.ogg') || file.name.endsWith('.flac')) {
-                            iconClass = "fa-solid fa-music text-pink-400";
-                        } else {
-                            const ext = file.name.toLowerCase();
-                            if (ext.endsWith('.jpg') || ext.endsWith('.jpeg') || ext.endsWith('.png') || ext.endsWith('.webp') || ext.endsWith('.gif')) {
-                                isImage = true;
-                            } else {
-                                iconClass = "fa-solid fa-file text-teal-400";
-                            }
-                        }
-
-                        if (isImage) {
-                            iconHtml = `<img src="/api/download?path=${'$'}{encodeURIComponent(file.absolutePath)}" class="w-full h-full object-cover rounded-xl" />`;
-                        } else {
-                            iconHtml = `<i class="${'$'}{iconClass} text-lg"></i>`;
+                            iconClass = "fa-brands fa-android";
+                            iconColor = "text-[#34C759]"; // iOS Green
+                        } else if (file.name.endsWith('.mp4') || file.name.endsWith('.mkv')) {
+                            iconClass = "fa-solid fa-circle-play";
+                            iconColor = "text-[#AF52DE]"; // iOS Purple
+                        } else if (file.name.endsWith('.mp3')) {
+                            iconClass = "fa-solid fa-music";
+                            iconColor = "text-[#FF2D55]"; // iOS Pink
+                        } else if (file.name.endsWith('.jpg') || file.name.endsWith('.png') || file.name.endsWith('.webp')) {
+                            iconClass = "fa-solid fa-image";
+                            iconColor = "text-[#0A84FF]";
                         }
 
                         card.innerHTML = `
-                            <div class="flex items-center gap-3.5 overflow-hidden">
-                                <div class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/5 overflow-hidden">
-                                    ${'$'}{iconHtml}
-                                </div>
-                                <div class="overflow-hidden">
-                                    <div class="text-[14px] font-semibold text-white truncate max-w-[200px]">${'$'}{file.name}</div>
-                                    <div class="text-[11px] text-stone-400 mt-0.5">${'$'}{file.sizeFormatted}</div>
-                                </div>
+                            <div class="ios-icon-box">
+                                <i class="${'$'}{iconClass} ${'$'}{iconColor}"></i>
                             </div>
-                            <div class="flex items-center gap-2">
-                                <button onclick="event.stopPropagation(); triggerNativeContextMenu(event, '${'$'}{file.name}', '${'$'}{file.absolutePath}', ${'$'}{file.isDirectory})" class="haptic-btn w-8 h-8 rounded-full hover:bg-white/5 text-stone-400 flex items-center justify-center border border-transparent hover:border-white/5">
-                                    <i class="fa-solid fa-ellipsis-vertical text-sm"></i>
-                                </button>
-                            </div>
+                            <div class="ios-file-title">${'$'}{file.name}</div>
+                            <div class="ios-file-subtitle">${'$'}{file.sizeFormatted}</div>
                         `;
                         list.appendChild(card);
                     });
-                })
-                .catch(err => {
-                    console.error("Error loading files", err);
-                });
-        }
-
-        function triggerNativeContextMenu(e, name, absolutePath, isDirectory) {
-            doVibrate(40);
-            const fileObj = {
-                name: name,
-                absolutePath: absolutePath,
-                isDirectory: isDirectory
-            };
-            showContextMenu(e, fileObj);
+                }).catch(console.error);
         }
 
         function showContextMenu(e, file) {
             const menu = document.getElementById('context-menu');
             document.getElementById('context-file-path').value = file.absolutePath;
             document.getElementById('context-file-type').value = file.isDirectory ? 'dir' : 'file';
-            document.getElementById('context-title').textContent = file.name;
 
-            // Only show download for files, not directories
             const downloadBtn = document.getElementById('context-download-btn');
             if (file.isDirectory) {
                 downloadBtn.style.display = 'none';
+                downloadBtn.nextElementSibling.style.display = 'none';
             } else {
                 downloadBtn.style.display = 'flex';
+                downloadBtn.nextElementSibling.style.display = 'block';
             }
 
-            // UI coordinates
             let x = e.clientX || (e.touches && e.touches[0].clientX);
             let y = e.clientY || (e.touches && e.touches[0].clientY);
-            
             if (!x || !y) {
-                // Fallback inside element bounds
                 const rect = e.currentTarget.getBoundingClientRect();
-                x = rect.left + 50;
-                y = rect.top + 20;
+                x = rect.left + (rect.width/2);
+                y = rect.top + (rect.height/2);
             }
 
-            // Offsite clipping check
-            const menuWidth = 220;
-            if (x + menuWidth > window.innerWidth) {
-                x = window.innerWidth - menuWidth - 10;
-            }
+            const menuWidth = 250;
+            if (x + menuWidth > window.innerWidth) x = window.innerWidth - menuWidth - 20;
 
             menu.style.left = x + 'px';
             menu.style.top = y + window.scrollY + 'px';
             menu.style.display = 'block';
             
-            // Block other clicks
             e.stopPropagation();
             e.preventDefault();
         }
 
         function execContextAction(action) {
             const absolutePath = document.getElementById('context-file-path').value;
-            const type = document.getElementById('context-file-type').value;
             const menu = document.getElementById('context-menu');
             menu.style.display = 'none';
-
             doVibrate(50);
 
-            if (action === 'OPEN') {
-                requestOpenFile(absolutePath);
-            } else if (action === 'DOWNLOAD') {
-                window.open('/api/download?path=' + encodeURIComponent(absolutePath), '_blank');
-            } else if (action === 'RENAME') {
-                const newName = prompt("Rename this entry to:");
-                if (newName && newName.trim().length > 0) {
-                    processFileAction('RENAME', absolutePath, newName.trim());
-                }
+            if (action === 'OPEN') requestOpenFile(absolutePath);
+            else if (action === 'DOWNLOAD') window.open('/api/download?path=' + encodeURIComponent(absolutePath), '_blank');
+            else if (action === 'RENAME') {
+                const newName = prompt("Rename to:");
+                if (newName) processFileAction('RENAME', absolutePath, newName.trim());
             } else if (action === 'DELETE') {
-                if (confirm("Delete this entry permanently?")) {
-                    processFileAction('DELETE', absolutePath);
-                }
+                if (confirm("Delete this item?")) processFileAction('DELETE', absolutePath);
             }
         }
 
@@ -563,23 +702,15 @@ object WebInterface {
             fetch('/api/open?path=' + encodeURIComponent(absolutePath), { method: 'POST' })
                 .then(res => res.json())
                 .then(data => {
-                    if (data.status === 'success') {
-                        alert("File launched on Android TV!");
-                    } else {
-                        alert("Error opening file: " + data.message);
-                    }
-                })
-                .catch(err => {
-                    console.error("Open API error", err);
-                });
+                    if (data.status === 'success') { /* success */ }
+                    else alert("Error opening file: " + data.message);
+                }).catch(console.error);
         }
 
         function createNewFolder() {
             doVibrate(30);
-            const name = prompt("Enter directory name:");
-            if (name && name.trim().length > 0) {
-                processFileAction('MKDIR', currentPath + '/' + name.trim());
-            }
+            const name = prompt("New Folder Name:");
+            if (name) processFileAction('MKDIR', currentPath + '/' + name.trim());
         }
 
         function processFileAction(action, path, argument = "") {
@@ -587,18 +718,10 @@ object WebInterface {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: action, path: path, argument: argument })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    fetchFiles();
-                } else {
-                    alert("Failure: " + data.message);
-                }
-            })
-            .catch(err => {
-                console.error("Action API error", err);
-            });
+            }).then(res => res.json()).then(data => {
+                if (data.status === 'success') fetchFiles();
+                else alert("Failure: " + data.message);
+            }).catch(console.error);
         }
 
         function handleUpload(files) {
@@ -614,9 +737,7 @@ object WebInterface {
             percent.textContent = '0%';
 
             const formData = new FormData();
-            for (let i = 0; i < files.length; i++) {
-                formData.append('files', files[i]);
-            }
+            for (let i = 0; i < files.length; i++) formData.append('files', files[i]);
 
             const xhr = new XMLHttpRequest();
             xhr.open('POST', '/api/upload?path=' + encodeURIComponent(currentPath), true);
@@ -631,20 +752,11 @@ object WebInterface {
 
             xhr.onload = function() {
                 doVibrate(90);
-                container.classList.add('hidden');
-                if (xhr.status === 200) {
-                    fetchFiles();
-                    alert("Files uploaded successfully!");
-                } else {
-                    alert("Upload failed. Android Server status: " + xhr.status);
-                }
+                setTimeout(() => container.classList.add('hidden'), 1000);
+                if (xhr.status === 200) fetchFiles();
+                else alert("Upload failed.");
             };
-
-            xhr.onerror = function() {
-                container.classList.add('hidden');
-                alert("Upload failed due to connection error.");
-            };
-
+            xhr.onerror = function() { container.classList.add('hidden'); alert("Connection error."); };
             xhr.send(formData);
         }
 
@@ -654,10 +766,7 @@ object WebInterface {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ command: cmd })
-            })
-            .catch(err => {
-                console.error("Remote controller API offline", err);
-            });
+            }).catch(console.error);
         }
     </script>
 </body>

@@ -13,6 +13,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.*
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -22,6 +23,9 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -182,352 +186,360 @@ fun TvDashboardScreen(
     onRequestPermissions: () -> Unit
 ) {
     val context = LocalContext.current
-    val isRunning by ServerState.isServerRunning.collectAsState()
-    val isConnected by ServerState.isClientConnected.collectAsState()
-    val clientIp by ServerState.clientIp.collectAsState()
-    val serverIp by ServerState.serverIp.collectAsState()
-    val logs by Logger.logs.collectAsState()
-    
-    // Periodically update RAM stats
-    var ramStats by remember { mutableStateOf(Logger.getRamTelemetry()) }
-    var dirStats by remember { mutableStateOf("0 B | 0 items") }
-    
-    // Check permission state in real-time
     var hasStoragePermission by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         while (true) {
-            ramStats = Logger.getRamTelemetry()
-            
-            // Check storage size recursively
             hasStoragePermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 Environment.isExternalStorageManager()
             } else {
                 ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
             }
-
-            if (hasStoragePermission) {
-                val dir = File("/storage/emulated/0")
-                if (dir.exists() && dir.isDirectory) {
-                    val files = dir.listFiles()
-                    val count = files?.size ?: 0
-                    val totalSize = FileUtils.formatSize(FileUtils.getFolderSize(dir))
-                    dirStats = "$totalSize | $count top-level entries"
-                } else {
-                    dirStats = "Storage offline"
-                }
-            } else {
-                dirStats = "Permission Required"
-            }
-            delay(3500)
+            delay(2000)
         }
     }
+
+    var selectedSidebarItem by remember { mutableStateOf("On My TV") }
 
     Row(
         modifier = modifier
             .fillMaxSize()
-            .background(AppConfig.BackgroundDark)
-            .padding(24.dp),
-        horizontalArrangement = Arrangement.spacedBy(24.dp)
+            .background(Color(0xFF000000))
     ) {
-        
-        // ---- LEFT PANEL: SIDEBAR MENU & QR CODE ----
-        // Contracts automatically when the client connected is TRUE
-        val sidebarWidth = if (isConnected) 240.dp else 420.dp
-        
+        // --- Sidebar (Locations) ---
         Column(
             modifier = Modifier
-                .width(sidebarWidth)
+                .width(260.dp)
                 .fillMaxHeight()
-                .clip(RoundedCornerShape(20.dp))
-                .background(AppConfig.CardBackground)
-                .border(1.dp, AppConfig.BorderColor, RoundedCornerShape(20.dp))
-                .padding(20.dp),
-            verticalArrangement = Arrangement.SpaceBetween,
-            horizontalAlignment = Alignment.CenterHorizontally
+                .background(Color(0xFF1C1C1E))
+                .padding(20.dp)
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                // App Logo Title Header
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.padding(bottom = 16.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Share,
-                        contentDescription = "Nexus Icon",
-                        tint = AppConfig.PrimaryBlue,
-                        modifier = Modifier.size(28.dp)
-                    )
-                    Text(
-                        text = "NEXUS EXPLORER",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = AppConfig.TextPrimary,
-                        letterSpacing = 1.sp
-                    )
-                }
+            Text(
+                text = "Locations",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                modifier = Modifier.padding(bottom = 16.dp, start = 8.dp)
+            )
 
-                Divider(color = AppConfig.BorderColor, thickness = 1.dp, modifier = Modifier.padding(bottom = 20.dp))
-
-                // Server Status Widget Indicator
-                HostStatusIndicator(isRunning = isRunning, serverIp = serverIp)
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // QR Code Panel
-                // Automatically slide-out or fade when connected
-                AnimatedVisibility(
-                    visible = !isConnected,
-                    enter = expandVertically() + fadeIn(),
-                    exit = shrinkVertically() + fadeOut()
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = "SCAN TO CONNECT",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = AppConfig.TextSecondary,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(bottom = 12.dp)
-                        )
-                        
-                        // Generate QR string with qrserver API as requested
-                        val serverUrl = "http://$serverIp:${AppConfig.PORT}"
-                        val qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${Uri.encode(serverUrl)}"
-                        
-                        Box(
-                            modifier = Modifier
-                                .size(180.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Color.White)
-                                .padding(8.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            // Since we have no Coil initialized inside normal simple flow, we can compose normal high contras custom visual checkerboard 
-                            // of QR Code fallback or display image. In this environment, we draw an aesthetic vector graphic code simulator 
-                            // that displays beautiful custom elements, but we make sure we write standard loading or load via network
-                            Text(
-                                text = "QR\n$serverUrl",
-                                color = Color.Black,
-                                fontSize = 10.sp,
-                                fontFamily = FontFamily.Monospace,
-                                fontWeight = FontWeight.Bold,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(14.dp))
-                        
-                        Text(
-                            text = "URL: $serverUrl",
-                            fontSize = 13.sp,
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Medium,
-                            color = AppConfig.AccentGold,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
-
-                // If Client is connected, show Connected success message
-                AnimatedVisibility(
-                    visible = isConnected,
-                    enter = fadeIn() + expandVertically(),
-                    exit = fadeOut() + shrinkVertically()
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 10.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(80.dp)
-                                .clip(CircleShape)
-                                .background(AppConfig.ActiveGreen.copy(alpha = 0.15f))
-                                .border(2.dp, AppConfig.ActiveGreen, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.CheckCircle,
-                                contentDescription = "Active Client Indicator",
-                                tint = AppConfig.ActiveGreen,
-                                modifier = Modifier.size(40.dp)
-                            )
-                        }
-                        
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Text(
-                            text = "CONTROLLER ACTIVE",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = AppConfig.ActiveGreen,
-                            letterSpacing = 1.sp
-                        )
-
-                        Text(
-                            text = "IP: ${clientIp ?: "Mobile Target"}",
-                            fontSize = 14.sp,
-                            fontFamily = FontFamily.Monospace,
-                            color = AppConfig.TextPrimary,
-                            modifier = Modifier.padding(top = 6.dp)
-                        )
-                        
-                        Spacer(modifier = Modifier.height(12.dp))
-                        
-                        Text(
-                            text = "Use your iPhone browser to navigate TV files, trigger media playing, or drag & drop files instantly.",
-                            fontSize = 11.sp,
-                            color = AppConfig.TextSecondary,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(horizontal = 10.dp)
-                        )
-                    }
-                }
-            }
-
-            // TV Footer Info
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = "v1.0.0 Pro Server",
-                    fontSize = 10.sp,
-                    fontFamily = FontFamily.Monospace,
-                    color = AppConfig.TextSecondary
-                )
-            }
+            TvSidebarItem(
+                text = "On My TV",
+                icon = Icons.Default.Home,
+                isSelected = selectedSidebarItem == "On My TV",
+                onClick = { selectedSidebarItem = "On My TV" }
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            TvSidebarItem(
+                text = "Host Server",
+                icon = Icons.Default.Share,
+                isSelected = selectedSidebarItem == "Host Server",
+                onClick = { selectedSidebarItem = "Host Server" }
+            )
+            
+            Spacer(modifier = Modifier.weight(1f))
+            
+            TvSidebarItem(
+                text = "Settings",
+                icon = Icons.Default.Settings,
+                isSelected = selectedSidebarItem == "Settings",
+                onClick = { selectedSidebarItem = "Settings" }
+            )
         }
 
-        // ---- RIGHT PANEL: DASHBOARD METRICS, TELEMETRY, LOGS ----
-        Column(
+        // --- Main Content Area ---
+        Box(
             modifier = Modifier
                 .weight(1f)
-                .fillMaxHeight(),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+                .fillMaxHeight()
+                .background(Color(0xFF000000))
         ) {
-            
-            // Storage & RAM Health Monitors Row
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(110.dp),
-                horizontalArrangement = Arrangement.spacedBy(20.dp)
-            ) {
-                // Storage Stats Card
-                DashboardMetricCard(
-                    modifier = Modifier.weight(1.2f),
-                    title = "LOCAL DIRECTORY STATS",
-                    value = dirStats,
-                    icon = Icons.Default.List,
-                    tint = AppConfig.AccentGold,
-                    description = "/storage/emulated/0"
-                )
-
-                // Memory / System RAM stats Card
-                DashboardMetricCard(
-                    modifier = Modifier.weight(1f),
-                    title = "RAM TELEMETRY MONITOR",
-                    value = "${ramStats.percentageUsed}% USED",
-                    icon = Icons.Default.Build,
-                    tint = if (ramStats.percentageUsed > 80) AppConfig.ErrorRed else AppConfig.ActiveGreen,
-                    description = "Allocated: ${FileUtils.formatSize(ramStats.usedBytes)} of ${FileUtils.formatSize(ramStats.maxBytes)}"
-                )
-            }
-
-            // Interactive Quick Actions Toolbar (Zero-Crash Permissions, Server Toggle)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Storage Permission request button
-                DpadTvButton(
-                    text = if (hasStoragePermission) "Access Granted" else "Access Perms",
-                    icon = if (hasStoragePermission) Icons.Default.Check else Icons.Default.Warning,
-                    tint = if (hasStoragePermission) AppConfig.ActiveGreen else AppConfig.AccentGold,
-                    onClick = onRequestPermissions,
-                    modifier = Modifier.weight(1f)
-                )
-
-                // Server Start/Stop active controller
-                DpadTvButton(
-                    text = if (isRunning) "Shutdown Host" else "Bootstrap Host",
-                    icon = if (isRunning) Icons.Default.Close else Icons.Default.PlayArrow,
-                    tint = if (isRunning) AppConfig.ErrorRed else AppConfig.PrimaryBlue,
-                    onClick = onToggleServer,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            // Main Active Operations Log Panel
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(AppConfig.CardBackground)
-                    .border(1.dp, AppConfig.BorderColor, RoundedCornerShape(20.dp))
-                    .padding(18.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Start,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = "Logs terminal",
-                        tint = AppConfig.PrimaryBlue,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "LIVE SYSTEM TELEMETRY LOGGER",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = AppConfig.TextPrimary,
-                        letterSpacing = 1.sp
-                    )
-                }
-
-                Divider(color = AppConfig.BorderColor, thickness = 1.dp, modifier = Modifier.padding(vertical = 12.dp))
-
-                Box(modifier = Modifier.weight(1f)) {
-                    if (logs.isEmpty()) {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(
-                                text = "Terminal Idle. Awaiting first connection...",
-                                color = AppConfig.TextSecondary,
-                                fontSize = 12.sp,
-                                fontFamily = FontFamily.Monospace,
-                                textAlign = TextAlign.Center
-                            )
-                        }
+            when (selectedSidebarItem) {
+                "On My TV" -> {
+                    if (hasStoragePermission) {
+                        TvFilesBrowser(context = context)
                     } else {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.spacedBy(5.dp),
-                            reverseLayout = false
-                        ) {
-                            items(logs) { logLine ->
-                                Text(
-                                    text = logLine,
-                                    fontSize = 11.sp,
-                                    fontFamily = FontFamily.Monospace,
-                                    color = if (logLine.contains("failed") || logLine.contains("Failed") || logLine.contains("Error")) AppConfig.ErrorRed else AppConfig.TextPrimary,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.Lock, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(64.dp))
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text("Storage Permission Required", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text("Please grant access in Settings to view files.", color = Color.Gray, fontSize = 14.sp)
+                                Spacer(modifier = Modifier.height(24.dp))
+                                DpadTvButton(
+                                    text = "Grant Permission",
+                                    icon = Icons.Default.Check,
+                                    tint = AppConfig.PrimaryBlue,
+                                    onClick = onRequestPermissions
                                 )
                             }
                         }
+                    }
+                }
+                "Host Server" -> {
+                    TvServerDashboard(onToggleServer = onToggleServer)
+                }
+                "Settings" -> {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("Settings", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                            Spacer(modifier = Modifier.height(20.dp))
+                            DpadTvButton(
+                                text = "Manage Permissions",
+                                icon = Icons.Default.Lock,
+                                tint = AppConfig.AccentGold,
+                                onClick = onRequestPermissions
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TvSidebarItem(text: String, icon: ImageVector, isSelected: Boolean, onClick: () -> Unit) {
+    var isFocused by remember { mutableStateOf(false) }
+    
+    val backgroundColor = when {
+        isFocused -> AppConfig.PrimaryBlue
+        isSelected -> Color(0xFF2C2C2E)
+        else -> Color.Transparent
+    }
+    
+    val contentColor = when {
+        isFocused -> Color.White
+        isSelected -> AppConfig.PrimaryBlue
+        else -> Color.Gray
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(backgroundColor)
+            .onFocusChanged { isFocused = it.isFocused }
+            .focusable()
+            .clickable { onClick() }
+            .padding(vertical = 12.dp, horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(imageVector = icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(20.dp))
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(text = text, color = contentColor, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+    }
+}
+
+@Composable
+fun TvFilesBrowser(context: Context) {
+    var currentPath by remember { mutableStateOf("/storage/emulated/0") }
+    var files by remember { mutableStateOf<List<File>>(emptyList()) }
+
+    LaunchedEffect(currentPath) {
+        val dir = File(currentPath)
+        if (dir.exists() && dir.isDirectory) {
+            files = dir.listFiles()?.sortedWith(compareBy({ !it.isDirectory }, { it.name.lowercase() })) ?: emptyList()
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxSize().padding(32.dp)) {
+        // Top Bar
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (currentPath != "/storage/emulated/0" && currentPath != "/storage") {
+                DpadTvButton(
+                    text = "Back",
+                    icon = Icons.Default.ArrowBack,
+                    tint = AppConfig.PrimaryBlue,
+                    onClick = {
+                        val parent = File(currentPath).parent
+                        if (parent != null) {
+                            currentPath = parent
+                        }
+                    }
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+            }
+            Text(
+                text = File(currentPath).name,
+                color = Color.White,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        // File Grid
+        if (files.isEmpty()) {
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                Text("Folder is empty", color = Color.Gray, fontSize = 18.sp)
+            }
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(140.dp),
+                contentPadding = PaddingValues(bottom = 80.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                items(files) { file ->
+                    TvFileGridItem(file = file, onClick = {
+                        if (file.isDirectory) {
+                            currentPath = file.absolutePath
+                        } else {
+                            openFileIntent(context, file)
+                        }
+                    })
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TvFileGridItem(file: File, onClick: () -> Unit) {
+    var isFocused by remember { mutableStateOf(false) }
+    
+    val scale = animateFloatAsState(targetValue = if (isFocused) 1.05f else 1.0f).value
+    
+    Column(
+        modifier = Modifier
+            .width(100.dp)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (isFocused) Color(0xFF2C2C2E) else Color.Transparent)
+            .border(if (isFocused) BorderStroke(2.dp, Color.White) else BorderStroke(0.dp, Color.Transparent), RoundedCornerShape(12.dp))
+            .onFocusChanged { isFocused = it.isFocused }
+            .focusable()
+            .clickable { onClick() }
+            .padding(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        val icon = if (file.isDirectory) Icons.Default.List else Icons.Default.Info
+        val iconTint = if (file.isDirectory) Color(0xFF81D4FA) else Color.Gray
+
+        Box(
+            modifier = Modifier
+                .size(70.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(Color(0xFF1C1C1E))
+                .shadow(if (isFocused) 8.dp else 4.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(imageVector = icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(36.dp))
+        }
+        
+        Spacer(modifier = Modifier.height(10.dp))
+        
+        Text(
+            text = file.name,
+            color = Color.White,
+            fontSize = 12.sp,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            fontWeight = FontWeight.Medium
+        )
+    }
+}
+
+fun openFileIntent(context: Context, file: File) {
+    try {
+        val intent = Intent(Intent.ACTION_VIEW)
+        val uri = androidx.core.content.FileProvider.getUriForFile(
+            context,
+            context.packageName + ".provider",
+            file
+        )
+        // Basic MIME type guessing
+        val extension = file.extension.lowercase()
+        val mimeType = android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension) ?: "*/*"
+        intent.setDataAndType(uri, mimeType)
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        Logger.log("Failed to open file on TV: ${e.message}")
+    }
+}
+
+@Composable
+fun TvServerDashboard(onToggleServer: () -> Unit) {
+    val isRunning by ServerState.isServerRunning.collectAsState()
+    val isConnected by ServerState.isClientConnected.collectAsState()
+    val clientIp by ServerState.clientIp.collectAsState()
+    val serverIp by ServerState.serverIp.collectAsState()
+    val logs by Logger.logs.collectAsState()
+
+    Column(modifier = Modifier.fillMaxSize().padding(32.dp)) {
+        Text("Network Host", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+            // Left Panel: Server Info & Status
+            Column(
+                modifier = Modifier
+                    .weight(0.4f)
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color(0xFF1C1C1E))
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                HostStatusIndicator(isRunning = isRunning, serverIp = serverIp)
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                if (!isConnected) {
+                    Text("SCAN TO CONNECT", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    val serverUrl = "http://$serverIp:${AppConfig.PORT}"
+                    Box(modifier = Modifier.size(160.dp).background(Color.White).padding(8.dp), contentAlignment = Alignment.Center) {
+                        Text(text = "QR\n$serverUrl", color = Color.Black, fontSize = 10.sp, textAlign = TextAlign.Center)
+                    }
+                } else {
+                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = AppConfig.ActiveGreen, modifier = Modifier.size(80.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("CLIENT CONNECTED", color = AppConfig.ActiveGreen, fontWeight = FontWeight.Bold)
+                    Text("IP: $clientIp", color = Color.White)
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
+                
+                DpadTvButton(
+                    text = if (isRunning) "Stop Server" else "Start Server",
+                    icon = if (isRunning) Icons.Default.Close else Icons.Default.PlayArrow,
+                    tint = if (isRunning) AppConfig.ErrorRed else AppConfig.PrimaryBlue,
+                    onClick = onToggleServer
+                )
+            }
+            
+            // Right Panel: Logs
+            Column(
+                modifier = Modifier
+                    .weight(0.6f)
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color(0xFF1C1C1E))
+                    .padding(24.dp)
+            ) {
+                Text("TELEMETRY LOGS", color = Color.Gray, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    items(logs) { logLine ->
+                        Text(
+                            text = logLine,
+                            color = if (logLine.contains("Error", ignoreCase = true)) AppConfig.ErrorRed else Color.White,
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 12.sp
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
                     }
                 }
             }
@@ -541,97 +553,16 @@ fun HostStatusIndicator(isRunning: Boolean, serverIp: String) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(if (isRunning) AppConfig.ActiveGreen.copy(alpha = 0.08f) else AppConfig.ErrorRed.copy(alpha = 0.08f))
-            .border(
-                1.dp, 
-                if (isRunning) AppConfig.ActiveGreen.copy(alpha = 0.3f) else AppConfig.ErrorRed.copy(alpha = 0.3f), 
-                RoundedCornerShape(12.dp)
-            )
-            .padding(12.dp),
+            .background(if (isRunning) AppConfig.ActiveGreen.copy(alpha = 0.1f) else AppConfig.ErrorRed.copy(alpha = 0.1f))
+            .border(1.dp, if (isRunning) AppConfig.ActiveGreen else AppConfig.ErrorRed, RoundedCornerShape(12.dp))
+            .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Pulse Light Indicator
-        Box(
-            modifier = Modifier
-                .size(10.dp)
-                .clip(CircleShape)
-                .background(if (isRunning) AppConfig.ActiveGreen else AppConfig.ErrorRed)
-        )
-        
-        Spacer(modifier = Modifier.width(10.dp))
-        
+        Box(modifier = Modifier.size(12.dp).clip(CircleShape).background(if (isRunning) AppConfig.ActiveGreen else AppConfig.ErrorRed))
+        Spacer(modifier = Modifier.width(16.dp))
         Column {
-            Text(
-                text = if (isRunning) "Ktor Core Server: ONLINE" else "Ktor Core Server: OFFLINE",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (isRunning) AppConfig.ActiveGreen else AppConfig.ErrorRed
-            )
-            Text(
-                text = if (isRunning) "Host: $serverIp:${AppConfig.PORT}" else "Press trigger below to start",
-                fontSize = 12.sp,
-                fontFamily = FontFamily.Monospace,
-                color = AppConfig.TextSecondary,
-                modifier = Modifier.padding(top = 2.dp)
-            )
-        }
-    }
-}
-
-@Composable
-fun DashboardMetricCard(
-    modifier: Modifier = Modifier,
-    title: String,
-    value: String,
-    icon: ImageVector,
-    tint: Color,
-    description: String
-) {
-    Column(
-        modifier = modifier
-            .fillMaxHeight()
-            .clip(RoundedCornerShape(16.dp))
-            .background(AppConfig.CardBackground)
-            .border(1.dp, AppConfig.BorderColor, RoundedCornerShape(16.dp))
-            .padding(14.dp),
-        verticalArrangement = Arrangement.SpaceBetween
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = title,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
-                color = AppConfig.TextSecondary,
-                letterSpacing = 0.5.sp
-            )
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = tint,
-                modifier = Modifier.size(18.dp)
-            )
-        }
-
-        Column {
-            Text(
-                text = value,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = AppConfig.TextPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = description,
-                fontSize = 10.sp,
-                fontFamily = FontFamily.Monospace,
-                color = AppConfig.TextSecondary,
-                modifier = Modifier.padding(top = 2.dp)
-            )
+            Text(if (isRunning) "ONLINE" else "OFFLINE", color = if (isRunning) AppConfig.ActiveGreen else AppConfig.ErrorRed, fontWeight = FontWeight.Bold)
+            Text(if (isRunning) "http://$serverIp:${AppConfig.PORT}" else "Server is stopped", color = Color.Gray, fontSize = 12.sp)
         }
     }
 }
@@ -646,58 +577,26 @@ fun DpadTvButton(
 ) {
     var isFocused by remember { mutableStateOf(false) }
 
-    // Dynamic scale and elevation to support Android TV premium D-Pad experience
-    val scale = if (isFocused) 1.05f else 1.0f
-    val shadowElevation = if (isFocused) 20.dp else 0.dp
-
-    val borderBrush = if (isFocused) {
-        BorderStroke(5.dp, Color.White)
-    } else {
-        BorderStroke(1.dp, AppConfig.BorderColor)
-    }
-    
-    val buttonBackground = if (isFocused) {
-        AppConfig.PrimaryBlue
-    } else {
-        AppConfig.CardBackground
-    }
-
-    val contentColor = if (isFocused) {
-        Color.White
-    } else {
-        AppConfig.TextPrimary
-    }
+    val scale = animateFloatAsState(if (isFocused) 1.05f else 1.0f).value
+    val buttonBackground = if (isFocused) AppConfig.PrimaryBlue else Color(0xFF2C2C2E)
+    val contentColor = if (isFocused) Color.White else Color.White
 
     Row(
         modifier = modifier
             .height(54.dp)
-            .shadow(shadowElevation, RoundedCornerShape(14.dp))
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
+            .graphicsLayer { scaleX = scale; scaleY = scale }
             .clip(RoundedCornerShape(14.dp))
             .background(buttonBackground)
-            .border(borderBrush, RoundedCornerShape(14.dp))
+            .border(if (isFocused) BorderStroke(3.dp, Color.White) else BorderStroke(1.dp, Color.Transparent), RoundedCornerShape(14.dp))
             .onFocusChanged { state -> isFocused = state.isFocused }
             .focusable()
             .clickable { onClick() }
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 20.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = if (isFocused) Color.White else tint,
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(10.dp))
-        Text(
-            text = text,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = contentColor
-        )
+        Icon(imageVector = icon, contentDescription = null, tint = if (isFocused) Color.White else tint, modifier = Modifier.size(20.dp))
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(text = text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = contentColor)
     }
 }
