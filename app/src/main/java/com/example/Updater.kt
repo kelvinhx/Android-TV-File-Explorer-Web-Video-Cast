@@ -21,6 +21,33 @@ object Updater {
     suspend fun isUpdateAvailable(context: Context, repoOwner: String = "rebeijar", repoName: String = "NexusTv"): Boolean {
         return withContext(Dispatchers.IO) {
             try {
+                // First check Releases
+                try {
+                    val releaseUrl = java.net.URL("https://api.github.com/repos/$repoOwner/$repoName/releases/latest")
+                    val conn = releaseUrl.openConnection() as HttpURLConnection
+                    conn.setRequestProperty("Accept", "application/vnd.github.v3+json")
+                    if (conn.responseCode in 200..299) {
+                        val jsonStr = conn.inputStream.bufferedReader().readText()
+                        val json = JSONObject(jsonStr)
+                        val tagName = json.optString("tag_name")
+                        
+                        val prefs = context.getSharedPreferences("updater_prefs", Context.MODE_PRIVATE)
+                        val lastTag = prefs.getString("last_installed_tag", "")
+                        
+                        // If there is a release, and tag differs, we have an update
+                        if (tagName.isNotEmpty() && tagName != lastTag) {
+                            prefs.edit()
+                                .putString("latest_available_tag", tagName)
+                                .putBoolean("update_via_release", true)
+                                .apply()
+                            return@withContext true
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+
+                // If no release, fallback to Action Runs
                 val url = java.net.URL("https://api.github.com/repos/$repoOwner/$repoName/actions/runs?status=success")
                 val connection = url.openConnection() as HttpURLConnection
                 connection.setRequestProperty("Accept", "application/vnd.github.v3+json")
@@ -36,7 +63,10 @@ object Updater {
                         val lastRunId = prefs.getLong("last_installed_run_id", 0L)
                         
                         if (runId > lastRunId) {
-                            prefs.edit().putLong("latest_available_run_id", runId).apply()
+                            prefs.edit()
+                                .putLong("latest_available_run_id", runId)
+                                .putBoolean("update_via_release", false)
+                                .apply()
                             return@withContext true
                         }
                     }
@@ -76,63 +106,110 @@ object Updater {
                 val nexusDir = File(Environment.getExternalStorageDirectory(), "Nexus")
                 if (!nexusDir.exists()) nexusDir.mkdirs()
                 
-                val zipFile = File(nexusDir, "update.zip")
-                if (zipFile.exists()) zipFile.delete()
-                
-                val branches = listOf("main", "master")
-                val workflows = listOf("android.yml", "build.yml")
-                val artifacts = listOf("app-debug", "app-release", artifactName)
+                val prefs = context.getSharedPreferences("updater_prefs", Context.MODE_PRIVATE)
+                val updateViaRelease = prefs.getBoolean("update_via_release", false)
                 
                 var connection: HttpURLConnection? = null
-                
-                search@ for (branch in branches) {
-                    for (workflow in workflows) {
-                        for (artifact in artifacts) {
-                            val urlStr = "https://nightly.link/$repoOwner/$repoName/workflows/$workflow/$branch/$artifact.zip"
-                            try {
-                                val conn = URL(urlStr).openConnection() as HttpURLConnection
-                                conn.instanceFollowRedirects = false
-                                conn.setRequestProperty("User-Agent", "Mozilla/5.0")
-                                conn.connect()
-                                
-                                var finalConn = conn
-                                var redirects = 0
-                                while ((finalConn.responseCode == HttpURLConnection.HTTP_MOVED_TEMP || 
-                                       finalConn.responseCode == HttpURLConnection.HTTP_MOVED_PERM || 
-                                       finalConn.responseCode == HttpURLConnection.HTTP_SEE_OTHER ||
-                                       finalConn.responseCode == 307 ||
-                                       finalConn.responseCode == 308) && redirects < 5) {
-                                    val location = finalConn.getHeaderField("Location")
-                                    finalConn.disconnect()
-                                    val nextUrl = URL(URL(urlStr), location)
-                                    finalConn = nextUrl.openConnection() as HttpURLConnection
-                                    finalConn.instanceFollowRedirects = false
-                                    finalConn.setRequestProperty("User-Agent", "Mozilla/5.0")
-                                    finalConn.connect()
-                                    redirects++
-                                }
+                var isZip = true
+                val downloadFile: File
 
-                                if (finalConn.responseCode in 200..299) {
-                                    connection = finalConn
-                                    break@search
-                                } else {
-                                    finalConn.disconnect()
+                if (updateViaRelease) {
+                    try {
+                        val releaseUrl = URL("https://api.github.com/repos/$repoOwner/$repoName/releases/latest")
+                        val conn = releaseUrl.openConnection() as HttpURLConnection
+                        conn.setRequestProperty("Accept", "application/vnd.github.v3+json")
+                        if (conn.responseCode in 200..299) {
+                            val jsonStr = conn.inputStream.bufferedReader().readText()
+                            val json = JSONObject(jsonStr)
+                            val assets = json.optJSONArray("assets")
+                            
+                            var apkAssetUrl: String? = null
+                            if (assets != null) {
+                                for (i in 0 until assets.length()) {
+                                    val asset = assets.optJSONObject(i)
+                                    val name = asset.optString("name").lowercase()
+                                    if (name.endsWith(".apk")) {
+                                        apkAssetUrl = asset.optString("browser_download_url")
+                                        break
+                                    }
                                 }
-                            } catch (e: Exception) {
-                                // ignore and try next
+                            }
+                            
+                            if (apkAssetUrl != null) {
+                                // Download APK directly
+                                val apkConn = URL(apkAssetUrl).openConnection() as HttpURLConnection
+                                apkConn.instanceFollowRedirects = true
+                                apkConn.connect()
+                                if (apkConn.responseCode in 200..299) {
+                                    connection = apkConn
+                                    isZip = false
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+
+                if (connection == null) {
+                    // Fallback to nightly.link ZIP
+                    val branches = listOf("main", "master")
+                    val workflows = listOf("android.yml", "build.yml")
+                    val artifacts = listOf("app-debug", "app-release", artifactName)
+                    
+                    search@ for (branch in branches) {
+                        for (workflow in workflows) {
+                            for (artifact in artifacts) {
+                                val urlStr = "https://nightly.link/$repoOwner/$repoName/workflows/$workflow/$branch/$artifact.zip"
+                                try {
+                                    val conn = URL(urlStr).openConnection() as HttpURLConnection
+                                    conn.instanceFollowRedirects = false
+                                    conn.setRequestProperty("User-Agent", "Mozilla/5.0")
+                                    conn.connect()
+                                    
+                                    var finalConn = conn
+                                    var redirects = 0
+                                    while ((finalConn.responseCode == HttpURLConnection.HTTP_MOVED_TEMP || 
+                                           finalConn.responseCode == HttpURLConnection.HTTP_MOVED_PERM || 
+                                           finalConn.responseCode == HttpURLConnection.HTTP_SEE_OTHER ||
+                                           finalConn.responseCode == 307 ||
+                                           finalConn.responseCode == 308) && redirects < 5) {
+                                        val location = finalConn.getHeaderField("Location")
+                                        finalConn.disconnect()
+                                        val nextUrl = URL(URL(urlStr), location)
+                                        finalConn = nextUrl.openConnection() as HttpURLConnection
+                                        finalConn.instanceFollowRedirects = false
+                                        finalConn.setRequestProperty("User-Agent", "Mozilla/5.0")
+                                        finalConn.connect()
+                                        redirects++
+                                    }
+
+                                    if (finalConn.responseCode in 200..299) {
+                                        connection = finalConn
+                                        isZip = true
+                                        break@search
+                                    } else {
+                                        finalConn.disconnect()
+                                    }
+                                } catch (e: Exception) {
+                                    // ignore and try next
+                                }
                             }
                         }
                     }
                 }
                 
                 if (connection == null) {
-                    onProgress("Erro: Falha no download (Código 404). Verifique se o GitHub Actions foi concluído com sucesso.")
+                    onProgress("Erro: Falha no download (Código 404). O artefato expirou ou não há releases. Instale o nightly.link no seu repositório ou crie um Release.")
                     return@withContext
                 }
 
+                downloadFile = File(nexusDir, if (isZip) "update.zip" else "update.apk")
+                if (downloadFile.exists()) downloadFile.delete()
+
                 val contentLength = connection.contentLength
                 connection.inputStream.use { input ->
-                    FileOutputStream(zipFile).use { output ->
+                    FileOutputStream(downloadFile).use { output ->
                         val data = ByteArray(8192)
                         var count: Int
                         var totalDownloaded: Long = 0
@@ -151,21 +228,27 @@ object Updater {
                     }
                 }
                 
-                onProgress("Extraindo atualização do arquivo ZIP...")
-                val apkFile = extractApkFromZip(zipFile, nexusDir)
+                val finalApkFile: File?
+                if (isZip) {
+                    onProgress("Extraindo atualização do arquivo ZIP...")
+                    finalApkFile = extractApkFromZip(downloadFile, nexusDir)
+                    downloadFile.delete() // cleanup zip
+                } else {
+                    finalApkFile = downloadFile
+                }
                 
-                // Excluir arquivo zip extraído
-                zipFile.delete()
-                
-                if (apkFile != null) {
+                if (finalApkFile != null) {
                     onProgress("Iniciando instalação...")
                     
-                    // Mark as installed before firing intent
-                    val prefs = context.getSharedPreferences("updater_prefs", Context.MODE_PRIVATE)
-                    val latest = prefs.getLong("latest_available_run_id", 0L)
-                    prefs.edit().putLong("last_installed_run_id", latest).apply()
+                    if (updateViaRelease) {
+                        val latestTag = prefs.getString("latest_available_tag", "")
+                        prefs.edit().putString("last_installed_tag", latestTag).apply()
+                    } else {
+                        val latestRun = prefs.getLong("latest_available_run_id", 0L)
+                        prefs.edit().putLong("last_installed_run_id", latestRun).apply()
+                    }
 
-                    installApk(context, apkFile)
+                    installApk(context, finalApkFile)
                     onProgress("")
                 } else {
                     onProgress("Erro: Nenhum formato .apk encontrado no diretório ZIP.")

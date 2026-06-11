@@ -620,6 +620,7 @@ object WebInterface {
             
             document.getElementById('view-files').classList.add('hidden');
             document.getElementById('view-browser').classList.add('hidden');
+            document.getElementById('view-browser').classList.remove('flex');
             
             document.getElementById('tab-files').classList.remove('active');
             document.getElementById('tab-browser').classList.remove('active');
@@ -633,6 +634,7 @@ object WebInterface {
                 fetchFiles();
             } else if (view === 'browser') {
                 document.getElementById('view-browser').classList.remove('hidden');
+                document.getElementById('view-browser').classList.add('flex');
                 document.getElementById('tab-browser').classList.add('active');
                 document.getElementById('main-header').style.display = "none";
                 document.getElementById('files-toolbar').style.display = "none";
