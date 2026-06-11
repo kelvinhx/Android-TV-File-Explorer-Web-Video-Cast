@@ -23,9 +23,11 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -2136,14 +2138,31 @@ fun TvFilesBrowser(
     onPathChanged: ((String) -> Unit)? = null
 ) {
     val backButtonFocusRequester = remember { FocusRequester() }
+    val listFirstItemFocusRequester = remember { FocusRequester() }
     var currentPath by remember { mutableStateOf(basePath) }
+    var shouldFocusFirstItem by remember { mutableStateOf(false) }
     
     // Reset path when base changes
     LaunchedEffect(basePath) {
         currentPath = basePath
     }
 
+    LaunchedEffect(currentPath) {
+        shouldFocusFirstItem = true
+    }
+
     var files by remember { mutableStateOf<List<UnifiedFile>>(emptyList()) }
+
+    LaunchedEffect(files) {
+        if (shouldFocusFirstItem && files.isNotEmpty()) {
+            kotlinx.coroutines.delay(150)
+            try {
+                listFirstItemFocusRequester.requestFocus()
+            } catch (e: Exception) {}
+            shouldFocusFirstItem = false
+        }
+    }
+    
     var showOpenAsDialog by remember { mutableStateOf(false) }
     var fileToPlay by remember { mutableStateOf<UnifiedFile?>(null) }
 
@@ -2380,20 +2399,19 @@ fun TvFilesBrowser(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         verticalArrangement = Arrangement.spacedBy(24.dp)
                     ) {
-                        items(files) { file ->
+                        itemsIndexed(files) { index, file ->
+                            val itemModifier = if (index == 0) {
+                                Modifier.focusRequester(listFirstItemFocusRequester)
+                            } else {
+                                Modifier
+                            }
                             TvFileGridItem(
                                 file = file,
+                                modifier = itemModifier,
                                 onClick = {
                                     if (file.isDirectory) {
                                         currentPath = file.absolutePath
                                         onPathChanged?.invoke(file.absolutePath)
-                                        if (isSidebarVisible) {
-                                            onRequestSidebarFocus?.invoke()
-                                        } else {
-                                            try {
-                                                backButtonFocusRequester.requestFocus()
-                                            } catch (e: Exception) {}
-                                        }
                                     } else {
                                         fileToManage = file
                                         showContextMenu = true
@@ -2411,20 +2429,19 @@ fun TvFilesBrowser(
                         contentPadding = PaddingValues(bottom = 80.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(files) { file ->
+                        itemsIndexed(files) { index, file ->
+                            val itemModifier = if (index == 0) {
+                                Modifier.focusRequester(listFirstItemFocusRequester)
+                            } else {
+                                Modifier
+                            }
                             TvFileListItem(
                                 file = file,
+                                modifier = itemModifier,
                                 onClick = {
                                     if (file.isDirectory) {
                                         currentPath = file.absolutePath
                                         onPathChanged?.invoke(file.absolutePath)
-                                        if (isSidebarVisible) {
-                                            onRequestSidebarFocus?.invoke()
-                                        } else {
-                                            try {
-                                                backButtonFocusRequester.requestFocus()
-                                            } catch (e: Exception) {}
-                                        }
                                     } else {
                                         fileToManage = file
                                         showContextMenu = true
@@ -2778,13 +2795,13 @@ fun TvFilesBrowser(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun TvFileGridItem(file: UnifiedFile, onClick: () -> Unit, onLongClick: () -> Unit) {
+fun TvFileGridItem(file: UnifiedFile, onClick: () -> Unit, onLongClick: () -> Unit, modifier: Modifier = Modifier) {
     var isFocused by remember { mutableStateOf(false) }
     
     val scale = animateFloatAsState(targetValue = if (isFocused) 1.05f else 1.0f).value
     
     Column(
-        modifier = Modifier
+        modifier = modifier
             .width(110.dp)
             .graphicsLayer {
                 scaleX = scale
@@ -2870,7 +2887,7 @@ fun TvFileGridItem(file: UnifiedFile, onClick: () -> Unit, onLongClick: () -> Un
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun TvFileListItem(file: UnifiedFile, onClick: () -> Unit, onLongClick: () -> Unit) {
+fun TvFileListItem(file: UnifiedFile, onClick: () -> Unit, onLongClick: () -> Unit, modifier: Modifier = Modifier) {
     var isFocused by remember { mutableStateOf(false) }
     val isDark = AppState.isDarkTheme.collectAsState().value
     val scale = animateFloatAsState(targetValue = if (isFocused) 1.02f else 1.0f).value
@@ -2879,7 +2896,7 @@ fun TvFileListItem(file: UnifiedFile, onClick: () -> Unit, onLongClick: () -> Un
     val textMutedColor = if (isFocused) Color.LightGray else if (isDark) Color.Gray else Color.DarkGray
     
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(72.dp)
             .graphicsLayer { scaleX = scale; scaleY = scale }
