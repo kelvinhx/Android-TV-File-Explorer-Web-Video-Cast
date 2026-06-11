@@ -74,11 +74,20 @@ fun BrowserScreen(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT
                     )
+                    
+                    isFocusable = true
+                    isFocusableInTouchMode = true
+                    
                     settings.apply {
                         javaScriptEnabled = true
                         domStorageEnabled = true
                         mediaPlaybackRequiresUserGesture = false // Great for TV Video playback
                         mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                        useWideViewPort = true
+                        loadWithOverviewMode = true
+                        setSupportZoom(true)
+                        builtInZoomControls = true
+                        displayZoomControls = false
                     }
 
                     webViewClient = object : WebViewClient() {
@@ -86,6 +95,12 @@ fun BrowserScreen(
                             super.onPageStarted(view, url, favicon)
                             url?.let { currentUrl = it }
                             canGoBack = view?.canGoBack() ?: false
+                            view?.requestFocus()
+                        }
+
+                        override fun onPageFinished(view: WebView?, url: String?) {
+                            super.onPageFinished(view, url)
+                            view?.requestFocus()
                         }
 
                         override fun shouldInterceptRequest(
@@ -111,10 +126,24 @@ fun BrowserScreen(
                     }
 
                     // Key events for DPAD nav in browser
-                    setOnKeyListener { _, keyCode, event ->
+                    setOnKeyListener { v, keyCode, event ->
                         if (event.action == KeyEvent.ACTION_DOWN) {
                             when (keyCode) {
-                                KeyEvent.KEYCODE_DPAD_CENTER -> { return@setOnKeyListener false } // Let webview handle it
+                                KeyEvent.KEYCODE_DPAD_CENTER -> { return@setOnKeyListener false }
+                                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                    v.scrollBy(0, 100)
+                                    return@setOnKeyListener false
+                                }
+                                KeyEvent.KEYCODE_DPAD_UP -> {
+                                    v.scrollBy(0, -100)
+                                    return@setOnKeyListener false
+                                }
+                                KeyEvent.KEYCODE_DPAD_LEFT -> {
+                                    if (canGoBack) {
+                                        goBack()
+                                        return@setOnKeyListener true
+                                    }
+                                }
                             }
                         }
                         false
@@ -122,10 +151,11 @@ fun BrowserScreen(
 
                     loadUrl(initialUrl)
                     webView = this
+                    requestFocus()
                 }
             },
             update = { view ->
-                // Do something if needed
+                view.requestFocus()
             }
         )
     }

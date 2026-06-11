@@ -453,26 +453,44 @@ fun IosFolderIcon(modifier: Modifier = Modifier) {
 
 @Composable
 fun IosFileIcon(modifier: Modifier = Modifier, extension: String) {
+    val ext = extension.lowercase()
+    
+    // Choose styling based on file category
+    val (backgroundColor, icon) = when (ext) {
+        // Video files (Apple Red palette)
+        "mp4", "mkv", "avi", "mov", "m3u8", "webm", "flv", "3gp", "ts" -> Triple(Color(0xFFFF3B30), Icons.Default.PlayArrow, Color.White)
+        // Audio files (Apple Purple/Indigo palette)
+        "mp3", "wav", "flac", "ogg", "m4a", "aac", "mid" -> Triple(Color(0xFFAF52DE), Icons.Default.Star, Color.White)
+        // Installers/Android/Tools (Apple Green palette)
+        "apk", "jar" -> Triple(Color(0xFF34C759), Icons.Default.Build, Color.White)
+        // Archives/Compressed (Apple Amber/Orange palette)
+        "zip", "rar", "tar", "gz", "7z" -> Triple(Color(0xFFFF9500), Icons.Default.Menu, Color.White)
+        // Documents/PDFs (Apple Blue palette)
+        "pdf", "epub", "txt", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "xml", "json" -> Triple(Color(0xFF0A84FF), Icons.Default.List, Color.White)
+        // Default (Gray palette)
+        else -> Triple(Color(0xFF8E8E93), Icons.Default.Info, Color.White)
+    }.let { Triple(it.first, it.second, it.third) }
+
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 14.dp, bottomEnd = 4.dp, bottomStart = 4.dp))
-            .background(Color(0xFF1C1C1E))
-            .border(1.5.dp, Color(0xFF3A3A3C), RoundedCornerShape(topStart = 4.dp, topEnd = 14.dp, bottomEnd = 4.dp, bottomStart = 4.dp))
+            .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 16.dp, bottomEnd = 6.dp, bottomStart = 6.dp))
+            .background(backgroundColor.copy(alpha = 0.15f))
+            .border(1.5.dp, backgroundColor, RoundedCornerShape(topStart = 6.dp, topEnd = 16.dp, bottomEnd = 6.dp, bottomStart = 6.dp))
             .padding(4.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Icon(
-                imageVector = Icons.Default.Info,
+                imageVector = icon,
                 contentDescription = null,
-                tint = Color(0xFF8E8E93),
-                modifier = Modifier.size(20.dp)
+                tint = backgroundColor,
+                modifier = Modifier.size(22.dp)
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = extension.uppercase().take(4),
+                text = ext.uppercase().take(4),
                 color = Color.LightGray,
-                fontSize = 8.sp,
+                fontSize = 9.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1
             )
@@ -484,7 +502,7 @@ fun IosFileIcon(modifier: Modifier = Modifier, extension: String) {
 fun TvFilesBrowser(context: Context) {
     var currentPath by remember { mutableStateOf("/storage/emulated/0") }
     var files by remember { mutableStateOf<List<File>>(emptyList()) }
-    var isManageMode by remember { mutableStateOf(false) }
+    var showOpenAsDialog by remember { mutableStateOf(false) }
 
     // Dialog state management
     var fileToManage by remember { mutableStateOf<File?>(null) }
@@ -544,13 +562,7 @@ fun TvFilesBrowser(context: Context) {
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // Action: Toggle Manage Mode
-            DpadTvButton(
-                text = if (isManageMode) "Modo: Gerenciar" else "Modo: Navegar",
-                icon = if (isManageMode) Icons.Default.Settings else Icons.Default.Home,
-                tint = if (isManageMode) AppConfig.AccentGold else AppConfig.PrimaryBlue,
-                onClick = { isManageMode = !isManageMode }
-            )
+
 
             Spacer(modifier = Modifier.width(12.dp))
 
@@ -612,15 +624,10 @@ fun TvFilesBrowser(context: Context) {
                     TvFileGridItem(
                         file = file,
                         onClick = {
-                            if (isManageMode) {
-                                fileToManage = file
-                                showContextMenu = true
+                            if (file.isDirectory) {
+                                currentPath = file.absolutePath
                             } else {
-                                if (file.isDirectory) {
-                                    currentPath = file.absolutePath
-                                } else {
-                                    openFileIntent(context, file)
-                                }
+                                openFileIntent(context, file)
                             }
                         },
                         onLongClick = {
@@ -677,6 +684,18 @@ fun TvFilesBrowser(context: Context) {
                         },
                         modifier = Modifier.fillMaxWidth()
                     )
+                    if (!fileToManage!!.isDirectory) {
+                        DpadTvButton(
+                            text = "Abrir como...",
+                            icon = Icons.Default.PlayArrow,
+                            tint = Color(0xFF34C759),
+                            onClick = {
+                                showContextMenu = false
+                                showOpenAsDialog = true
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                     DpadTvButton(
                         text = "Excluir",
                         icon = Icons.Default.Close,
@@ -753,6 +772,68 @@ fun TvFilesBrowser(context: Context) {
                         }
                     )
                 }
+            }
+        )
+    }
+
+    if (showOpenAsDialog && fileToManage != null) {
+        AlertDialog(
+            onDismissRequest = { showOpenAsDialog = false },
+            containerColor = Color(0xFF1C1C1E),
+            title = { Text("Abrir como...", color = Color.White, fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Escolha o tipo de visualizador:", color = Color.Gray, fontSize = 14.sp)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    DpadTvButton(
+                        text = "Vídeo",
+                        icon = Icons.Default.PlayArrow,
+                        tint = Color(0xFF34C759),
+                        onClick = {
+                            showOpenAsDialog = false
+                            openFileAsIntent(context, fileToManage!!, "video/*")
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    DpadTvButton(
+                        text = "Áudio",
+                        icon = Icons.Default.Star,
+                        tint = Color(0xFFAF52DE),
+                        onClick = {
+                            showOpenAsDialog = false
+                            openFileAsIntent(context, fileToManage!!, "audio/*")
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    DpadTvButton(
+                        text = "Imagem",
+                        icon = Icons.Default.Info,
+                        tint = Color(0xFFFF2D55),
+                        onClick = {
+                            showOpenAsDialog = false
+                            openFileAsIntent(context, fileToManage!!, "image/*")
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    DpadTvButton(
+                        text = "Texto / Documento",
+                        icon = Icons.Default.List,
+                        tint = Color(0xFF0A84FF),
+                        onClick = {
+                            showOpenAsDialog = false
+                            openFileAsIntent(context, fileToManage!!, "text/*")
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                DpadTvButton(
+                    text = "Cancelar",
+                    icon = Icons.Default.Close,
+                    tint = Color.Gray,
+                    onClick = { showOpenAsDialog = false }
+                )
             }
         )
     }
@@ -931,6 +1012,23 @@ fun openFileIntent(context: Context, file: File) {
         context.startActivity(intent)
     } catch (e: Exception) {
         Logger.log("Failed to open file on TV: ${e.message}")
+    }
+}
+
+fun openFileAsIntent(context: Context, file: File, mimeType: String) {
+    try {
+        val intent = Intent(Intent.ACTION_VIEW)
+        val uri = androidx.core.content.FileProvider.getUriForFile(
+            context,
+            context.packageName + ".provider",
+            file
+        )
+        intent.setDataAndType(uri, mimeType)
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        Logger.log("Failed to open file as $mimeType: ${e.message}")
     }
 }
 

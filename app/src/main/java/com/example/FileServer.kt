@@ -205,42 +205,164 @@ class FileServer(private val context: Context) {
                                     baseUrl + path + (if(path.endsWith("/")) "" else "/")
                                 
                                 val inject = """
+                                    <style>
+                                    /* Premium iOS 18 / 26 Inspired Style Injection to force hide ads and banners */
+                                    .ad, .ads, .ad-box, .advertisement, #ad-container, [id^=google_ads_], [class*=ad-], ins,
+                                    iframe[src*="doubleclick.net"], iframe[src*="adservice"], iframe[src*="popads"], iframe[src*="propeller"],
+                                    .popunder, .popup, div[class*="popup"], div[id*="popup"], .widget-ad, .banner-ad,
+                                    div[style*="z-index: 2147483647"], div[style*="z-index:99999"], div[style*="z-index: 999999"] {
+                                        display: none !important;
+                                        opacity: 0 !important;
+                                        pointer-events: none !important;
+                                        height: 0 !important;
+                                        width: 0 !important;
+                                        visibility: hidden !important;
+                                    }
+                                    </style>
                                     <script>
-                                    // Internal AdBlock / Video Sniffer
+                                    // 1. Popup & Popunder Blocker (Force block window.open)
+                                    window.open = function() {
+                                        console.log("Interactive popup blocked!");
+                                        return null;
+                                    };
+
+                                    // 2. Video link patterns detector
+                                    const isVideoUrl = (url) => {
+                                        if (!url || typeof url !== 'string') return false;
+                                        const lower = url.toLowerCase();
+                                        
+                                        // Specific extensions with or without query params
+                                        if (/\.(mp4|m3u8|mkv|mov|avi|webm|flv|3gp|ts|mpd)(\?|$)/.test(lower)) return true;
+                                        
+                                        // Video streaming specialized domains and endpoints
+                                        if (lower.includes('streamtape.com/get_video') ||
+                                            lower.includes('dood') || lower.includes('/pass_md5/') ||
+                                            lower.includes('mixdrop') || lower.includes('/delivery/') ||
+                                            lower.includes('filemoon') || lower.includes('byse') ||
+                                            lower.includes('mcloud') || lower.includes('vizcloud') ||
+                                            lower.includes('fembed') || lower.includes('streamwis') ||
+                                            lower.includes('/api/source/') || lower.includes('manifest.mpd') ||
+                                            lower.includes('master.m3u8')
+                                        ) {
+                                            return true;
+                                        }
+                                        return false;
+                                    };
+
+                                    const notifyParent = (src) => {
+                                        if(src && isVideoUrl(src)) {
+                                            console.log("Sniffed Video URL:", src);
+                                            window.parent.postMessage({type: 'video_found', url: src}, '*');
+                                        }
+                                    };
+
+                                    // 3. Dynamic Property Hooking (Instantly catches javascript-set sources)
+                                    try {
+                                        const originalSrcDescriptor = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'src');
+                                        if (originalSrcDescriptor) {
+                                            Object.defineProperty(HTMLMediaElement.prototype, 'src', {
+                                                get: function() { return originalSrcDescriptor.get.call(this); },
+                                                set: function(val) {
+                                                    originalSrcDescriptor.set.call(this, val);
+                                                    notifyParent(val);
+                                                },
+                                                configurable: true
+                                            });
+                                        }
+                                    } catch(e) { console.error("Media hook error", e); }
+
+                                    try {
+                                        const originalSourceSrcDescriptor = Object.getOwnPropertyDescriptor(HTMLSourceElement.prototype, 'src');
+                                        if (originalSourceSrcDescriptor) {
+                                            Object.defineProperty(HTMLSourceElement.prototype, 'src', {
+                                                get: function() { return originalSourceSrcDescriptor.get.call(this); },
+                                                set: function(val) {
+                                                    originalSourceSrcDescriptor.set.call(this, val);
+                                                    notifyParent(val);
+                                                },
+                                                configurable: true
+                                            });
+                                        }
+                                    } catch(e) { console.error("Source hook error", e); }
+
+                                    // Hook Fetch requests
+                                    const originalFetch = window.fetch;
+                                    window.fetch = function(...args) {
+                                        const url = args[0];
+                                        if (typeof url === 'string') {
+                                            notifyParent(url);
+                                        } else if (url && url.url) {
+                                            notifyParent(url.url);
+                                        }
+                                        return originalFetch.apply(this, args);
+                                    };
+
+                                    // Hook XMLHttpRequest
+                                    const originalOpen = XMLHttpRequest.prototype.open;
+                                    XMLHttpRequest.prototype.open = function(method, url, ...args) {
+                                        if (typeof url === 'string') {
+                                            notifyParent(url);
+                                        }
+                                        return originalOpen.apply(this, [method, url, ...args]);
+                                    };
+
+                                    // Recursive Iframe Hijacking
+                                    const hijackIframes = () => {
+                                        document.querySelectorAll('iframe').forEach(iframe => {
+                                            try {
+                                                const src = iframe.src || iframe.getAttribute('src');
+                                                if (src && src.startsWith('http') && !src.includes('/api/proxy') && !src.includes(window.location.origin)) {
+                                                    const proxiedSrc = window.location.origin + '/api/proxy?url=' + encodeURIComponent(src);
+                                                    iframe.src = proxiedSrc;
+                                                    iframe.setAttribute('src', proxiedSrc);
+                                                }
+                                            } catch(e) {}
+                                        });
+                                    };
+
+                                    // Main Initialization & Observation
                                     document.addEventListener('DOMContentLoaded', () => {
-                                        // Remove some typical ad containers
+                                        // Static check
+                                        hijackIframes();
                                         const ads = document.querySelectorAll('.ad, .ads, [id^=google_ads], ins');
                                         ads.forEach(ad => ad.style.display = 'none');
-
-                                        const notifyParent = (src) => {
-                                            if(src && (src.endsWith('.mp4') || src.endsWith('.m3u8') || src.includes('video'))) {
-                                                window.parent.postMessage({type: 'video_found', url: src}, '*');
-                                            }
-                                        };
 
                                         const videos = document.querySelectorAll('video');
                                         videos.forEach(v => {
                                             notifyParent(v.src || v.querySelector('source')?.src);
                                         });
 
+                                        // Dynamic check via MutationObserver
                                         const obs = new MutationObserver(mutations => {
+                                            hijackIframes(); // Keep sub-players inside proxy!
                                             mutations.forEach(m => {
                                                 m.addedNodes.forEach(n => {
                                                     if(n.tagName === 'VIDEO') {
-                                                        const src = n.src || n.querySelector('source')?.src;
-                                                        notifyParent(src);
+                                                        notifyParent(n.src || n.querySelector('source')?.src);
+                                                    } else if (n.tagName === 'IFRAME') {
+                                                        // Instantly hijack new iframe
+                                                        const src = n.src || n.getAttribute('src');
+                                                        if (src && src.startsWith('http') && !src.includes('/api/proxy') && !src.includes(window.location.origin)) {
+                                                            const proxied = window.location.origin + '/api/proxy?url=' + encodeURIComponent(src);
+                                                            n.src = proxied;
+                                                            n.setAttribute('src', proxied);
+                                                        }
                                                     } else if (n.querySelectorAll) {
                                                         const vids = n.querySelectorAll('video');
                                                         vids.forEach(v => notifyParent(v.src || v.querySelector('source')?.src));
                                                         
-                                                        // Hide injected ads dynamically
-                                                        const injAds = n.querySelectorAll('.ad, .ads');
+                                                        const injAds = n.querySelectorAll('.ad, .ads, [id^=google_ads], ins');
                                                         injAds.forEach(ad => ad.style.display = 'none');
                                                     }
                                                 });
                                             });
                                         });
                                         obs.observe(document.body, {childList: true, subtree: true});
+                                        
+                                        // Regular interval running to catch dynamic changes
+                                        setInterval(() => {
+                                            hijackIframes();
+                                        }, 1500);
                                     });
 
                                     // Intercept links to keep them inside proxy

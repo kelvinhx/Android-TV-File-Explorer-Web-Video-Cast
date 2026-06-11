@@ -731,25 +731,33 @@ object WebInterface {
                             } else {
                                 requestOpenFile(file.absolutePath);
                             }
-                        });
-
-                        let iconClass = "fa-solid fa-file";
+                                        let iconClass = "fa-solid fa-file";
                         let iconColor = "text-[#8E8E93]"; // iOS Gray
                         let isImg = false;
 
+                        const nameLower = file.name.toLowerCase();
                         if (file.isDirectory) {
                             iconClass = "fa-solid fa-folder";
                             iconColor = "ios-folder";
-                        } else if (file.name.endsWith('.apk')) {
+                        } else if (nameLower.endsWith('.apk')) {
                             iconClass = "fa-brands fa-android";
                             iconColor = "text-[#34C759]"; // iOS Green
-                        } else if (file.name.endsWith('.mp4') || file.name.endsWith('.mkv') || file.name.endsWith('.webm') || file.name.endsWith('.mov')) {
+                        } else if (['.mp4', '.mkv', '.webm', '.mov', '.avi', '.ts', '.m3u8'].some(el => nameLower.endsWith(el))) {
                             iconClass = "fa-solid fa-circle-play";
                             iconColor = "text-[#AF52DE]"; // iOS Purple
-                        } else if (file.name.endsWith('.mp3') || file.name.endsWith('.wav') || file.name.endsWith('.aac')) {
+                        } else if (['.mp3', '.wav', '.aac', '.flac', '.ogg', '.m4a'].some(el => nameLower.endsWith(el))) {
                             iconClass = "fa-solid fa-music";
                             iconColor = "text-[#FF2D55]"; // iOS Pink
-                        } else if (file.name.endsWith('.jpg') || file.name.endsWith('.jpeg') || file.name.endsWith('.png') || file.name.endsWith('.webp') || file.name.endsWith('.gif')) {
+                        } else if (['.zip', '.rar', '.7z', '.tar', '.gz'].some(el => nameLower.endsWith(el))) {
+                            iconClass = "fa-solid fa-file-zipper";
+                            iconColor = "text-[#FF9500]"; // iOS Amber
+                        } else if (nameLower.endsWith('.pdf')) {
+                            iconClass = "fa-solid fa-file-pdf";
+                            iconColor = "text-[#FF3B30]"; // iOS Red
+                        } else if (['.txt', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.json', '.xml', '.html', '.css', '.js', '.kt'].some(el => nameLower.endsWith(el))) {
+                            iconClass = "fa-solid fa-file-lines";
+                            iconColor = "text-[#0A84FF]"; // iOS Blue
+                        } else if (['.jpg', '.jpeg', '.png', '.webp', '.gif'].some(el => nameLower.endsWith(el))) {
                             isImg = true;
                         }
 
