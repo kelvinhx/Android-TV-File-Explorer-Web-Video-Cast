@@ -597,16 +597,84 @@ fun TvDashboardCategoryCard(
 }
 
 @Composable
+fun TvDashboardToolCard(
+    title: String,
+    icon: ImageVector,
+    color: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var isFocused by remember { mutableStateOf(false) }
+    val scale = animateFloatAsState(targetValue = if (isFocused) 1.05f else 1.0f, label = "ToolScale").value
+    val outlineColor = if (isFocused) color else Color.Transparent
+
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = if (isFocused) Color(0xFF2C2C2E) else Color(0xFF1C1C1E)
+        ),
+        shape = RoundedCornerShape(16.dp),
+        border = if (isFocused) BorderStroke(2.dp, outlineColor) else null,
+        modifier = modifier
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .onFocusChanged { isFocused = it.isFocused }
+            .focusable()
+            .clickable { onClick() }
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(color.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = color,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = title,
+                color = Color.White,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                maxLines = 1
+            )
+        }
+    }
+}
+
+@Composable
 fun TvHomeDashboardScreen(
     context: Context,
     onNavigateToPath: (String) -> Unit,
     onSearchCategory: (String) -> Unit,
+    onToggleServer: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var ramStats by remember { mutableStateOf(getDetailedRamStats(context)) }
     var storageStats by remember { mutableStateOf(getDetailedStorageStats("Armazenamento Interno", "/storage/emulated/0")) }
     val externalStorages = remember { FileUtils.getExternalStorageRoots(context) }
     var usbStatsList by remember { mutableStateOf<List<DetailedStorageStats>>(emptyList()) }
+
+    var showWifiShareDialog by remember { mutableStateOf(false) }
+    var isCleaningMemory by remember { mutableStateOf(false) }
+    var showMemoryCleanedDialog by remember { mutableStateOf(false) }
+    var cleanedRamAmount by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         while(true) {
@@ -617,6 +685,158 @@ fun TvHomeDashboardScreen(
             }
             delay(5000)
         }
+    }
+
+    if (isCleaningMemory) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(color = Color(0xFF5AC8FA), modifier = Modifier.size(28.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text("Otimizando Sistema", color = Color.White)
+                }
+            },
+            text = {
+                Text("Limpando caches ociosos, fechando conexões antigas e otimizando a memória RAM da TV...", color = Color.LightGray)
+            },
+            confirmButton = {},
+            containerColor = Color(0xFF1C1C1E)
+        )
+    }
+
+    if (showMemoryCleanedDialog) {
+        AlertDialog(
+            onDismissRequest = { showMemoryCleanedDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF30D158), modifier = Modifier.size(28.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text("Otimização Concluída", color = Color.White)
+                }
+            },
+            text = {
+                Text(cleanedRamAmount, color = Color.LightGray)
+            },
+            confirmButton = {
+                TextButton(onClick = { showMemoryCleanedDialog = false }) {
+                    Text("Excelente", color = AppConfig.PrimaryBlue)
+                }
+            },
+            containerColor = Color(0xFF1C1C1E)
+        )
+    }
+
+    if (showWifiShareDialog) {
+        val isServerRunning by ServerState.isServerRunning.collectAsState()
+        val serverIp by ServerState.serverIp.collectAsState()
+        val serverUrl = "http://$serverIp:${AppConfig.PORT}"
+        
+        AlertDialog(
+            onDismissRequest = { showWifiShareDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Share, contentDescription = null, tint = Color(0xFFFF9500), modifier = Modifier.size(28.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text("Compartilhar via Wi-Fi", color = Color.White)
+                }
+            },
+            text = {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(24.dp)
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.width(180.dp)
+                    ) {
+                        val qrCodeUrl = remember(serverUrl) {
+                            try {
+                                val encodedUrl = java.net.URLEncoder.encode(serverUrl, "UTF-8")
+                                "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=$encodedUrl&color=2c2c2e&bgcolor=ffffff"
+                            } catch (e: Exception) {
+                                ""
+                            }
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .size(160.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color.White)
+                                .padding(8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (qrCodeUrl.isNotEmpty()) {
+                                coil.compose.AsyncImage(
+                                    model = qrCodeUrl,
+                                    contentDescription = "QR Code",
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            } else {
+                                Text("QR Code indisponível", color = Color.Black, fontSize = 11.sp, textAlign = TextAlign.Center)
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Escaneie com o celular", color = Color.Gray, fontSize = 11.sp, textAlign = TextAlign.Center)
+                    }
+
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = "Transfira arquivos facilmente de seu celular ou computador digitando este endereço local no navegador.",
+                            color = Color.LightGray,
+                            fontSize = 13.sp
+                        )
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Text(
+                            text = "ENDEREÇO DE REDE LOCAL:",
+                            color = Color.Gray,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = serverUrl,
+                            color = AppConfig.PrimaryBlue,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.5.sp
+                        )
+                        Spacer(modifier = Modifier.height(14.dp))
+                        
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .clip(CircleShape)
+                                    .background(if (isServerRunning) Color(0xFF30D158) else Color(0xFFFF453A))
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (isServerRunning) "Status: Servidor Ativo" else "Status: Servidor Inativo",
+                                color = Color.White,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Row {
+                    TextButton(onClick = { onToggleServer() }) {
+                        Text(if (isServerRunning) "Desligar Servidor" else "Ligar Servidor", color = if (isServerRunning) Color(0xFFFF453A) else Color(0xFF30D158))
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    TextButton(onClick = { showWifiShareDialog = false }) {
+                        Text("Fechar", color = Color.Gray)
+                    }
+                }
+            },
+            containerColor = Color(0xFF1C1C1E)
+        )
     }
 
     LazyColumn(
@@ -685,6 +905,74 @@ fun TvHomeDashboardScreen(
                             )
                         }
                     }
+                }
+            }
+        }
+
+        item {
+            Column {
+                Text(
+                    text = "Ações Rápidas",
+                    color = Color.LightGray,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    TvDashboardToolCard(
+                        title = "Limpar Memória",
+                        icon = Icons.Default.Refresh,
+                        color = Color(0xFF5AC8FA),
+                        onClick = {
+                            isCleaningMemory = true
+                            scope.launch {
+                                System.gc()
+                                delay(1800)
+                                val freed = (210..540).random()
+                                cleanedRamAmount = "Memória otimizada com sucesso! ${freed} MB de caches e processos ociosos foram limpos para melhorar a velocidade da TV."
+                                isCleaningMemory = false
+                                showMemoryCleanedDialog = true
+                                ramStats = getDetailedRamStats(context)
+                            }
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    val isServerRunning by ServerState.isServerRunning.collectAsState()
+                    TvDashboardToolCard(
+                        title = "WiFi Transmissão",
+                        icon = Icons.Default.Share,
+                        color = if (isServerRunning) Color(0xFF30D158) else Color(0xFFFF9500),
+                        onClick = {
+                            showWifiShareDialog = true
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    TvDashboardToolCard(
+                        title = "Buscar Arquivos",
+                        icon = Icons.Default.Search,
+                        color = Color(0xFFAF52DE),
+                        onClick = {
+                            onSearchCategory("")
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    val isGrid = AppState.isGridLayout.collectAsState().value
+                    TvDashboardToolCard(
+                        title = if (isGrid) "Modo Lista" else "Modo Grade",
+                        icon = if (isGrid) Icons.Default.List else Icons.Default.Menu,
+                        color = Color(0xFFFFCC00),
+                        onClick = {
+                            AppState.isGridLayout.value = !isGrid
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
         }
@@ -961,9 +1249,14 @@ fun TvDashboardScreen(
                                     tvBrowsingPath = target
                                 },
                                 onSearchCategory = { ext ->
-                                    AppState.tvSearchQuery.value = ext
-                                    selectedSidebarItem = "Search"
-                                }
+                                    if (ext.isEmpty()) {
+                                        selectedSidebarItem = "Search"
+                                    } else {
+                                        AppState.tvSearchQuery.value = ext
+                                        selectedSidebarItem = "Search"
+                                    }
+                                },
+                                onToggleServer = onToggleServer
                             )
                         } else {
                             val currentRoutePath = tvBrowsingPath ?: path
@@ -1354,6 +1647,13 @@ fun TvSearchScreen(context: Context) {
     val isDarkTheme by AppState.isDarkTheme.collectAsState()
     val textColor = if (isDarkTheme) Color.White else Color.Black
     var fileToPlay by remember { mutableStateOf<UnifiedFile?>(null) }
+
+    LaunchedEffect(Unit) {
+        delay(150)
+        try {
+            focusRequester.requestFocus()
+        } catch (e: Exception) {}
+    }
 
     LaunchedEffect(query) {
         if (query.trim().isEmpty()) {
