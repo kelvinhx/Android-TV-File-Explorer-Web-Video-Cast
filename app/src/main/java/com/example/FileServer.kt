@@ -54,6 +54,49 @@ class FileServer(private val context: Context) {
                         call.respondText(WebInterface.getHtml(), ContentType.Text.Html)
                     }
 
+                    get("/api/update_available") {
+                        val repoOwner = call.request.queryParameters["owner"] ?: "kelvinhx"
+                        val repoName = call.request.queryParameters["repo"] ?: "Android-TV-File-Explorer-Web-Video-Cast"
+                        
+                        val pInfo = this@FileServer.context.packageManager.getPackageInfo(this@FileServer.context.packageName, 0)
+                        val localVersion = pInfo.versionName ?: "1.0"
+                        
+                        var updateAvailable = false
+                        var latestVersion = localVersion
+                        
+                        try {
+                            val url = java.net.URL("https://api.github.com/repos/$repoOwner/$repoName/releases/latest")
+                            val conn = url.openConnection() as java.net.HttpURLConnection
+                            conn.setRequestProperty("Accept", "application/vnd.github.v3+json")
+                            conn.connect()
+                            
+                            if (conn.responseCode in 200..299) {
+                                val jsonStr = conn.inputStream.bufferedReader().readText()
+                                val json = JSONObject(jsonStr)
+                                val tagName = json.optString("tag_name", "")
+                                
+                                if (tagName.isNotEmpty()) {
+                                    val cleanTag = tagName.replace(Regex("[^0-9.]"), "")
+                                    val cleanLocal = localVersion.replace(Regex("[^0-9.]"), "")
+                                    
+                                    if (cleanTag != cleanLocal && cleanTag.isNotEmpty()) {
+                                        updateAvailable = true
+                                        latestVersion = tagName
+                                    }
+                                }
+                            }
+                        } catch(e: Exception) {
+                            e.printStackTrace()
+                        }
+                        
+                        val response = JSONObject()
+                        response.put("updateAvailable", updateAvailable)
+                        response.put("latestVersion", latestVersion)
+                        response.put("localVersion", localVersion)
+                        
+                        call.respondText(response.toString(), ContentType.Application.Json)
+                    }
+
                     // Directory Discovery
                     get("/api/files") {
                         val rootPath = "/storage/emulated/0"
