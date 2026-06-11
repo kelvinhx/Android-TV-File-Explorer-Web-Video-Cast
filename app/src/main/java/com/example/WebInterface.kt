@@ -388,36 +388,26 @@ object WebInterface {
         </div>
 
         <!-- Tab 3: Browser Cast -->
-        <div id="view-browser" class="hidden">
-            <div class="px-6 mt-4">
-                <div class="ios-list p-4 mb-6">
-                    <div class="text-center">
-                        <div class="w-16 h-16 rounded-full bg-[#1C1C1E] mx-auto border border-[var(--ios-blue)] flex items-center justify-center shadow-[0_0_15px_rgba(10,132,255,0.3)] mb-4">
-                            <i class="fa-solid fa-wifi text-2xl text-[var(--ios-blue)]"></i>
-                        </div>
-                        <h2 class="text-lg font-bold mb-1">Transmitir para TV</h2>
-                        <p class="text-xs text-[var(--ios-gray)] mb-4">Envie qualquer link de site diretamente para o Navegador da TV.</p>
-                    </div>
-
-                    <input type="text" id="cast-url" placeholder="https://..." class="w-full bg-[var(--ios-bg)] border border-[rgba(255,255,255,0.1)] text-white px-4 py-3 rounded-lg text-sm mb-4 outline-none">
-                    
-                    <button onclick="castUrl()" class="w-full bg-[var(--ios-blue)] text-white font-semibold py-3 rounded-xl mb-4">
-                        Transmitir via Rede
-                    </button>
+        <div id="view-browser" class="hidden flex-col absolute top-[60px] bottom-[84px] left-0 right-0">
+            <div class="flex items-center gap-1 p-2 bg-[#1C1C1E] border-b border-[rgba(255,255,255,0.1)] z-10 w-full shrink-0">
+                <button onclick="document.getElementById('internal-browser').contentWindow.history.back()" class="p-2 text-[var(--ios-blue)]"><i class="fa-solid fa-chevron-left"></i></button>
+                <div class="flex-1 bg-black rounded-lg flex items-center px-3 py-1.5 border border-stone-800">
+                    <i class="fa-solid fa-lock text-xs text-[#34C759] mr-2"></i>
+                    <input type="text" id="browser-url" class="bg-transparent text-sm text-white w-full outline-none" value="https://www.google.com.br">
                 </div>
+                <button onclick="loadInternalBrowser()" class="p-2 text-[var(--ios-blue)]"><i class="fa-solid fa-arrow-rotate-right"></i></button>
+            </div>
+            
+            <div id="video-sniffer-bar" class="hidden bg-emerald-600 text-white px-3 py-2 text-xs flex justify-between items-center shadow-lg shrink-0">
+                <span class="font-bold flex items-center"><i class="fa-solid fa-video mr-1.5 animate-pulse"></i> Vídeo Detectado!</span>
+                <button onclick="castSniffedVideo()" class="bg-white text-emerald-800 px-3 py-1.5 rounded-full font-bold shadow-sm">Transmitir à TV</button>
+            </div>
 
-                <h3 class="text-xs font-semibold text-[var(--ios-gray)] uppercase tracking-wider mb-2 px-2">Apps Rápidos</h3>
-                <div class="ios-list">
-                    <button onclick="document.getElementById('cast-url').value='https://youtube.com/tv'; castUrl();" class="ios-list-item w-full text-left">
-                        <img src="https://www.youtube.com/s/desktop/15e7ca63/img/favicon.ico" class="w-6 h-6 mr-3 rounded" onerror="this.src=''">
-                        <span class="flex-1">YouTube TV</span>
-                        <i class="fa-solid fa-chevron-right text-[var(--ios-gray)] text-sm"></i>
-                    </button>
-                    <button onclick="document.getElementById('cast-url').value='https://netflix.com'; castUrl();" class="ios-list-item w-full text-left">
-                        <div class="w-6 h-6 mr-3 rounded bg-red-600 text-white flex items-center justify-center font-bold text-xs">N</div>
-                        <span class="flex-1">Netflix</span>
-                        <i class="fa-solid fa-chevron-right text-[var(--ios-gray)] text-sm"></i>
-                    </button>
+            <div class="flex-1 relative bg-white w-full h-full overflow-hidden">
+                <iframe id="internal-browser" class="w-full h-full border-none absolute inset-0" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
+                <div id="browser-loading" class="absolute inset-0 bg-[rgba(0,0,0,0.7)] flex flex-col items-center justify-center hidden z-20">
+                    <i class="fa-solid fa-spinner fa-spin text-4xl text-[var(--ios-blue)] mb-4"></i>
+                    <span class="text-sm font-semibold text-white tracking-wider">CARREGANDO...</span>
                 </div>
             </div>
         </div>
@@ -613,28 +603,69 @@ object WebInterface {
                 document.getElementById('tab-browser').classList.add('active');
                 document.getElementById('main-header').firstElementChild.textContent = "Transmitir";
                 document.getElementById('files-toolbar').style.display = "none";
+                
+                const iframe = document.getElementById('internal-browser');
+                if (!iframe.src || iframe.src === window.location.href) {
+                    loadInternalBrowser();
+                }
             }
         }
 
-        function castUrl() {
-            doVibrate(50);
-            const urlInput = document.getElementById('cast-url');
-            let url = urlInput.value.trim();
-            if (!url) return;
+        let sniffedVideoUrl = null;
+
+        function loadInternalBrowser() {
+            let url = document.getElementById('browser-url').value.trim();
+            if(!url) return;
             if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url;
-            
-            fetch('/api/cast', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url: url })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    urlInput.value = "";
-                } else alert("Falha na transmissão: " + data.message);
-            }).catch(console.error);
+            document.getElementById('browser-url').value = url;
+            document.getElementById('browser-loading').classList.remove('hidden');
+            document.getElementById('internal-browser').src = '/api/proxy?url=' + encodeURIComponent(url);
         }
+
+        document.getElementById('internal-browser').addEventListener('load', function() {
+            document.getElementById('browser-loading').classList.add('hidden');
+        });
+
+        document.getElementById('browser-url').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.target.blur();
+                loadInternalBrowser();
+            }
+        });
+
+        window.addEventListener('message', function(e) {
+            if (e.data) {
+                if (e.data.type === 'video_found') {
+                    sniffedVideoUrl = e.data.url;
+                    document.getElementById('video-sniffer-bar').classList.remove('hidden');
+                    doVibrate(60);
+                } else if (e.data.type === 'navigate') {
+                    document.getElementById('browser-url').value = e.data.url;
+                    loadInternalBrowser();
+                }
+            }
+        });
+
+        function castSniffedVideo() {
+            if (sniffedVideoUrl) {
+                doVibrate(50);
+                fetch('/api/cast', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: sniffedVideoUrl })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        document.getElementById('video-sniffer-bar').classList.add('hidden');
+                        alert("O vídeo foi enviado à sua TV!");
+                    } else {
+                        alert("Falha na transmissão: " + data.message);
+                    }
+                }).catch(console.error);
+            }
+        }
+
 
         function fetchFiles() {
             fetch('/api/files?path=' + encodeURIComponent(currentPath))

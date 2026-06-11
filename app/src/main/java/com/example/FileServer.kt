@@ -171,6 +171,109 @@ class FileServer(private val context: Context) {
                         }
                     }
 
+                    // Browse proxy for sniffing videos
+                    get("/api/proxy") {
+                        val urlStr = call.request.queryParameters["url"] ?: ""
+                        if (urlStr.isEmpty()) {
+                            call.respondText("Missing URL", ContentType.Text.Plain)
+                            return@get
+                        }
+                        
+                        try {
+                            val url = java.net.URL(urlStr)
+                            val conn = url.openConnection() as java.net.HttpURLConnection
+                            conn.requestMethod = "GET"
+                            // Pretend to be a mobile browser
+                            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1")
+                            
+                            // Headers to avoid some blocks, though sophisticated sites will still block
+                            conn.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
+                            
+                            conn.connect()
+                            
+                            val contentType = conn.contentType ?: "text/html"
+                            
+                            if (contentType.startsWith("text/html")) {
+                                val stream = if (conn.responseCode in 200..299) conn.inputStream else conn.errorStream
+                                var html = stream?.bufferedReader()?.readText() ?: ""
+                                
+                                val baseUrl = "${url.protocol}://${url.host}"
+                                val path = url.path
+                                val basePath = if (path.substringAfterLast("/").contains(".")) 
+                                    baseUrl + path.substringBeforeLast("/") + "/" 
+                                else 
+                                    baseUrl + path + (if(path.endsWith("/")) "" else "/")
+                                
+                                val inject = """
+                                    <script>
+                                    // Internal AdBlock / Video Sniffer
+                                    document.addEventListener('DOMContentLoaded', () => {
+                                        // Remove some typical ad containers
+                                        const ads = document.querySelectorAll('.ad, .ads, [id^=google_ads], ins');
+                                        ads.forEach(ad => ad.style.display = 'none');
+
+                                        const notifyParent = (src) => {
+                                            if(src && (src.endsWith('.mp4') || src.endsWith('.m3u8') || src.includes('video'))) {
+                                                window.parent.postMessage({type: 'video_found', url: src}, '*');
+                                            }
+                                        };
+
+                                        const videos = document.querySelectorAll('video');
+                                        videos.forEach(v => {
+                                            notifyParent(v.src || v.querySelector('source')?.src);
+                                        });
+
+                                        const obs = new MutationObserver(mutations => {
+                                            mutations.forEach(m => {
+                                                m.addedNodes.forEach(n => {
+                                                    if(n.tagName === 'VIDEO') {
+                                                        const src = n.src || n.querySelector('source')?.src;
+                                                        notifyParent(src);
+                                                    } else if (n.querySelectorAll) {
+                                                        const vids = n.querySelectorAll('video');
+                                                        vids.forEach(v => notifyParent(v.src || v.querySelector('source')?.src));
+                                                        
+                                                        // Hide injected ads dynamically
+                                                        const injAds = n.querySelectorAll('.ad, .ads');
+                                                        injAds.forEach(ad => ad.style.display = 'none');
+                                                    }
+                                                });
+                                            });
+                                        });
+                                        obs.observe(document.body, {childList: true, subtree: true});
+                                    });
+
+                                    // Intercept links to keep them inside proxy
+                                    window.addEventListener('click', e => {
+                                        const a = e.target.closest('a');
+                                        if (a && a.href && a.href.startsWith('http')) {
+                                            e.preventDefault();
+                                            window.parent.postMessage({type: 'navigate', url: a.href}, '*');
+                                        }
+                                    });
+                                    </script>
+                                """.trimIndent()
+
+                                html = html.replace("<head>", "<head><base href=\"$basePath\">$inject")
+                                call.respondText(html, ContentType.Text.Html)
+                            } else {
+                                // If not HTML (e.g. image/json/etc), stream directly
+                                val stream = if (conn.responseCode in 200..299) conn.inputStream else conn.errorStream
+                                call.respondOutputStream(ContentType.parse(contentType), HttpStatusCode.OK) {
+                                    stream?.use { input ->
+                                        val buffer = ByteArray(8 * 1024)
+                                        var bytesRead: Int
+                                        while (input.read(buffer).also { bytesRead = it } != -1) {
+                                            write(buffer, 0, bytesRead)
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (e: Exception) {
+                            call.respondText("Browser Proxy Error: ${e.message}", ContentType.Text.Plain)
+                        }
+                    }
+
                     // Native operations actions (MKDIR, DELETE, RENAME)
                     post("/api/action") {
                         val requestBody = call.receiveText()
