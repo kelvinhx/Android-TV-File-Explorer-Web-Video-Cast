@@ -71,8 +71,8 @@ object WebInterface {
         
         .ios-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
-            gap: 12px;
+            grid-template-columns: repeat(auto-fill, minmax(95px, 1fr));
+            gap: 20px 12px;
             padding: 16px;
         }
         .ios-grid-item {
@@ -123,27 +123,33 @@ object WebInterface {
         }
 
         .tab-bar {
-            background: rgba(28, 28, 30, 0.9);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-top: 0.5px solid var(--ios-border);
+            background: rgba(44, 44, 46, 0.95);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
             display: flex;
             justify-content: space-around;
-            padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+            padding: 6px;
             position: fixed;
-            bottom: 0;
-            width: 100%;
+            bottom: calc(16px + env(safe-area-inset-bottom));
+            left: 50%;
+            transform: translateX(-50%);
+            width: 85%;
+            max-width: 380px;
+            border-radius: 30px;
             z-index: 100;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
         }
         .tab-item {
             display: flex;
             flex-direction: column;
             align-items: center;
             color: var(--ios-gray);
-            font-size: 10px;
+            font-size: 11px;
             font-weight: 500;
-            transition: color 0.2s;
-            width: 33%;
+            padding: 8px 16px;
+            border-radius: 20px;
+            transition: all 0.2s;
+            flex: 1;
         }
         .tab-item i {
             font-size: 24px;
@@ -151,6 +157,7 @@ object WebInterface {
         }
         .tab-item.active {
             color: var(--ios-blue);
+            background: rgba(255, 255, 255, 0.1);
         }
 
         .toolbar {
@@ -190,10 +197,6 @@ object WebInterface {
             width: 100%;
             padding: 14px 16px;
             font-size: 16px;
-            border-bottom: 0.5px solid rgba(255,255,255,0.1);
-        }
-        .context-item:last-child {
-            border-bottom: none;
         }
         .context-item:active {
             background: rgba(255, 255, 255, 0.1);
@@ -448,43 +451,48 @@ object WebInterface {
     </div>
 
     <!-- Context Menu -->
-    <div id="context-menu" class="context-menu">
+    <div id="context-menu" class="context-menu" style="padding: 0; overflow: hidden;">
         <input type="hidden" id="context-file-path" value="">
         <input type="hidden" id="context-file-type" value="">
         
-        <button onclick="execContextAction('OPEN')" class="context-item">
+        <!-- Top action row -->
+        <div class="flex items-center justify-between border-b border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.05)]">
+            <button onclick="execContextAction('COPY')" class="flex-1 py-3 flex flex-col items-center justify-center active:bg-[rgba(255,255,255,0.1)]">
+                <i class="fa-solid fa-copy text-white mb-1.5 text-lg"></i>
+                <span class="text-[11px] text-white">Copiar</span>
+            </button>
+            <div class="w-[1px] h-12 bg-[rgba(255,255,255,0.1)]"></div>
+            <button onclick="execContextAction('CUT')" class="flex-1 py-3 flex flex-col items-center justify-center active:bg-[rgba(255,255,255,0.1)]">
+                <i class="fa-solid fa-folder text-white mb-1.5 text-lg"></i>
+                <span class="text-[11px] text-white">Mover</span>
+            </button>
+            <div class="w-[1px] h-12 bg-[rgba(255,255,255,0.1)]"></div>
+            <button id="context-download-btn" onclick="execContextAction('DOWNLOAD')" class="flex-1 py-3 flex flex-col items-center justify-center active:bg-[rgba(255,255,255,0.1)]">
+                <i class="fa-solid fa-arrow-up-from-bracket text-white mb-1.5 text-lg"></i>
+                <span class="text-[11px] text-white">Compartilhar</span>
+            </button>
+        </div>
+
+        <button onclick="execContextAction('OPEN')" class="context-item !text-white">
             <span>Abrir na TV</span>
-            <i class="fa-solid fa-play text-[var(--ios-blue)]"></i>
+            <i class="fa-solid fa-play"></i>
         </button>
-        <div class="h-[1px] bg-[rgba(255,255,255,0.1)] w-full"></div>
-        <button onclick="execContextAction('STREAM')" class="context-item">
+        <div class="h-[1px] bg-[rgba(255,255,255,0.1)] w-full ml-4"></div>
+        <button onclick="execContextAction('STREAM')" class="context-item !text-white">
             <span>Ver no Celular</span>
-            <i class="fa-solid fa-mobile-screen-button text-purple-400"></i>
+            <i class="fa-solid fa-mobile-screen-button"></i>
         </button>
-        <div class="h-[1px] bg-[rgba(255,255,255,0.1)] w-full"></div>
-        <button id="context-download-btn" onclick="execContextAction('DOWNLOAD')" class="context-item">
-            <span>Baixar</span>
-            <i class="fa-solid fa-cloud-arrow-down text-emerald-400"></i>
-        </button>
-        <div class="h-[1px] bg-[rgba(255,255,255,0.1)] w-full"></div>
-        <button onclick="execContextAction('CUT')" class="context-item">
-            <span>Recortar</span>
-            <i class="fa-solid fa-scissors text-amber-500"></i>
-        </button>
-        <div class="h-[1px] bg-[rgba(255,255,255,0.1)] w-full"></div>
-        <button onclick="execContextAction('COPY')" class="context-item">
-            <span>Copiar</span>
-            <i class="fa-solid fa-copy text-teal-400"></i>
-        </button>
-        <div class="h-[1px] bg-[rgba(255,255,255,0.1)] w-full"></div>
-        <button onclick="execContextAction('RENAME')" class="context-item">
+        
+        <div class="h-2 bg-[rgba(0,0,0,0.2)] w-full"></div>
+        
+        <button onclick="execContextAction('RENAME')" class="context-item !text-white">
             <span>Renomear</span>
-            <i class="fa-solid fa-pen text-sky-400"></i>
+            <i class="fa-solid fa-pen"></i>
         </button>
-        <div class="h-[1px] bg-[rgba(255,255,255,0.1)] w-full"></div>
+        <div class="h-[1px] bg-[rgba(255,255,255,0.1)] w-full ml-4"></div>
         <button onclick="execContextAction('DELETE')" class="context-item danger">
-            <span>Excluir</span>
-            <i class="fa-solid fa-trash-can text-red-500"></i>
+            <span>Apagar</span>
+            <i class="fa-solid fa-trash-can"></i>
         </button>
     </div>
 
@@ -1003,19 +1011,28 @@ object WebInterface {
                 }
 
                 let iconHtml = "";
-                if (isImg) {
-                    iconHtml = '<img src="/api/download?path=' + encodeURIComponent(absolutePath) + '" class="w-full h-full object-cover rounded-lg">';
+                let iconWrapperClass = "ios-icon-box";
+
+                if (file.isDirectory) {
+                    iconWrapperClass = "w-[65px] h-[65px] flex items-center justify-center mb-1.5 drop-shadow-md";
+                    iconHtml = `<svg viewBox="0 0 24 24" class="w-full h-full text-[#69A5FF]" fill="currentColor"><path d="M2.25 6A3.75 3.75 0 0 1 6 2.25h3.692a3.75 3.75 0 0 1 2.378.85l.59.493a2.25 2.25 0 0 0 1.428.508H18A3.75 3.75 0 0 1 21.75 7.85v10.4a3.75 3.75 0 0 1-3.75 3.75H6a3.75 3.75 0 0 1-3.75-3.75V6Z"/></svg>`;
+                } else if (isImg) {
+                    iconHtml = '<img src="/api/download?path=' + encodeURIComponent(absolutePath) + '" class="w-full h-full object-cover rounded shadow-sm">';
                 } else {
-                    iconHtml = '<i class="' + iconClass + ' ' + iconColor + '"></i>';
+                    iconWrapperClass = "ios-icon-box shadow-md";
+                    iconHtml = '<i class="' + iconClass + ' ' + iconColor + ' text-3xl"></i>';
                 }
 
-                const displaySize = file.isDirectory ? "Pasta" : (file.lengthFormatted || file.sizeFormatted);
+                const dateString = file.dateFormatted ? file.dateFormatted.split(" ")[0] : "";
+                const dateSizeDisplay = dateString ? (dateString + "<br>" + (file.sizeFormatted || file.lengthFormatted)) : (file.sizeFormatted || file.lengthFormatted);
+                const subtitleLine = file.isDirectory ? "Pasta" : dateSizeDisplay;
+
                 card.innerHTML = '\n' +
-'                            <div class="ios-icon-box">\n' +
+'                            <div class="' + iconWrapperClass + '">\n' +
 '                                ' + iconHtml + '\n' +
 '                            </div>\n' +
-'                            <div class="ios-file-title">' + file.name + '</div>\n' +
-'                            <div class="ios-file-subtitle">' + displaySize + '</div>\n' +
+'                            <div class="ios-file-title text-[#E5E5E5] font-semibold tracking-wide">' + file.name + '</div>\n' +
+'                            <div class="ios-file-subtitle leading-tight text-[#989899]">' + subtitleLine + '</div>\n' +
 '                        ';
                 list.appendChild(card);
             });
