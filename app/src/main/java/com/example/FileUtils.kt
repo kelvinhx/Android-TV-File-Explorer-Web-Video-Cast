@@ -23,6 +23,33 @@ data class UnifiedFile(
 
 object FileUtils {
 
+    fun getExternalStorageRoots(context: Context): List<String> {
+        val roots = mutableListOf<String>()
+        val externalDirs = androidx.core.content.ContextCompat.getExternalFilesDirs(context, null)
+        for (dir in externalDirs) {
+            if (dir != null) {
+                // Get the root of the storage volume. E.g., /storage/emulated/0
+                val path = dir.absolutePath
+                val rootPath = path.substringBefore("/Android/data")
+                if (!roots.contains(rootPath)) {
+                    roots.add(rootPath)
+                }
+            }
+        }
+        // Fallback for /storage
+        try {
+            val storageDir = File("/storage")
+            if (storageDir.exists() && storageDir.isDirectory) {
+                storageDir.listFiles()?.forEach { file ->
+                    if (file.isDirectory && file.canRead() && !roots.contains(file.absolutePath)) {
+                        roots.add(file.absolutePath)
+                    }
+                }
+            }
+        } catch (e: Exception) {}
+        return roots.distinct()
+    }
+
     fun hasAndroidDataPermission(context: Context): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return true
         val treeUri = Uri.parse("content://com.android.externalstorage.documents/tree/primary%3AAndroid%2Fdata")

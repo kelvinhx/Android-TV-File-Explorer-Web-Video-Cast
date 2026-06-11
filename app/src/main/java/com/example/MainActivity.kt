@@ -58,12 +58,15 @@ import com.example.BrowserScreen
 import kotlinx.coroutines.flow.MutableStateFlow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.input.key.*
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 
 object AppState {
     val browserUrl = MutableStateFlow<String?>(null)
+    val isDarkTheme = MutableStateFlow(true)
+    val isGridLayout = MutableStateFlow(true)
 }
 
 class MainActivity : ComponentActivity() {
@@ -289,6 +292,35 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+data class SystemMetrics(val ramUsed: String, val storageUsed: String)
+
+fun getSystemMetrics(context: Context): SystemMetrics {
+    val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+    val memoryInfo = android.app.ActivityManager.MemoryInfo()
+    activityManager.getMemoryInfo(memoryInfo)
+    
+    val ramFree = memoryInfo.availMem
+    val ramTotal = memoryInfo.totalMem
+    val ramUsed = ramTotal - ramFree
+    val ramStr = "${formatTvFileSize(ramUsed)} / ${formatTvFileSize(ramTotal)}"
+    
+    var storageStr = "0 / 0"
+    try {
+        val stat = android.os.StatFs(Environment.getDataDirectory().path)
+        val blockSize = stat.blockSizeLong
+        val totalBlocks = stat.blockCountLong
+        val availableBlocks = stat.availableBlocksLong
+        
+        val totalSize = totalBlocks * blockSize
+        val availableSize = availableBlocks * blockSize
+        val usedSize = totalSize - availableSize
+        storageStr = "${formatTvFileSize(usedSize)} / ${formatTvFileSize(totalSize)}"
+    } catch (e: Exception) {
+    }
+    
+    return SystemMetrics("RAM: $ramStr", "Storage: $storageStr")
+}
+
 @Composable
 fun PhoneDiscoveryScreen(modifier: Modifier = Modifier) {
     Column(
@@ -412,25 +444,32 @@ fun TvDashboardScreen(
     }
 
     var selectedSidebarItem by remember { mutableStateOf("On My TV") }
+    val isDarkTheme by AppState.isDarkTheme.collectAsState()
+    val externalDirs = remember { FileUtils.getExternalStorageRoots(context) }
+    
+    val bgColor = if (isDarkTheme) Color(0xFF000000) else Color(0xFFF2F2F7)
+    val sidebarColor = if (isDarkTheme) Color(0xFF1C1C1E) else Color(0xFFFFFFFF)
+    val textColor = if (isDarkTheme) Color.White else Color.Black
+    val textMutedColor = if (isDarkTheme) Color.Gray else Color.DarkGray
 
     Row(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF000000))
+            .background(bgColor)
     ) {
         // --- Sidebar (Locations) ---
         Column(
             modifier = Modifier
                 .width(260.dp)
                 .fillMaxHeight()
-                .background(Color(0xFF1C1C1E))
+                .background(sidebarColor)
                 .padding(20.dp)
         ) {
             Text(
                 text = "Locais",
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White,
+                color = textColor,
                 modifier = Modifier.padding(bottom = 16.dp, start = 8.dp)
             )
 
@@ -440,6 +479,18 @@ fun TvDashboardScreen(
                 isSelected = selectedSidebarItem == "On My TV",
                 onClick = { selectedSidebarItem = "On My TV" }
             )
+            
+            externalDirs.forEachIndexed { index, path ->
+                if (path != "/storage/emulated/0") {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TvSidebarItem(
+                        text = "USB ${index}",
+                        icon = Icons.Default.List,
+                        isSelected = selectedSidebarItem == "USB_$index",
+                        onClick = { AppState.browserUrl.value = null; selectedSidebarItem = "USB_$index" }
+                    )
+                }
+            }
             
             Spacer(modifier = Modifier.height(8.dp))
             
@@ -458,6 +509,21 @@ fun TvDashboardScreen(
                 isSelected = selectedSidebarItem == "Settings",
                 onClick = { selectedSidebarItem = "Settings" }
             )
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            Divider(color = Color.DarkGray)
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            var metrics by remember { mutableStateOf(getSystemMetrics(context)) }
+            LaunchedEffect(Unit) {
+                while (true) {
+                    delay(5000)
+                    metrics = getSystemMetrics(context)
+                }
+            }
+            Text(metrics.ramUsed, color = textMutedColor, fontSize = 11.sp, maxLines = 1)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(metrics.storageUsed, color = textMutedColor, fontSize = 11.sp, maxLines = 1)
         }
 
         // --- Main Content Area ---
@@ -465,13 +531,20 @@ fun TvDashboardScreen(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxHeight()
-                .background(Color(0xFF000000))
+                .background(bgColor)
         ) {
-            when (selectedSidebarItem) {
-                "On My TV" -> {
+            when {
+                selectedSidebarItem == "On My TV" || selectedSidebarItem.startsWith("USB_") -> {
                     if (hasStoragePermission) {
+                        val path = if (selectedSidebarItem.startsWith("USB_")) {
+                            val index = selectedSidebarItem.substringAfter("USB_").toIntOrNull() ?: 0
+                            externalDirs.getOrNull(index) ?: "/storage/emulated/0"
+                        } else {
+                            "/storage/emulated/0"
+                        }
                         TvFilesBrowser(
                             context = context,
+                            basePath = path,
                             onRequestAndroidDataPermission = onRequestAndroidDataPermission
                         )
                     } else {
@@ -493,15 +566,34 @@ fun TvDashboardScreen(
                         }
                     }
                 }
-                "Host Server" -> {
+                selectedSidebarItem == "Host Server" -> {
                     TvServerDashboard(onToggleServer = onToggleServer)
                 }
-                "Settings" -> {
-                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Configurações", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                selectedSidebarItem == "Settings" -> {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize().background(bgColor)) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(bottom = 64.dp)) {
+                            Text("Configurações", color = textColor, fontSize = 28.sp, fontWeight = FontWeight.Bold)
                             Spacer(modifier = Modifier.height(30.dp))
                             
+                            val isDark = AppState.isDarkTheme.collectAsState().value
+                            val isGrid = AppState.isGridLayout.collectAsState().value
+                            
+                            DpadTvButton(
+                                text = "Tema: " + if (isDark) "Escuro" else "Claro",
+                                icon = if (isDark) Icons.Default.Info else Icons.Default.Star,
+                                tint = if (isDark) Color(0xFFE0E0E0) else Color(0xFFFFCC00),
+                                onClick = { AppState.isDarkTheme.value = !isDark }
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            DpadTvButton(
+                                text = "Layout: " + if (isGrid) "Grade" else "Lista",
+                                icon = if (isGrid) Icons.Default.List else Icons.Default.Menu,
+                                tint = AppConfig.PrimaryBlue,
+                                onClick = { AppState.isGridLayout.value = !isGrid }
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+
                             DpadTvButton(
                                 text = "Configurações do Android TV",
                                 icon = Icons.Default.Settings,
@@ -800,11 +892,19 @@ fun IosFileIcon(modifier: Modifier = Modifier, extension: String) {
 @Composable
 fun TvFilesBrowser(
     context: Context,
+    basePath: String = "/storage/emulated/0",
     onRequestAndroidDataPermission: () -> Unit
 ) {
-    var currentPath by remember { mutableStateOf("/storage/emulated/0") }
+    var currentPath by remember { mutableStateOf(basePath) }
+    
+    // Reset path when base changes
+    LaunchedEffect(basePath) {
+        currentPath = basePath
+    }
+
     var files by remember { mutableStateOf<List<UnifiedFile>>(emptyList()) }
     var showOpenAsDialog by remember { mutableStateOf(false) }
+    var fileToPlay by remember { mutableStateOf<UnifiedFile?>(null) }
 
     // Helper list fetch trigger
     var listKey by remember { mutableStateOf(0) }
@@ -990,28 +1090,54 @@ fun TvFilesBrowser(
                     Text("A pasta está vazia", color = Color.Gray, fontSize = 18.sp)
                 }
             } else {
-                LazyVerticalGrid(
-                    columns = GridCells.Adaptive(140.dp),
-                    contentPadding = PaddingValues(bottom = 80.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(24.dp)
-                ) {
-                    items(files) { file ->
-                        TvFileGridItem(
-                            file = file,
-                            onClick = {
-                                if (file.isDirectory) {
-                                    currentPath = file.absolutePath
-                                } else {
+                val isGridView = AppState.isGridLayout.collectAsState().value
+                if (isGridView) {
+                    LazyVerticalGrid(
+                        columns = GridCells.Adaptive(140.dp),
+                        contentPadding = PaddingValues(bottom = 80.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(24.dp)
+                    ) {
+                        items(files) { file ->
+                            TvFileGridItem(
+                                file = file,
+                                onClick = {
+                                    if (file.isDirectory) {
+                                        currentPath = file.absolutePath
+                                    } else {
+                                        fileToManage = file
+                                        showContextMenu = true
+                                    }
+                                },
+                                onLongClick = {
                                     fileToManage = file
                                     showContextMenu = true
                                 }
-                            },
-                            onLongClick = {
-                                fileToManage = file
-                                showContextMenu = true
-                            }
-                        )
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        contentPadding = PaddingValues(bottom = 80.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(files) { file ->
+                            TvFileListItem(
+                                file = file,
+                                onClick = {
+                                    if (file.isDirectory) {
+                                        currentPath = file.absolutePath
+                                    } else {
+                                        fileToManage = file
+                                        showContextMenu = true
+                                    }
+                                },
+                                onLongClick = {
+                                    fileToManage = file
+                                    showContextMenu = true
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -1039,7 +1165,7 @@ fun TvFilesBrowser(
                     Text(text = descStr, color = Color.Gray, fontSize = 14.sp)
                     Spacer(modifier = Modifier.height(12.dp))
                     
-                    val openText = if (fileToManage!!.isDirectory) "Entrar na Pasta" else "Abrir Arquivo"
+                    val openText = if (fileToManage!!.isDirectory) "Entrar na Pasta" else "Abrir Arquivo App Externo"
                     DpadTvButton(
                         text = openText,
                         icon = Icons.Default.PlayArrow,
@@ -1054,6 +1180,19 @@ fun TvFilesBrowser(
                         },
                         modifier = Modifier.fillMaxWidth()
                     )
+                    
+                    if (!fileToManage!!.isDirectory) {
+                        DpadTvButton(
+                            text = "Mini Player",
+                            icon = Icons.Default.Star,
+                            tint = Color(0xFFE91E63),
+                            onClick = {
+                                fileToPlay = fileToManage
+                                showContextMenu = false
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                     
                     DpadTvButton(
                         text = "Mover / Recortar",
@@ -1333,6 +1472,10 @@ fun TvFilesBrowser(
             confirmButton = {}
         )
     }
+
+    if (fileToPlay != null) {
+        InternalMediaViewer(file = fileToPlay!!, onClose = { fileToPlay = null })
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -1424,6 +1567,100 @@ fun TvFileGridItem(file: UnifiedFile, onClick: () -> Unit, onLongClick: () -> Un
             textAlign = TextAlign.Center,
             fontWeight = FontWeight.Medium
         )
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun TvFileListItem(file: UnifiedFile, onClick: () -> Unit, onLongClick: () -> Unit) {
+    var isFocused by remember { mutableStateOf(false) }
+    val isDark = AppState.isDarkTheme.collectAsState().value
+    val scale = animateFloatAsState(targetValue = if (isFocused) 1.02f else 1.0f).value
+    val bgColor = if (isFocused) AppConfig.PrimaryBlue else if (isDark) Color(0xFF1C1C1E) else Color(0xFFFFFFFF)
+    val textColor = if (isFocused) Color.White else if (isDark) Color.White else Color.Black
+    val textMutedColor = if (isFocused) Color.LightGray else if (isDark) Color.Gray else Color.DarkGray
+    
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(72.dp)
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .clip(RoundedCornerShape(12.dp))
+            .background(bgColor)
+            .onFocusChanged { isFocused = it.isFocused }
+            .focusable()
+            .onKeyEvent { keyEvent ->
+                if (keyEvent.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN) {
+                    when (keyEvent.nativeKeyEvent.keyCode) {
+                        android.view.KeyEvent.KEYCODE_DPAD_CENTER,
+                        android.view.KeyEvent.KEYCODE_ENTER,
+                        android.view.KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                            if (keyEvent.nativeKeyEvent.repeatCount == 0) {
+                                onClick()
+                            }
+                            true
+                        }
+                        android.view.KeyEvent.KEYCODE_MENU -> {
+                            onLongClick()
+                            true
+                        }
+                        else -> false
+                    }
+                } else if (keyEvent.nativeKeyEvent.action == android.view.KeyEvent.ACTION_UP) {
+                    if (keyEvent.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_CENTER) {
+                        if (keyEvent.nativeKeyEvent.flags and android.view.KeyEvent.FLAG_LONG_PRESS != 0) {
+                            onLongClick()
+                            true
+                        } else false
+                    } else false
+                } else false
+            }
+            .clickable(onClick = onClick)
+            .border(if (isFocused) BorderStroke(2.dp, Color.White) else BorderStroke(0.dp, Color.Transparent), RoundedCornerShape(12.dp))
+            .padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier.size(48.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            if (file.isDirectory) {
+                IosFolderIcon(modifier = Modifier.size(40.dp))
+            } else {
+                val ext = file.extension
+                if (ext in listOf("jpg", "jpeg", "png", "webp", "gif")) {
+                    val model = if (file.uriString != null) Uri.parse(file.uriString) else File(file.absolutePath)
+                    coil.compose.AsyncImage(
+                        model = model,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                    )
+                } else {
+                    IosFileIcon(modifier = Modifier.size(36.dp), extension = ext)
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.width(16.dp))
+        
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = file.name,
+                color = textColor,
+                fontSize = 16.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                fontWeight = FontWeight.Medium
+            )
+            val subText = if (file.isDirectory) "Pasta" else formatTvFileSize(file.length)
+            Text(
+                text = subText,
+                color = textMutedColor,
+                fontSize = 12.sp,
+                maxLines = 1
+            )
+        }
     }
 }
 
@@ -1533,6 +1770,65 @@ fun TvServerDashboard(onToggleServer: () -> Unit) {
                 }
             }
         }
+    }
+}
+
+@Composable
+fun InternalMediaViewer(file: UnifiedFile, onClose: () -> Unit) {
+    val context = LocalContext.current
+    val ext = file.extension.lowercase()
+    val isImage = ext in listOf("jpg", "jpeg", "png", "webp", "gif", "bmp")
+    val isVideo = ext in listOf("mp4", "mkv", "avi", "mov", "webm", "3gp")
+    val isAudio = ext in listOf("mp3", "wav", "flac", "ogg", "m4a", "aac")
+    
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .clickable { onClose() },
+        contentAlignment = Alignment.Center
+    ) {
+        if (isImage) {
+            val model = if (file.uriString != null) Uri.parse(file.uriString) else File(file.absolutePath)
+            coil.compose.AsyncImage(
+                model = model,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = androidx.compose.ui.layout.ContentScale.Fit
+            )
+        } else if (isVideo || isAudio) {
+            AndroidView(
+                factory = { ctx ->
+                    android.widget.VideoView(ctx).apply {
+                        val uri = if (file.uriString != null) Uri.parse(file.uriString) else Uri.fromFile(File(file.absolutePath))
+                        setVideoURI(uri)
+                        val mediaController = android.widget.MediaController(ctx)
+                        mediaController.setAnchorView(this)
+                        setMediaController(mediaController)
+                        setOnPreparedListener { mp ->
+                            mp.isLooping = true
+                            start()
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(Icons.Default.Info, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(64.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("Formato de mídia não suportado no player interno", color = Color.White)
+            }
+        }
+        
+        // Close Button
+        DpadTvButton(
+            text = "Fechar",
+            icon = Icons.Default.Close,
+            tint = Color.White,
+            onClick = onClose,
+            modifier = Modifier.align(Alignment.TopEnd).padding(32.dp)
+        )
     }
 }
 
