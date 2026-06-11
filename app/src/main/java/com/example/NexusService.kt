@@ -10,19 +10,21 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 
 class NexusService : Service() {
     private var fileServer: FileServer? = null
+    private var wakeLock: PowerManager.WakeLock? = null
 
     override fun onCreate() {
         super.onCreate()
-        Logger.log("Nexus Foreground Service initialized.")
+        Logger.log("Nexus Foreground Service inicializado.")
         fileServer = FileServer(applicationContext)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Logger.log("Foreground Service starting server threads...")
+        Logger.log("Serviço em segundo plano iniciando threads do servidor...")
         
         createNotificationChannel()
         val notification = createNotification()
@@ -31,6 +33,17 @@ class NexusService : Service() {
             startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
         } else {
             startForeground(NOTIFICATION_ID, notification)
+        }
+
+        // Adquirir WakeLock para evitar suspensão da CPU na Android TV durante transferência
+        try {
+            val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+            wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "NexusService::WakeLock").apply {
+                acquire(2 * 60 * 60 * 1000L) // Limite de 2 horas para autodefesa, caso o app trave
+            }
+            Logger.log("WakeLock de energia adquirido com sucesso para o servidor da TV.")
+        } catch (e: Exception) {
+            Logger.log("Falha ao criar/adquirir WakeLock: ${e.message}")
         }
 
         // Spin Netty server asynchronously
@@ -42,7 +55,15 @@ class NexusService : Service() {
     }
 
     override fun onDestroy() {
-        Logger.log("Stopping Foreground Service thread systems...")
+        Logger.log("Parando sistemas de segundo plano do serviço Nexus...")
+        try {
+            if (wakeLock?.isHeld == true) {
+                wakeLock?.release()
+                Logger.log("WakeLock liberado com sucesso.")
+            }
+        } catch (e: Exception) {
+            Logger.log("Erro ao liberar WakeLock: ${e.message}")
+        }
         Thread {
             fileServer?.stop()
         }.start()
@@ -55,10 +76,10 @@ class NexusService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Nexus Explorer Pro Services",
+                "Serviços Nexus Explorer Pro",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "System notification channel for Nexus server background host"
+                description = "Canal de notificações para host em segundo plano do servidor Nexus"
             }
             val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(channel)
@@ -85,8 +106,8 @@ class NexusService : Service() {
         )
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Nexus Explorer Pro Core Online")
-            .setContentText("Open on your mobile: $serverUrl")
+            .setContentTitle("Nexus Explorer Pro Core Ativo")
+            .setContentText("Abra no seu celular: $serverUrl")
             .setSmallIcon(android.R.drawable.ic_dialog_info) // Safe built-in asset icon
             .setContentIntent(pendingIntent)
             .setOngoing(true)
