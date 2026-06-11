@@ -2,6 +2,10 @@
 
 Aqui você encontra o registro histórico de atualizações e aperfeiçoamentos do Nexus Explorer Pro.
 
+## [1.1.5] - 11/06/2026 16:35
+- **Sistema de Atualizações Ultrarrobusto**: Adicionado o mecanismo de "Forçar Atualização (Bypass)" direto na janela de configurações e versão. Isso permite baixar o APK mais recente de forma direta no GitHub caso ocorra qualquer dificuldade técnica ou erro com checagem de metadados, garantindo atualizações garantidas para a Android TV.
+- **Sincronização de Assinatura e Build**: Sincronia aprimorada dos identificadores estáticos internos de compilação com os arquivos manifest do projeto.
+
 ## [1.1.4] - 11/06/2026 15:20
 - **Sistema de Atualizações Automáticas**: Implementação de um fluxo de checagem inteligente baseado em arquivos JSON dedicados (`version-check.json`), ignorando os caches de requisição do GitHub para garantir precisão instantânea na detecção de novas compilações.
 - **Navegação Ultra-Fluida**: Fluxo de retorno de foco melhorado ao entrar e retornar por subdiretórios nas abas de arquivos para TV da TCL e eixos compatíveis.

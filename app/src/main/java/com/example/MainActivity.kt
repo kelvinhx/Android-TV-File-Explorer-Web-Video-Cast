@@ -1089,7 +1089,7 @@ fun TvDashboardScreen(
     var showUpdateDialog by remember { mutableStateOf(false) }
     var autoUpdatingMessage by remember { mutableStateOf("") }
     var isAutoUpdating by remember { mutableStateOf(false) }
-    var remoteVersionName by remember { mutableStateOf("1.1.4") }
+    var remoteVersionName by remember { mutableStateOf("1.1.5") }
     var remoteChangelogLines by remember { mutableStateOf<List<String>>(emptyList()) }
     val scope = rememberCoroutineScope()
 
@@ -1098,7 +1098,7 @@ fun TvDashboardScreen(
             try {
                 val remote = Updater.getRemoteVersionInfo()
                 if (remote != null) {
-                    remoteVersionName = remote.optString("versionName", "1.1.4")
+                    remoteVersionName = remote.optString("versionName", "1.1.5")
                     val arr = remote.optJSONArray("changelog")
                     if (arr != null) {
                         val list = mutableListOf<String>()
@@ -3825,6 +3825,37 @@ fun AboutVersionDialog(
                                             updateFound = false
                                         }
                                         isCheckingUpdates = false
+                                    }
+                                }
+                            },
+                            modifier = Modifier.widthIn(min = 180.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        DpadTvButton(
+                            text = if (isDownloadingUpdate) "Espere..." else "Forçar Build (Bypass)",
+                            icon = Icons.Default.PlayArrow,
+                            tint = Color(0xFFFF9500),
+                            onClick = {
+                                if (!isDownloadingUpdate) {
+                                    isDownloadingUpdate = true
+                                    checkStateMessage = "Iniciando download forçado (Bypass)..."
+                                    scope.launch {
+                                        val repoOwner = "kelvinhx"
+                                        val repoName = "Android-TV-File-Explorer-Web-Video-Cast"
+                                        val artifactName = "app-debug"
+                                        Updater.downloadExtractAndInstall(
+                                            context = context,
+                                            repoOwner = repoOwner,
+                                            repoName = repoName,
+                                            artifactName = artifactName,
+                                            onProgress = { msg ->
+                                                checkStateMessage = msg
+                                                if (msg.startsWith("Erro")) {
+                                                    isDownloadingUpdate = false
+                                                }
+                                            }
+                                        )
                                     }
                                 }
                             },

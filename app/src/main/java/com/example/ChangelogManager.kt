@@ -20,6 +20,16 @@ object ChangelogManager {
 
     val changelogs = listOf(
         VersionChangelog(
+            versionName = "1.1.5",
+            versionCode = 7,
+            releaseDate = "11 de Junho de 2026 (16:35)",
+            highlights = listOf(
+                "Inclusão do mecanismo 'Forçar Atualização (Bypass)', garantindo a instalação direta mesmo em caso de erro na detecção automática das versões.",
+                "Estatutos de atualização robustos para evitar lentidão ou erros no download direto do repositório GitHub.",
+                "Sincronização estrita de builds e integridade dos manifestos de release para a Android TV."
+            )
+        ),
+        VersionChangelog(
             versionName = "1.1.4",
             versionCode = 6,
             releaseDate = "11 de Junho de 2026",
