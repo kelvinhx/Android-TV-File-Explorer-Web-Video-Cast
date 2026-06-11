@@ -21,6 +21,20 @@ import java.io.File
 class FileServer(private val context: Context) {
     private var server: NettyApplicationEngine? = null
 
+    private fun isPathAllowed(path: String): Boolean {
+        return try {
+            val canonical = File(path).canonicalPath
+            canonical.startsWith("/storage/") || canonical.startsWith("/sdcard/") || canonical.startsWith(context.cacheDir.absolutePath)
+        } catch(e: Exception) {
+            false
+        }
+    }
+
+    private fun sanitizePath(path: String?, defaultPath: String): String {
+        val resolvedPath = path ?: defaultPath
+        return try { File(resolvedPath).canonicalPath } catch(e: Exception) { resolvedPath }.replace("//", "/")
+    }
+
     fun start() {
         if (server != null) return
         Logger.log("Initializing Ktor Netty core on port ${AppConfig.PORT}...")
@@ -43,7 +57,12 @@ class FileServer(private val context: Context) {
                     // Directory Discovery
                     get("/api/files") {
                         val rootPath = "/storage/emulated/0"
-                        val pathParam = (call.request.queryParameters["path"] ?: rootPath).replace("//", "/")
+                        val pathParam = sanitizePath(call.request.queryParameters["path"], rootPath)
+                        
+                        if (!isPathAllowed(pathParam)) {
+                            call.respondText(JSONObject().put("status", "error").put("message", "Acesso negado para o caminho fornecido.").toString(), ContentType.Application.Json, HttpStatusCode.Forbidden)
+                            return@get
+                        }
                         
                         // Check Android/data permission if navigating there
                         val isDataFolder = pathParam.startsWith("/storage/emulated/0/Android/data")
@@ -127,7 +146,12 @@ class FileServer(private val context: Context) {
                             return@get
                         }
 
-                        val targetPath = path.replace("//", "/")
+                        val targetPath = sanitizePath(path, path)
+                        if (!isPathAllowed(targetPath)) {
+                            call.respondText(JSONObject().put("status", "error").put("message", "Acesso negado para o diretório alvo.").toString(), ContentType.Application.Json, HttpStatusCode.Forbidden)
+                            return@get
+                        }
+                        
                         Logger.log("Streaming file via download api: $targetPath")
 
                         if (targetPath.startsWith("/storage/emulated/0/Android/data") && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
@@ -175,7 +199,12 @@ class FileServer(private val context: Context) {
                             return@post
                         }
 
-                        val targetPath = path.replace("//", "/")
+                        val targetPath = sanitizePath(path, path)
+                        if (!isPathAllowed(targetPath)) {
+                            call.respondText(JSONObject().put("status", "error").put("message", "Acesso negado").toString(), ContentType.Application.Json, HttpStatusCode.Forbidden)
+                            return@post
+                        }
+                        
                         val success = FileUtils.openFile(this@FileServer.context, targetPath)
                         if (success) {
                             call.respondText(JSONObject().put("status", "success").toString(), ContentType.Application.Json)
@@ -415,16 +444,22 @@ class FileServer(private val context: Context) {
                         }
                     }
 
-                    // Native operations actions (MKDIR, DELETE, RENAME)
+                    // Native operations actions (MKDIR, DELETE, RENAME, COPY, MOVE)
                     post("/api/action") {
                         val requestBody = call.receiveText()
                         val json = JSONObject(requestBody)
                         val action = json.optString("action")
-                        val path = json.optString("path")
+                        val rawPath = json.optString("path")
                         val argument = json.optString("argument")
 
-                        if (path.isEmpty()) {
+                        if (rawPath.isEmpty()) {
                             call.respondText(JSONObject().put("status", "error").put("message", "Path is missing").toString(), ContentType.Application.Json)
+                            return@post
+                        }
+
+                        val path = sanitizePath(rawPath, rawPath)
+                        if (!isPathAllowed(path)) {
+                            call.respondText(JSONObject().put("status", "error").put("message", "Acesso ao diretório negado").toString(), ContentType.Application.Json)
                             return@post
                         }
 
@@ -512,7 +547,14 @@ class FileServer(private val context: Context) {
 
                     // Multipart file uploads using 64KB streams mapping
                     post("/api/upload") {
-                        val pathParam = (call.request.queryParameters["path"] ?: "/storage/emulated/0").replace("//", "/")
+                        val rawPath = call.request.queryParameters["path"] ?: "/storage/emulated/0"
+                        val pathParam = sanitizePath(rawPath, rawPath)
+                        
+                        if (!isPathAllowed(pathParam)) {
+                            call.respondText(JSONObject().put("status", "error").put("message", "Upload restrito nesse caminho.").toString(), ContentType.Application.Json, HttpStatusCode.Forbidden)
+                            return@post
+                        }
+                        
                         val multipart = call.receiveMultipart()
                         var count = 0
 

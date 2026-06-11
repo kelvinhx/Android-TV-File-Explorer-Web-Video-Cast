@@ -83,26 +83,25 @@ object Updater {
                 }
 
                 val contentLength = connection.contentLength
-                val input = connection.inputStream
-                val output = FileOutputStream(zipFile)
-                
-                val data = ByteArray(8192)
-                var count: Int
-                var totalDownloaded: Long = 0
-                
-                while (input.read(data).also { count = it } != -1) {
-                    output.write(data, 0, count)
-                    totalDownloaded += count
-                    if (contentLength > 0) {
-                        val progress = (totalDownloaded * 100) / contentLength
-                        onProgress("Baixando atualização... $progress%")
-                    } else {
-                        onProgress("Baixando atualização...")
+                connection.inputStream.use { input ->
+                    FileOutputStream(zipFile).use { output ->
+                        val data = ByteArray(8192)
+                        var count: Int
+                        var totalDownloaded: Long = 0
+                        
+                        while (input.read(data).also { count = it } != -1) {
+                            output.write(data, 0, count)
+                            totalDownloaded += count
+                            if (contentLength > 0) {
+                                val progress = (totalDownloaded * 100) / contentLength
+                                onProgress("Baixando atualização... $progress%")
+                            } else {
+                                onProgress("Baixando atualização...")
+                            }
+                        }
+                        output.flush()
                     }
                 }
-                output.flush()
-                output.close()
-                input.close()
                 
                 onProgress("Extraindo atualização do arquivo ZIP...")
                 val apkFile = extractApkFromZip(zipFile, nexusDir)
