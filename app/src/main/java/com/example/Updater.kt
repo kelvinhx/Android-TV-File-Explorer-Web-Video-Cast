@@ -63,22 +63,52 @@ object Updater {
         }
     }
     
-    suspend fun downloadExtractAndInstall(context: Context, zipUrl: String, onProgress: (String) -> Unit) {
+    suspend fun downloadExtractAndInstall(
+        context: Context, 
+        repoOwner: String, 
+        repoName: String, 
+        artifactName: String, 
+        onProgress: (String) -> Unit
+    ) {
         withContext(Dispatchers.IO) {
             try {
-                onProgress("Conectando ao GitHub...")
+                onProgress("Verificando repositório GitHub...")
                 val nexusDir = File(Environment.getExternalStorageDirectory(), "Nexus")
                 if (!nexusDir.exists()) nexusDir.mkdirs()
                 
                 val zipFile = File(nexusDir, "update.zip")
                 if (zipFile.exists()) zipFile.delete()
                 
-                val connection = URL(zipUrl).openConnection() as HttpURLConnection
-                connection.instanceFollowRedirects = true
-                connection.connect()
+                val branches = listOf("main", "master")
+                val workflows = listOf("android.yml", "build.yml")
+                val artifacts = listOf("app-debug", "app-release", artifactName)
                 
-                if (connection.responseCode !in 200..299) {
-                    onProgress("Erro: Falha no download (Código ${connection.responseCode})")
+                var connection: HttpURLConnection? = null
+                
+                search@ for (branch in branches) {
+                    for (workflow in workflows) {
+                        for (artifact in artifacts) {
+                            val urlStr = "https://nightly.link/$repoOwner/$repoName/workflows/$workflow/$branch/$artifact.zip"
+                            try {
+                                val conn = URL(urlStr).openConnection() as HttpURLConnection
+                                conn.instanceFollowRedirects = true
+                                conn.setRequestProperty("User-Agent", "Mozilla/5.0")
+                                conn.connect()
+                                if (conn.responseCode in 200..299) {
+                                    connection = conn
+                                    break@search
+                                } else {
+                                    conn.disconnect()
+                                }
+                            } catch (e: Exception) {
+                                // ignore and try next
+                            }
+                        }
+                    }
+                }
+                
+                if (connection == null) {
+                    onProgress("Erro: Falha no download (Código 404). Verifique se o GitHub Actions foi concluído com sucesso.")
                     return@withContext
                 }
 
@@ -156,6 +186,23 @@ object Updater {
     }
 
     private fun installApk(context: Context, apkFile: File) {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            if (!context.packageManager.canRequestPackageInstalls()) {
+                val intent = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
+                intent.data = android.net.Uri.parse("package:${context.packageName}")
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+                
+                // Exibe toast para o usuário tentar novamente após conceder permissão
+                android.widget.Toast.makeText(
+                    context, 
+                    "Por favor, conceda permissão e tente iniciar a instalação novamente.", 
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+                return
+            }
+        }
+
         val intent = Intent(Intent.ACTION_VIEW)
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)

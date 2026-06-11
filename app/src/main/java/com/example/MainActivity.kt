@@ -359,11 +359,12 @@ fun TvDashboardScreen(
                         val workflowFile = "build.yml"
                         val branch = "main"
                         val artifactName = "app-debug"
-                        val url = "https://nightly.link/$repoOwner/$repoName/workflows/$workflowFile/$branch/$artifactName.zip"
                         scope.launch {
                             Updater.downloadExtractAndInstall(
                                 context = context,
-                                zipUrl = url,
+                                repoOwner = repoOwner,
+                                repoName = repoName,
+                                artifactName = artifactName,
                                 onProgress = { msg ->
                                     autoUpdatingMessage = msg
                                     if (msg.isEmpty() || msg.startsWith("Erro") || msg.startsWith("Iniciando")) {
@@ -537,15 +538,12 @@ fun TvDashboardScreen(
                                         val branch = "main"
                                         val artifactName = "app-debug"
                                         
-                                        val tempUrl = "https://nightly.link/$repoOwner/$repoName/workflows/$workflowFile/$branch/$artifactName.zip"
-                                        
-                                        // You can optionally allow the user to type this or configure it.
-                                        val url = tempUrl
-                                        
                                         scope.launch {
                                             Updater.downloadExtractAndInstall(
                                                 context = context,
-                                                zipUrl = url,
+                                                repoOwner = repoOwner,
+                                                repoName = repoName,
+                                                artifactName = artifactName,
                                                 onProgress = { msg ->
                                                     updateMessage = msg
                                                     if (msg.isEmpty() || msg.startsWith("Erro") || msg.startsWith("Iniciando")) {
