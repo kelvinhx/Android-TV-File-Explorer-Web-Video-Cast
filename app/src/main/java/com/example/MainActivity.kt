@@ -124,20 +124,30 @@ class MainActivity : ComponentActivity() {
         val context = this
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             try {
-                // Direct Storage Manager Request
-                val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION).apply {
+                // Direct Storage Manager Request directly targeted to this app
+                val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                    data = Uri.parse("package:${context.packageName}")
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
                 context.startActivity(intent)
-                Logger.log("Opened direct MANAGE_EXTERNAL_STORAGE settings screen.")
+                Logger.log("Opened targeted MANAGE_APP_ALL_FILES_ACCESS_PERMISSION screen.")
             } catch (e: Exception) {
-                // Application details fallback
-                Logger.log("Direct storage intent failed. Opening Application settings fallback...")
-                val fallbackIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                    data = Uri.fromParts("package", context.packageName, null)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                try {
+                    // Fallback to global setting if manufacturer removed app-specific screen (TCL TVs sometimes do this)
+                    val genericIntent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(genericIntent)
+                    Logger.log("Targeted intent failed. Opened global MANAGE_EXTERNAL_STORAGE settings screen.")
+                } catch (e2: Exception) {
+                    // Application details fallback
+                    Logger.log("Direct storage intents failed. Opening Application settings fallback...")
+                    val fallbackIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = Uri.fromParts("package", context.packageName, null)
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(fallbackIntent)
                 }
-                context.startActivity(fallbackIntent)
             }
         } else {
             // Under Android 11 standard dialog request
