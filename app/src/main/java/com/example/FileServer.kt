@@ -372,7 +372,8 @@ class FileServer(private val context: Context) {
                                     /* Premium iOS 18 / 26 Inspired Style Injection to force hide ads and banners */
                                     .ad, .ads, .ad-box, .advertisement, #ad-container, [id^=google_ads_],
                                     iframe[src*="doubleclick.net"], iframe[src*="adservice"], iframe[src*="popads"], iframe[src*="propeller"],
-                                    .popunder, .widget-ad, .banner-ad,
+                                    .popunder, .widget-ad, .banner-ad, .taboola, .outbrain, .adsbygoogle,
+                                    div[class*="Sponsored"], div[class*="sponsored"],
                                     div[style*="z-index: 2147483647"], div[style*="z-index:99999"], div[style*="z-index: 999999"] {
                                         display: none !important;
                                         opacity: 0 !important;
@@ -465,16 +466,8 @@ class FileServer(private val context: Context) {
 
                                     // Recursive Iframe Hijacking
                                     const hijackIframes = () => {
-                                        document.querySelectorAll('iframe').forEach(iframe => {
-                                            try {
-                                                const src = iframe.src || iframe.getAttribute('src');
-                                                if (src && src.startsWith('http') && !src.includes('/api/proxy') && !src.includes(window.location.origin)) {
-                                                    const proxiedSrc = window.location.origin + '/api/proxy?url=' + encodeURIComponent(src);
-                                                    iframe.src = proxiedSrc;
-                                                    iframe.setAttribute('src', proxiedSrc);
-                                                }
-                                            } catch(e) {}
-                                        });
+                                        // Removed: hijacking iframes breaks Cloudflare protected embeds like PobreFlix.
+                                        // document.querySelectorAll('iframe').forEach(...)
                                     };
 
                                     // Main Initialization & Observation
@@ -497,13 +490,8 @@ class FileServer(private val context: Context) {
                                                     if(n.tagName === 'VIDEO') {
                                                         notifyParent(n.src || n.querySelector('source')?.src);
                                                     } else if (n.tagName === 'IFRAME') {
-                                                        // Instantly hijack new iframe
-                                                        const src = n.src || n.getAttribute('src');
-                                                        if (src && src.startsWith('http') && !src.includes('/api/proxy') && !src.includes(window.location.origin)) {
-                                                            const proxied = window.location.origin + '/api/proxy?url=' + encodeURIComponent(src);
-                                                            n.src = proxied;
-                                                            n.setAttribute('src', proxied);
-                                                        }
+                                                        // We no longer hijack iframes dynamically to prevent breaking external secure players
+                                                        // const src = n.src || n.getAttribute('src');
                                                     } else if (n.querySelectorAll) {
                                                         const vids = n.querySelectorAll('video');
                                                         vids.forEach(v => notifyParent(v.src || v.querySelector('source')?.src));
@@ -544,24 +532,39 @@ class FileServer(private val context: Context) {
                                         const form = e.target;
                                         if (form && form.action) {
                                             e.preventDefault();
-                                            let action = form.action.startsWith('http') ? form.action : new URL(form.action, window.location.href).href;
+                                            let action = form.action.startsWith('http') ? form.action : new URL(form.action, document.baseURI || window.location.href).href;
                                             const formData = new FormData(form);
                                             const params = new URLSearchParams(formData);
-                                            let urlObj = new URL(action);
-                                            for (const [key, value] of params.entries()) {
-                                                urlObj.searchParams.append(key, value);
+                                            
+                                            if (form.method && form.method.toLowerCase() === 'get') {
+                                                let urlObj = new URL(action);
+                                                for (const [key, value] of params.entries()) {
+                                                    urlObj.searchParams.append(key, value);
+                                                }
+                                                action = urlObj.href;
                                             }
+                                            
                                             try {
-                                                window.top.postMessage({type: 'navigate', url: urlObj.href}, '*');
-                                            } catch(e) {
-                                                window.parent.postMessage({type: 'navigate', url: urlObj.href}, '*');
+                                                window.top.postMessage({type: 'navigate', url: action}, '*');
+                                            } catch(err) {
+                                                window.parent.postMessage({type: 'navigate', url: action}, '*');
                                             }
                                         }
                                     });
                                     </script>
                                 """.trimIndent()
 
-                                html = html.replace("<head>", "<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no\"><base href=\"$basePath\">$inject")
+                                val headMatch = Regex("(?i)<head[^>]*>").find(html)
+                                if (headMatch != null) {
+                                    html = html.replaceFirst(Regex("(?i)<head[^>]*>"), "${headMatch.value}\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no\">\n<base href=\"$basePath\">\n$inject")
+                                } else {
+                                    val htmlMatch = Regex("(?i)<html[^>]*>").find(html)
+                                    if (htmlMatch != null) {
+                                        html = html.replaceFirst(Regex("(?i)<html[^>]*>"), "${htmlMatch.value}\n<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no\">\n<base href=\"$basePath\">\n$inject</head>")
+                                    } else {
+                                        html = "<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no\">\n<base href=\"$basePath\">\n$inject</head>\n$html"
+                                    }
+                                }
                                 call.respondText(html, ContentType.Text.Html)
                             } else {
                                 // If not HTML (e.g. image/json/etc), stream directly
