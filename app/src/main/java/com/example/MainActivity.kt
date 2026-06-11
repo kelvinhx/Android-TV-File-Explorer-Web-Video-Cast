@@ -438,6 +438,63 @@ fun TvDashboardScreen(
                                 tint = AppConfig.ActiveGreen,
                                 onClick = onRequestAndroidDataPermission
                             )
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            var isUpdating by remember { mutableStateOf(false) }
+                            var updateMessage by remember { mutableStateOf("") }
+                            val scope = rememberCoroutineScope()
+
+                            DpadTvButton(
+                                text = "Procurar e Instalar Atualizações",
+                                icon = Icons.Default.Refresh,
+                                tint = Color(0xFFE91E63),
+                                onClick = {
+                                    if (!isUpdating) {
+                                        isUpdating = true
+                                        // Usar nightly.link para acessar artefatos do GitHub Actions sem autenticação
+                                        val repoOwner = "rebeijar"
+                                        val repoName = "NexusTv"
+                                        val workflowFile = "android.yml"
+                                        val branch = "main"
+                                        val artifactName = "app-release"
+                                        
+                                        val tempUrl = "https://nightly.link/$repoOwner/$repoName/workflows/$workflowFile/$branch/$artifactName.zip"
+                                        
+                                        // You can optionally allow the user to type this or configure it.
+                                        val url = tempUrl
+                                        
+                                        scope.launch {
+                                            Updater.downloadExtractAndInstall(
+                                                context = context,
+                                                zipUrl = url,
+                                                onProgress = { msg ->
+                                                    updateMessage = msg
+                                                    if (msg.isEmpty() || msg.startsWith("Erro") || msg.startsWith("Iniciando")) {
+                                                        if (msg.isEmpty() || msg.startsWith("Iniciando")) {
+                                                            isUpdating = false
+                                                        } else {
+                                                            // leave error visible briefly, then revert
+                                                            scope.launch {
+                                                                kotlinx.coroutines.delay(4000)
+                                                                if (updateMessage == msg) {
+                                                                    isUpdating = false
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+                            )
+                            
+                            if (isUpdating) {
+                                Spacer(modifier = Modifier.height(24.dp))
+                                CircularProgressIndicator(color = Color(0xFFE91E63), modifier = Modifier.size(32.dp))
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(updateMessage, color = Color.White, fontSize = 14.sp)
+                            }
                         }
                     }
                 }
