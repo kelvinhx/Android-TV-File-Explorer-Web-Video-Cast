@@ -88,14 +88,19 @@ class MainActivity : ComponentActivity() {
 
     fun triggerAndroidDataPermissionRequest() {
         try {
-            val documentUri = Uri.parse("content://com.android.externalstorage.documents/document/primary%3AAndroid%2Fdata")
+            val documentUri = android.net.Uri.parse("content://com.android.externalstorage.documents/document/primary%3AAndroid%2Fdata")
             requestDocumentTree.launch(documentUri)
+        } catch (e: android.content.ActivityNotFoundException) {
+            ErrorTracker.logError("MainActivity", "TV lacks DocumentsUI (SAF) capability to select folders.", e)
+            ErrorTracker.attemptAutoCorrection("MainActivity", "saf_permission_failed")
+            android.widget.Toast.makeText(this, "Seu sistema não possui um seletor de arquivos compatível. Permissão negada pelo SO.", android.widget.Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
             Logger.log("Failed to target document URI, launching normal folder selector: ${e.message}")
             try {
                 requestDocumentTree.launch(null)
-            } catch (e2: Exception) {
-                Logger.log("Fatal: could not request folder tree.")
+            } catch (e2: android.content.ActivityNotFoundException) {
+                ErrorTracker.logError("MainActivity", "Fatal: could not request folder tree.", e2)
+                android.widget.Toast.makeText(this, "Seu sistema não possui o seletor nativo obrigatório.", android.widget.Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -783,7 +788,8 @@ fun TvFilesBrowser(
                                 if (file.isDirectory) {
                                     currentPath = file.absolutePath
                                 } else {
-                                    FileUtils.openFile(context, file.absolutePath)
+                                    fileToManage = file
+                                    showContextMenu = true
                                 }
                             },
                             onLongClick = {

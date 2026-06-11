@@ -78,10 +78,9 @@ class FileServer(private val context: Context) {
                                     val subItems = FileUtils.listUnifiedFiles(this@FileServer.context, f.absolutePath)
                                     obj.put("sizeFormatted", "${subItems.size} itens")
                                 } else {
-                                    val sizeBytes = FileUtils.getFolderSize(File(f.absolutePath))
                                     val subfiles = File(f.absolutePath).listFiles()
                                     val count = subfiles?.size ?: 0
-                                    obj.put("sizeFormatted", "$count itens (${FileUtils.formatSize(sizeBytes)})")
+                                    obj.put("sizeFormatted", "$count itens")
                                 }
                             } else {
                                 obj.put("sizeFormatted", FileUtils.formatSize(f.length))
@@ -567,7 +566,8 @@ class FileServer(private val context: Context) {
             ServerState.setServerIp(localIp)
             Logger.log("Nexus server online: http://$localIp:${AppConfig.PORT}")
         } catch (e: Exception) {
-            Logger.log("Server failed to start: ${e.message}")
+            ErrorTracker.logError("FileServer", "Server failed to start", e)
+            ErrorTracker.attemptAutoCorrection("FileServer", "server_start_failed")
             ServerState.setServerRunning(false)
         }
     }

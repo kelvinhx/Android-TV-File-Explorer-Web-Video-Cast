@@ -296,11 +296,19 @@ object FileUtils {
                 true
             } catch (e: android.content.ActivityNotFoundException) {
                 Logger.log("No default app found for $mime. Falling back to chooser.")
-                val chooser = Intent.createChooser(intent, "Abrir com").apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                ErrorTracker.logError("FileUtils", "No default app found for opening $mime at $path", e)
+                try {
+                    val chooser = Intent.createChooser(intent, "Abrir com").apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(chooser)
+                    true
+                } catch (e2: Exception) {
+                    ErrorTracker.logError("FileUtils", "Failed to launch chooser", e2)
+                    ErrorTracker.attemptAutoCorrection("FileUtils", "open_apk_failed")
+                    android.widget.Toast.makeText(context, "Erro ao abrir: Nenhum app suportado encontrado.", android.widget.Toast.LENGTH_LONG).show()
+                    false
                 }
-                context.startActivity(chooser)
-                true
             }
         } catch (e: Exception) {
             Logger.log("Failed to open file: ${e.message}")
