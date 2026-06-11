@@ -18,31 +18,68 @@ import java.util.zip.ZipInputStream
 
 object Updater {
 
+    fun getLocalVersionInfo(context: Context): JSONObject {
+        return try {
+            val jsonString = context.assets.open("version-check.json").bufferedReader().use { it.readText() }
+            JSONObject(jsonString)
+        } catch (e: Exception) {
+            val fallback = JSONObject()
+            try {
+                val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+                val code = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                    pInfo.longVersionCode
+                } else {
+                    pInfo.versionCode.toLong()
+                }
+                fallback.put("versionCode", code)
+                fallback.put("versionName", pInfo.versionName ?: "1.1.4")
+                fallback.put("buildDateTime", "2026-06-11T15:20:00Z")
+            } catch (ex: Exception) {
+                fallback.put("versionCode", 6L)
+                fallback.put("versionName", "1.1.4")
+                fallback.put("buildDateTime", "2026-06-11T15:20:00Z")
+            }
+            fallback
+        }
+    }
+
+    suspend fun getRemoteVersionInfo(repoOwner: String = "kelvinhx", repoName: String = "Android-TV-File-Explorer-Web-Video-Cast"): JSONObject? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val urlStr = "https://raw.githubusercontent.com/$repoOwner/$repoName/main/version-check.json?t=${System.currentTimeMillis()}"
+                val url = URL(urlStr)
+                val connection = url.openConnection() as HttpURLConnection
+                connection.connectTimeout = 8000
+                connection.readTimeout = 8000
+                connection.connect()
+                if (connection.responseCode in 200..299) {
+                    val jsonContent = connection.inputStream.bufferedReader().use { it.readText() }
+                    return@withContext JSONObject(jsonContent)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            null
+        }
+    }
+
     suspend fun isUpdateAvailable(context: Context, repoOwner: String = "kelvinhx", repoName: String = "Android-TV-File-Explorer-Web-Video-Cast"): Boolean {
         return withContext(Dispatchers.IO) {
             try {
-                // Fetch the build.gradle.kts file from the repository, bypass cache
-                val url = java.net.URL("https://raw.githubusercontent.com/$repoOwner/$repoName/main/app/build.gradle.kts?t=${System.currentTimeMillis()}")
-                val connection = url.openConnection() as HttpURLConnection
-                connection.connect()
-
-                if (connection.responseCode in 200..299) {
-                    val gradleContent = connection.inputStream.bufferedReader().readText()
-                    
-                    // Parse versionCode from the gradle file
-                    val versionCodeMatch = Regex("versionCode\\s*=\\s*(\\d+)").find(gradleContent)
-                    val remoteVersionCode = versionCodeMatch?.groupValues?.get(1)?.toLongOrNull()
-                    
-                    if (remoteVersionCode != null) {
-                        val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-                        val localVersionCode = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-                            pInfo.longVersionCode
-                        } else {
-                            pInfo.versionCode.toLong()
-                        }
-                        
-                        // Compare the codes -> indicate update if remote is > local
-                        return@withContext remoteVersionCode > localVersionCode
+                val local = getLocalVersionInfo(context)
+                val remote = getRemoteVersionInfo(repoOwner, repoName) ?: return@withContext false
+                
+                val localCode = local.optLong("versionCode", 5L)
+                val remoteCode = remote.optLong("versionCode", 6L)
+                
+                if (remoteCode > localCode) {
+                    return@withContext true
+                } else if (remoteCode == localCode) {
+                    val localDateTime = local.optString("buildDateTime", "")
+                    val remoteDateTime = remote.optString("buildDateTime", "")
+                    if (remoteDateTime.isNotEmpty() && localDateTime.isNotEmpty()) {
+                        // Compare raw strings such as ISO-8601 lexicographically (e.g. "2026-06-11T15:20:00Z" > "2026-06-11T15:10:00Z")
+                        return@withContext remoteDateTime > localDateTime
                     }
                 }
             } catch (e: Exception) {

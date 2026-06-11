@@ -20,6 +20,17 @@ object ChangelogManager {
 
     val changelogs = listOf(
         VersionChangelog(
+            versionName = "1.1.4",
+            versionCode = 6,
+            releaseDate = "11 de Junho de 2026",
+            highlights = listOf(
+                "Aprimoramento completo e otimização do sistema de atualizações automáticas integradas com arquivo JSON dedicado.",
+                "Sincronização impecável com o histórico do GitHub sem problemas de cache.",
+                "Interface de navegação por pastas com fluxo contínuo e retorno de foco rápido para o botão superior na TV.",
+                "Aba de pesquisa de arquivos atualizada com menu contextual de manipulação completo (Mover, Copiar, Renomear e Excluir)."
+            )
+        ),
+        VersionChangelog(
             versionName = "1.1.3",
             versionCode = 5,
             releaseDate = "Junho de 2026",

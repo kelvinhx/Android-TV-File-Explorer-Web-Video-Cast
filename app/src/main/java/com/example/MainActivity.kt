@@ -1069,10 +1069,26 @@ fun TvDashboardScreen(
     var showUpdateDialog by remember { mutableStateOf(false) }
     var autoUpdatingMessage by remember { mutableStateOf("") }
     var isAutoUpdating by remember { mutableStateOf(false) }
+    var remoteVersionName by remember { mutableStateOf("1.1.4") }
+    var remoteChangelogLines by remember { mutableStateOf<List<String>>(emptyList()) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         if (Updater.isUpdateAvailable(context)) {
+            try {
+                val remote = Updater.getRemoteVersionInfo()
+                if (remote != null) {
+                    remoteVersionName = remote.optString("versionName", "1.1.4")
+                    val arr = remote.optJSONArray("changelog")
+                    if (arr != null) {
+                        val list = mutableListOf<String>()
+                        for (i in 0 until arr.length()) {
+                            list.add(arr.getString(i))
+                        }
+                        remoteChangelogLines = list
+                    }
+                }
+            } catch (e: Exception) {}
             showUpdateDialog = true
         }
     }
@@ -1080,10 +1096,24 @@ fun TvDashboardScreen(
     if (showUpdateDialog) {
         AlertDialog(
             onDismissRequest = { if (!isAutoUpdating) showUpdateDialog = false },
-            title = { Text("Atualização do Nexus Explorer Pro") },
+            title = { Text("Nova Versão Disponível: v$remoteVersionName", color = Color.White, fontWeight = FontWeight.Bold) },
             text = { 
                 Column {
-                    Text("Há uma nova versão do aplicativo disponível no GitHub. Deseja baixar e instalar agora?")
+                    Text("Uma nova versão do Nexus Explorer Pro está disponível para instalação.", color = Color.LightGray)
+                    if (remoteChangelogLines.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text("Novidades desta atualização:", color = Color.Gray, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        remoteChangelogLines.forEach { line ->
+                            Row(modifier = Modifier.padding(vertical = 2.dp)) {
+                                Text("• ", color = Color(0xFF30D158), fontSize = 14.sp)
+                                Text(line, color = Color.White, fontSize = 13.sp)
+                            }
+                        }
+                    } else {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text("Deseja baixar e aplicar a atualização automática agora?", color = Color.LightGray)
+                    }
                     if (isAutoUpdating) {
                         Spacer(modifier = Modifier.height(16.dp))
                         CircularProgressIndicator(color = Color(0xFFE91E63), modifier = Modifier.size(32.dp))
