@@ -71,7 +71,7 @@ class FileServer(private val context: Context) {
                         var latestVersion = localVersion
                         
                         try {
-                            val url = java.net.URL("https://raw.githubusercontent.com/$repoOwner/$repoName/main/app/build.gradle.kts")
+                            val url = java.net.URL("https://raw.githubusercontent.com/$repoOwner/$repoName/main/app/build.gradle.kts?t=${System.currentTimeMillis()}")
                             val conn = url.openConnection() as java.net.HttpURLConnection
                             conn.connect()
                             

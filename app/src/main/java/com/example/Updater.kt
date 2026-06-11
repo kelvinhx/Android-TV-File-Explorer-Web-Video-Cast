@@ -21,8 +21,8 @@ object Updater {
     suspend fun isUpdateAvailable(context: Context, repoOwner: String = "kelvinhx", repoName: String = "Android-TV-File-Explorer-Web-Video-Cast"): Boolean {
         return withContext(Dispatchers.IO) {
             try {
-                // Fetch the build.gradle.kts file from the repository
-                val url = java.net.URL("https://raw.githubusercontent.com/$repoOwner/$repoName/main/app/build.gradle.kts")
+                // Fetch the build.gradle.kts file from the repository, bypass cache
+                val url = java.net.URL("https://raw.githubusercontent.com/$repoOwner/$repoName/main/app/build.gradle.kts?t=${System.currentTimeMillis()}")
                 val connection = url.openConnection() as HttpURLConnection
                 connection.connect()
 
@@ -41,12 +41,8 @@ object Updater {
                             pInfo.versionCode.toLong()
                         }
                         
-                        // Compare the codes
-                        if (remoteVersionCode > localVersionCode) {
-                            return@withContext true
-                        } else {
-                            return@withContext false
-                        }
+                        // Compare the codes -> ONLY indicate update if remote is strictly greater
+                        return@withContext remoteVersionCode > localVersionCode
                     }
                 }
             } catch (e: Exception) {
