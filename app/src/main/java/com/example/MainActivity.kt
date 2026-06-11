@@ -138,6 +138,27 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             RemoteCommandChannel.commands.collect { cmd ->
                 Logger.log("Activity captured command event: $cmd")
+                val keyCode = when (cmd) {
+                    "DPAD_UP" -> android.view.KeyEvent.KEYCODE_DPAD_UP
+                    "DPAD_DOWN" -> android.view.KeyEvent.KEYCODE_DPAD_DOWN
+                    "DPAD_LEFT" -> android.view.KeyEvent.KEYCODE_DPAD_LEFT
+                    "DPAD_RIGHT" -> android.view.KeyEvent.KEYCODE_DPAD_RIGHT
+                    "DPAD_CENTER", "OK" -> android.view.KeyEvent.KEYCODE_DPAD_CENTER
+                    "BACK" -> android.view.KeyEvent.KEYCODE_BACK
+                    "HOME" -> android.view.KeyEvent.KEYCODE_HOME
+                    "MEDIA_PLAY" -> android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE
+                    "MEDIA_PAUSE" -> android.view.KeyEvent.KEYCODE_MEDIA_PAUSE
+                    "MEDIA_NEXT" -> android.view.KeyEvent.KEYCODE_MEDIA_NEXT
+                    "MEDIA_PREV" -> android.view.KeyEvent.KEYCODE_MEDIA_PREVIOUS
+                    else -> null
+                }
+                if (keyCode != null) {
+                    this@MainActivity.window.decorView.post {
+                        val root = this@MainActivity.window.decorView.rootView
+                        root.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, keyCode))
+                        root.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, keyCode))
+                    }
+                }
             }
         }
     }
@@ -333,12 +354,33 @@ fun TvDashboardScreen(
                     Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("Configurações", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                            Spacer(modifier = Modifier.height(20.dp))
+                            Spacer(modifier = Modifier.height(30.dp))
+                            
                             DpadTvButton(
-                                text = "Gerenciar Permissões",
+                                text = "Configurações do Android TV",
+                                icon = Icons.Default.Settings,
+                                tint = AppConfig.PrimaryBlue,
+                                onClick = { 
+                                    try {
+                                        context.startActivity(android.content.Intent(android.provider.Settings.ACTION_SETTINGS).apply {
+                                            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        })
+                                    } catch (e: Exception) {}
+                                }
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            DpadTvButton(
+                                text = "Gerenciar Permissões Padrão",
                                 icon = Icons.Default.Lock,
                                 tint = AppConfig.AccentGold,
                                 onClick = onRequestPermissions
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            DpadTvButton(
+                                text = "Permitir Acesso Completo ao Android/data",
+                                icon = Icons.Default.Info,
+                                tint = AppConfig.ActiveGreen,
+                                onClick = onRequestAndroidDataPermission
                             )
                         }
                     }
@@ -541,6 +583,33 @@ fun TvFilesBrowser(
     var files by remember { mutableStateOf<List<UnifiedFile>>(emptyList()) }
     var showOpenAsDialog by remember { mutableStateOf(false) }
 
+    // Helper list fetch trigger
+    var listKey by remember { mutableStateOf(0) }
+
+    val coroutineScope = rememberCoroutineScope()
+    var isProcessing by remember { mutableStateOf(false) }
+    var processingText by remember { mutableStateOf("") }
+
+    val handleAction: (String, suspend () -> Boolean) -> Unit = { text, action ->
+        coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            isProcessing = true
+            processingText = text
+            val success = action()
+            kotlinx.coroutines.delay(300) // minimum loading duration for visual feedback
+            isProcessing = false
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                if (success) {
+                    Logger.log("Ação '$text' concluída.")
+                    android.widget.Toast.makeText(context, "Concluído: $text", android.widget.Toast.LENGTH_SHORT).show()
+                } else {
+                    Logger.log("Falha na ação '$text'.")
+                    android.widget.Toast.makeText(context, "Falha: $text", android.widget.Toast.LENGTH_LONG).show()
+                }
+                listKey++
+            }
+        }
+    }
+
     // Dialog state management
     var fileToManage by remember { mutableStateOf<UnifiedFile?>(null) }
     var showContextMenu by remember { mutableStateOf(false) }
@@ -556,9 +625,6 @@ fun TvFilesBrowser(
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
     var clipboardFile by remember { mutableStateOf<UnifiedFile?>(null) }
-
-    // Helper list fetch trigger
-    var listKey by remember { mutableStateOf(0) }
 
     val isDataFolder = currentPath.startsWith("/storage/emulated/0/Android/data")
     val hasDataPerm = FileUtils.hasAndroidDataPermission(context)
@@ -627,14 +693,10 @@ fun TvFilesBrowser(
                     tint = AppConfig.PrimaryBlue,
                     onClick = {
                         val src = clipboardFile!!
-                        val success = FileUtils.moveUnifiedFile(context, src.absolutePath, currentPath, src.name)
-                        if (success) {
-                            Logger.log("Item movido com sucesso para: $currentPath")
-                            clipboardFile = null
-                            listKey++
-                        } else {
-                            Logger.log("Erro ao mover item.")
+                        handleAction("Mover para cá") {
+                            FileUtils.moveUnifiedFile(context, src.absolutePath, currentPath, src.name)
                         }
+                        clipboardFile = null
                     }
                 )
                 Spacer(modifier = Modifier.width(8.dp))
@@ -715,11 +777,8 @@ fun TvFilesBrowser(
                         TvFileGridItem(
                             file = file,
                             onClick = {
-                                if (file.isDirectory) {
-                                    currentPath = file.absolutePath
-                                } else {
-                                    FileUtils.openFile(context, file.absolutePath)
-                                }
+                                fileToManage = file
+                                showContextMenu = true
                             },
                             onLongClick = {
                                 fileToManage = file
@@ -752,6 +811,22 @@ fun TvFilesBrowser(
                     val descStr = if (fileToManage!!.isDirectory) "Pasta" else "Arquivo • ${formatTvFileSize(fileToManage!!.length)}"
                     Text(text = descStr, color = Color.Gray, fontSize = 14.sp)
                     Spacer(modifier = Modifier.height(12.dp))
+                    
+                    val openText = if (fileToManage!!.isDirectory) "Entrar na Pasta" else "Abrir Arquivo"
+                    DpadTvButton(
+                        text = openText,
+                        icon = Icons.Default.PlayArrow,
+                        tint = AppConfig.ActiveGreen,
+                        onClick = {
+                            showContextMenu = false
+                            if (fileToManage!!.isDirectory) {
+                                currentPath = fileToManage!!.absolutePath
+                            } else {
+                                FileUtils.openFile(context, fileToManage!!.absolutePath)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
                     
                     DpadTvButton(
                         text = "Mover / Recortar",
@@ -851,12 +926,8 @@ fun TvFilesBrowser(
                         onClick = {
                             val src = fileToRename!!
                             if (renameNameText.isNotBlank() && renameNameText != src.name) {
-                                val success = FileUtils.renameUnifiedFile(context, src.absolutePath, renameNameText.trim())
-                                if (success) {
-                                    Logger.log("Item renomeado para: ${renameNameText.trim()}")
-                                    listKey++
-                                } else {
-                                    Logger.log("Falha ao renomear item.")
+                                handleAction("Renomear file") {
+                                    FileUtils.renameUnifiedFile(context, src.absolutePath, renameNameText.trim())
                                 }
                             }
                             showRenameDialog = false
@@ -967,12 +1038,8 @@ fun TvFilesBrowser(
                         tint = AppConfig.ActiveGreen,
                         onClick = {
                             if (newFolderNameText.isNotBlank()) {
-                                val success = FileUtils.createUnifiedDirectory(context, currentPath, newFolderNameText.trim())
-                                if (success) {
-                                    Logger.log("Pasta criada com sucesso: ${newFolderNameText.trim()}")
-                                    listKey++
-                                } else {
-                                    Logger.log("Erro ao criar pasta.")
+                                handleAction("Criar pasta") {
+                                    FileUtils.createUnifiedDirectory(context, currentPath, newFolderNameText.trim())
                                 }
                             }
                             showCreateFolderDialog = false
@@ -1005,18 +1072,38 @@ fun TvFilesBrowser(
                         tint = AppConfig.ErrorRed,
                         onClick = {
                             val f = fileToDelete!!
-                            val success = FileUtils.deleteUnifiedFile(context, f.absolutePath)
-                            if (success) {
-                                Logger.log("Item excluído com sucesso: ${f.name}")
-                                listKey++
-                            } else {
-                                Logger.log("Erro ao excluir item.")
+                            handleAction("Excluir item") {
+                                FileUtils.deleteUnifiedFile(context, f.absolutePath)
                             }
                             showDeleteConfirm = false
                         }
                     )
                 }
             }
+        )
+    }
+
+    if (isProcessing) {
+        AlertDialog(
+            onDismissRequest = { },
+            containerColor = Color.Transparent,
+            title = null,
+            text = {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier
+                            .background(Color(0xE61C1C1E), RoundedCornerShape(16.dp))
+                            .padding(32.dp)
+                    ) {
+                        CircularProgressIndicator(color = AppConfig.PrimaryBlue)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(processingText, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            },
+            confirmButton = {}
         )
     }
 }

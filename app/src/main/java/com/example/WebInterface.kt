@@ -693,7 +693,12 @@ object WebInterface {
                     const list = document.getElementById('files-list');
                     list.innerHTML = "";
 
-                    if (data.files.length === 0) {
+                    if (data.status === 'error') {
+                        document.getElementById('files-list').innerHTML = `<div class="col-span-full text-center py-20 text-red-500 font-bold">${"$"}{data.message}</div>`;
+                        return;
+                    }
+
+                    if (!data.files || data.files.length === 0) {
                         list.innerHTML = `
                             <div class="col-span-full text-center py-20 text-[var(--ios-gray)]">
                                 <span class="text-sm">A pasta está vazia.</span>
