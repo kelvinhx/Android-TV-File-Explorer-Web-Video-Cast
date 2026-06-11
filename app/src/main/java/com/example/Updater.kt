@@ -18,7 +18,7 @@ import java.util.zip.ZipInputStream
 
 object Updater {
 
-    suspend fun isUpdateAvailable(context: Context, repoOwner: String = "rebeijar", repoName: String = "NexusTv"): Boolean {
+    suspend fun isUpdateAvailable(context: Context, repoOwner: String = "kelvinhx", repoName: String = "Android-TV-File-Explorer-Web-Video-Cast"): Boolean {
         return withContext(Dispatchers.IO) {
             try {
                 // First check Releases
@@ -34,13 +34,18 @@ object Updater {
                         val prefs = context.getSharedPreferences("updater_prefs", Context.MODE_PRIVATE)
                         val lastTag = prefs.getString("last_installed_tag", "")
                         
-                        // If there is a release, and tag differs, we have an update
-                        if (tagName.isNotEmpty() && tagName != lastTag) {
-                            prefs.edit()
-                                .putString("latest_available_tag", tagName)
-                                .putBoolean("update_via_release", true)
-                                .apply()
-                            return@withContext true
+                        // If there is a release, compare the tag
+                        if (tagName.isNotEmpty()) {
+                            if (tagName != lastTag) {
+                                prefs.edit()
+                                    .putString("latest_available_tag", tagName)
+                                    .putBoolean("update_via_release", true)
+                                    .apply()
+                                return@withContext true
+                            } else {
+                                // Already on the latest release, don't check actions
+                                return@withContext false
+                            }
                         }
                     }
                 } catch (e: Exception) {

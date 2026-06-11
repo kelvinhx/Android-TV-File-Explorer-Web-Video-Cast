@@ -354,8 +354,8 @@ fun TvDashboardScreen(
                 if (!isAutoUpdating) {
                     TextButton(onClick = {
                         isAutoUpdating = true
-                        val repoOwner = "rebeijar"
-                        val repoName = "NexusTv"
+                        val repoOwner = "kelvinhx"
+                        val repoName = "Android-TV-File-Explorer-Web-Video-Cast"
                         val workflowFile = "build.yml"
                         val branch = "main"
                         val artifactName = "app-debug"
@@ -532,8 +532,8 @@ fun TvDashboardScreen(
                                     if (!isUpdating) {
                                         isUpdating = true
                                         // Usar nightly.link para acessar artefatos do GitHub Actions sem autenticação
-                                        val repoOwner = "rebeijar"
-                                        val repoName = "NexusTv"
+                                        val repoOwner = "kelvinhx"
+                                        val repoName = "Android-TV-File-Explorer-Web-Video-Cast"
                                         val workflowFile = "build.yml"
                                         val branch = "main"
                                         val artifactName = "app-debug"
