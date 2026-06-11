@@ -1129,7 +1129,7 @@ fun TvFileGridItem(file: UnifiedFile, onClick: () -> Unit, onLongClick: () -> Un
     
     Column(
         modifier = Modifier
-            .width(100.dp)
+            .width(110.dp)
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
@@ -1204,6 +1204,7 @@ fun TvFileGridItem(file: UnifiedFile, onClick: () -> Unit, onLongClick: () -> Un
             color = Color.White,
             fontSize = 12.sp,
             maxLines = 2,
+            lineHeight = 14.sp,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
             fontWeight = FontWeight.Medium

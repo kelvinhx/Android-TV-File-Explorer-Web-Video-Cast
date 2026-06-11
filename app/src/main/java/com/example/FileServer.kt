@@ -215,6 +215,8 @@ class FileServer(private val context: Context) {
                             
                             // Headers to avoid some blocks, though sophisticated sites will still block
                             conn.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
+                            conn.setRequestProperty("Accept-Language", "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7")
+                            conn.setRequestProperty("Accept-Encoding", "identity")
                             
                             conn.connect()
                             
@@ -247,29 +249,18 @@ class FileServer(private val context: Context) {
                                     }
                                     </style>
                                     <script>
-                                    // 1. Popup & Popunder Blocker (Force block window.open)
-                                    window.open = function() {
-                                        console.log("Interactive popup blocked!");
-                                        return null;
-                                    };
-
-                                    // 2. Video link patterns detector
+                                    window.open = function() { console.log("Popup blocked"); return null; };
                                     const isVideoUrl = (url) => {
                                         if (!url || typeof url !== 'string') return false;
                                         const lower = url.toLowerCase();
-                                        
-                                        // Specific extensions with or without query params
                                         if (/\.(mp4|m3u8|mkv|mov|avi|webm|flv|3gp|ts|mpd)(\?|$)/.test(lower)) return true;
-                                        
-                                        // Video streaming specialized domains and endpoints
-                                        if (lower.includes('streamtape.com/get_video') ||
-                                            lower.includes('dood') || lower.includes('/pass_md5/') ||
-                                            lower.includes('mixdrop') || lower.includes('/delivery/') ||
-                                            lower.includes('filemoon') || lower.includes('byse') ||
-                                            lower.includes('mcloud') || lower.includes('vizcloud') ||
-                                            lower.includes('fembed') || lower.includes('streamwis') ||
-                                            lower.includes('/api/source/') || lower.includes('manifest.mpd') ||
-                                            lower.includes('master.m3u8')
+                                        if (lower.includes('streamtape') || lower.includes('dood') || lower.includes('mixdrop') || 
+                                            lower.includes('filemoon') || lower.includes('mcloud') || lower.includes('vizcloud') ||
+                                            lower.includes('vidsrc') || lower.includes('rabbitstream') || lower.includes('vidplay') ||
+                                            lower.includes('supervideo') || lower.includes('pobreflix') || lower.includes('megacloud') ||
+                                            lower.includes('gdriveplayer') || lower.includes('uqload') || lower.includes('voe.sx') ||
+                                            lower.includes('/api/source/') || lower.includes('manifest.mpd') || lower.includes('master.m3u8') ||
+                                            lower.includes('/get_video') || lower.includes('blob:http')
                                         ) {
                                             return true;
                                         }
@@ -282,6 +273,7 @@ class FileServer(private val context: Context) {
                                             window.parent.postMessage({type: 'video_found', url: src}, '*');
                                         }
                                     };
+
 
                                     // 3. Dynamic Property Hooking (Instantly catches javascript-set sources)
                                     try {

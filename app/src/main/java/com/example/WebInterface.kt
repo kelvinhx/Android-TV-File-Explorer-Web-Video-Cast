@@ -71,8 +71,8 @@ object WebInterface {
         
         .ios-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-            gap: 16px;
+            grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
+            gap: 12px;
             padding: 16px;
         }
         .ios-grid-item {
@@ -82,36 +82,39 @@ object WebInterface {
             text-align: center;
             background: transparent;
             border-radius: 12px;
-            padding: 8px;
+            padding: 4px;
             transition: transform 0.1s, background 0.15s;
         }
         .ios-grid-item:active {
-            transform: scale(0.95);
-            background: var(--ios-tint);
+            transform: scale(0.92);
+            background: rgba(255, 255, 255, 0.05);
         }
         
         .ios-icon-box {
-            width: 60px;
-            height: 60px;
+            width: 65px;
+            height: 65px;
             background: var(--ios-bg);
-            border-radius: 14px;
+            border-radius: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-            font-size: 28px;
+            margin-bottom: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            font-size: 32px;
             overflow: hidden;
         }
         .ios-folder { color: #81D4FA; } /* Light blue for iOS folder */
         .ios-file-title {
             font-size: 13px;
             font-weight: 500;
+            line-height: 1.2;
             word-break: break-word;
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
+            width: 100%;
+            max-width: 90px;
         }
         .ios-file-subtitle {
             font-size: 11px;
@@ -583,7 +586,15 @@ object WebInterface {
 
         function doVibrate(duration = 60) {
             if ("vibrate" in navigator) {
-                navigator.vibrate(duration);
+                if (typeof duration === 'number') {
+                    if (duration > 50) {
+                        navigator.vibrate([15, 20, 15]); // Simulated haptic pop
+                    } else {
+                        navigator.vibrate([10, 15, 10]); // Simulated light tap
+                    }
+                } else {
+                    navigator.vibrate(duration);
+                }
             }
         }
 
