@@ -1,0 +1,43 @@
+name: Build Android APK
+
+# Gatilhos de execução: O fluxo rodará sempre que houver um push ou pull request na branch 'main'
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build Debug APK
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Baixa o código do repositório para o contêiner virtual do GitHub
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      # 2. Configura o Java (O JDK 17 é o padrão recomendado para o Android Studio atual)
+      - name: Configurar JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle' # Estratégia de cache para acelerar builds futuros
+
+      # 3. Garante que o Gradle Wrapper tem permissão para ser executado pelo sistema Linux
+      - name: Conceder permissão de execução para o gradlew
+        run: chmod +x gradlew
+
+      # 4. Executa a compilação do aplicativo via terminal
+      - name: Compilar APK (Debug)
+        run: ./gradlew assembleDebug
+
+      # 5. Captura o arquivo gerado e o disponibiliza para download na interface web do GitHub
+      - name: Upload do APK gerado
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
