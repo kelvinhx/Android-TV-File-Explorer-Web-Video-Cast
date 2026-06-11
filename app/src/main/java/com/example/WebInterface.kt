@@ -358,9 +358,9 @@ object WebInterface {
         </div>
 
         <!-- Tab 3: Browser Cast -->
-        <div id="view-browser" class="hidden flex-col absolute top-[60px] bottom-[5px] left-0 right-0 z-40 bg-[var(--ios-bg)]">
+        <div id="view-browser" class="hidden flex-col fixed inset-0 z-[150] bg-[var(--ios-bg)] pt-[env(safe-area-inset-top)]">
             
-            <div id="video-sniffer-bar" class="hidden bg-[#ff3b30] text-white px-4 py-3 text-sm flex justify-between items-center shadow-lg shrink-0 w-full rounded-b-xl border-b border-[#ff3b30]">
+            <div id="video-sniffer-bar" class="hidden bg-[#ff3b30] text-white px-4 py-3 text-sm flex justify-between items-center shadow-lg shrink-0 w-full border-b border-[#ff3b30]">
                 <span class="font-bold flex items-center"><i class="fa-solid fa-play-circle mr-2 animate-pulse text-lg"></i> Vídeo Encontrado!</span>
                 <button onclick="castSniffedVideo()" class="bg-white text-[#ff3b30] px-4 py-2 rounded-full font-bold shadow-sm active:opacity-70 flex items-center gap-2"><i class="fa-solid fa-tv"></i> Cast TV</button>
             </div>
@@ -405,7 +405,7 @@ object WebInterface {
                     <button onclick="document.getElementById('internal-browser').contentWindow.history.forward()" class="text-[var(--ios-blue)] text-xl p-2 active:opacity-50"><i class="fa-solid fa-chevron-right"></i></button>
                     <button onclick="castCurrentPage()" class="text-[var(--ios-blue)] text-xl p-2 active:opacity-50 flex items-center justify-center w-10 h-10 rounded-full bg-[rgba(10,132,255,0.1)]"><i class="fa-solid fa-arrow-up-from-bracket"></i></button>
                     <button onclick="addBookmark()" class="text-[var(--ios-blue)] text-xl p-2 active:opacity-50"><i class="fa-regular fa-bookmark" id="bookmark-icon"></i></button>
-                    <button onclick="toggleView('files')" class="text-[var(--ios-blue)] text-xl p-2 active:opacity-50"><i class="fa-regular fa-clone"></i></button>
+                    <button onclick="toggleView('files')" class="text-[var(--ios-blue)] text-xl p-2 active:opacity-50 flex items-center justify-center"><i class="fa-solid fa-folder-open"></i></button>
                 </div>
             </div>
         </div>

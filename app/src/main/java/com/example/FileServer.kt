@@ -236,18 +236,43 @@ class FileServer(private val context: Context) {
                         }
                         
                         try {
-                            val url = java.net.URL(urlStr)
-                            val conn = url.openConnection() as java.net.HttpURLConnection
-                            conn.requestMethod = "GET"
-                            // Pretend to be a mobile browser
-                            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1")
+                            var redirectCount = 0
+                            var currentUrlStr = urlStr
+                            var conn: java.net.HttpURLConnection? = null
+                            var currentUrl: java.net.URL = java.net.URL(currentUrlStr)
                             
-                            // Headers to avoid some blocks, though sophisticated sites will still block
-                            conn.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
-                            conn.setRequestProperty("Accept-Language", "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7")
-                            conn.setRequestProperty("Accept-Encoding", "identity")
+                            while (redirectCount < 10) {
+                                currentUrl = java.net.URL(currentUrlStr)
+                                conn = currentUrl.openConnection() as java.net.HttpURLConnection
+                                conn.requestMethod = "GET"
+                                conn.instanceFollowRedirects = false
+                                // Pretend to be a mobile browser
+                                conn.setRequestProperty("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1")
+                                
+                                // Headers to avoid some blocks, though sophisticated sites will still block
+                                conn.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+                                conn.setRequestProperty("Accept-Language", "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7")
+                                
+                                conn.connect()
+                                
+                                val status = conn.responseCode
+                                if (status == java.net.HttpURLConnection.HTTP_MOVED_TEMP
+                                    || status == java.net.HttpURLConnection.HTTP_MOVED_PERM
+                                    || status == java.net.HttpURLConnection.HTTP_SEE_OTHER
+                                    || status == 307 || status == 308) {
+                                    val newUrl = conn.getHeaderField("Location")
+                                    val nextUrl = if (newUrl.startsWith("http")) newUrl else java.net.URL(currentUrl, newUrl).toString()
+                                    currentUrlStr = nextUrl
+                                    redirectCount++
+                                } else {
+                                    break
+                                }
+                            }
                             
-                            conn.connect()
+                            if (conn == null) {
+                                call.respondText("Failed to proxy", ContentType.Text.Plain)
+                                return@get
+                            }
                             
                             val contentType = conn.contentType ?: "text/html"
                             
@@ -255,8 +280,8 @@ class FileServer(private val context: Context) {
                                 val stream = if (conn.responseCode in 200..299) conn.inputStream else conn.errorStream
                                 var html = stream?.bufferedReader()?.readText() ?: ""
                                 
-                                val baseUrl = "${url.protocol}://${url.host}"
-                                val path = url.path
+                                val baseUrl = "${currentUrl.protocol}://${currentUrl.host}"
+                                val path = currentUrl.path
                                 val basePath = if (path.substringAfterLast("/").contains(".")) 
                                     baseUrl + path.substringBeforeLast("/") + "/" 
                                 else 
