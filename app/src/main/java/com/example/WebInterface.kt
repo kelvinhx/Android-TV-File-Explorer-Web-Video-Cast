@@ -396,6 +396,7 @@ object WebInterface {
                     <input type="text" id="browser-url" class="bg-transparent text-sm text-white w-full outline-none" value="https://www.google.com.br">
                 </div>
                 <button onclick="loadInternalBrowser()" class="p-2 text-[var(--ios-blue)]"><i class="fa-solid fa-arrow-rotate-right"></i></button>
+                <button onclick="castCurrentPage()" class="p-2 text-[var(--ios-blue)] ml-1"><i class="fa-solid fa-tv"></i></button>
             </div>
             
             <div id="video-sniffer-bar" class="hidden bg-emerald-600 text-white px-3 py-2 text-xs flex justify-between items-center shadow-lg shrink-0">
@@ -516,11 +517,48 @@ object WebInterface {
                     <input type="checkbox" id="toggle-grid" checked class="accent-[var(--ios-blue)] scale-125">
                 </div>
             </div>
+            
+            <h2 class="text-sm font-bold text-gray-400 mt-6 mb-2">Sistema da Android TV</h2>
+            <div class="ios-list bg-[var(--ios-bg)] border border-[rgba(255,255,255,0.1)]">
+                <div onclick="sendRemoteCmd('SETTINGS'); closeSettingsModal('close');" class="ios-list-item justify-between cursor-pointer active:bg-[rgba(255,255,255,0.1)]">
+                    <span>Abrir Configurações da TV</span>
+                    <i class="fa-solid fa-chevron-right text-gray-500"></i>
+                </div>
+                <div onclick="sendRemoteCmd('HOME'); closeSettingsModal('close');" class="ios-list-item justify-between cursor-pointer active:bg-[rgba(255,255,255,0.1)]">
+                    <span>Ir para Tela Inicial da TV</span>
+                    <i class="fa-solid fa-chevron-right text-gray-500"></i>
+                </div>
+            </div>
             <button onclick="closeSettingsModal('close')" class="w-full bg-[var(--ios-card)] py-3 rounded-xl text-[var(--ios-blue)] font-bold text-lg mt-4">Concluído</button>
         </div>
     </div>
 
+    <div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex flex-col items-center gap-2 pointer-events-none"></div>
+
     <script>
+        function showNotification(msg, isError = false) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bgClass = isError ? 'bg-red-600' : 'bg-green-600';
+            const iconClass = isError ? 'fa-circle-xmark' : 'fa-circle-check';
+            toast.className = 'px-4 py-2 rounded-full shadow-lg text-white text-sm font-bold flex items-center gap-2 transform transition-all duration-300 opacity-0 translate-y-[-20px] ' + bgClass;
+            toast.innerHTML = '<i class="fa-solid ' + iconClass + '"></i> ' + msg;
+            container.appendChild(toast);
+            
+            // Animate in
+            setTimeout(() => {
+                toast.classList.remove('opacity-0', 'translate-y-[-20px]');
+                toast.classList.add('opacity-100', 'translate-y-0');
+            }, 10);
+            
+            // Animate out
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-[-20px]');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+            
+            if (!isError) doVibrate(30);
+        }
         let currentPath = "/storage/emulated/0";
         let activeView = "files";
         let longPressTimer = null;
@@ -658,12 +696,32 @@ object WebInterface {
                 .then(data => {
                     if (data.status === 'success') {
                         document.getElementById('video-sniffer-bar').classList.add('hidden');
-                        alert("O vídeo foi enviado à sua TV!");
+                        showNotification("O vídeo foi enviado à sua TV!");
                     } else {
-                        alert("Falha na transmissão: " + data.message);
+                        showNotification("Falha na transmissão: " + data.message, true);
                     }
-                }).catch(console.error);
+                }).catch(err => showNotification("Erro de conexão", true));
             }
+        }
+        
+        function castCurrentPage() {
+            let url = document.getElementById('browser-url').value;
+            if (!url) return;
+            if (!url.startsWith('http')) url = 'https://' + url;
+            
+            fetch('/api/cast', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: url })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showNotification("Página aberta na TV!");
+                } else {
+                    showNotification('Falha: ' + data.message, true);
+                }
+            }).catch(err => showNotification('Erro na conexão', true));
         }
 
 
@@ -913,9 +971,9 @@ object WebInterface {
             fetch('/api/open?path=' + encodeURIComponent(absolutePath), { method: 'POST' })
                 .then(res => res.json())
                 .then(data => {
-                     if (data.status === 'success') { /* sucesso */ }
-                     else alert("Erro ao abrir o arquivo: " + data.message);
-                }).catch(console.error);
+                     if (data.status === 'success') { showNotification("Arquivo aberto na TV!"); }
+                     else showNotification("Erro ao abrir o arquivo: " + data.message, true);
+                }).catch(err => showNotification("Erro de conexão", true));
         }
 
         function createNewFolder() {
@@ -930,9 +988,13 @@ object WebInterface {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: action, path: path, argument: argument })
             }).then(res => res.json()).then(data => {
-                if (data.status === 'success') fetchFiles();
-                else alert("Falha: " + data.message);
-            }).catch(console.error);
+                if (data.status === 'success') {
+                    showNotification("Ação concluída!");
+                    fetchFiles();
+                } else {
+                    showNotification("Falha: " + data.message, true);
+                }
+            }).catch(err => showNotification("Erro de conexão", true));
         }
 
         function handleUpload(files) {
@@ -964,10 +1026,10 @@ object WebInterface {
             xhr.onload = function() {
                 doVibrate(90);
                 setTimeout(() => container.classList.add('hidden'), 1000);
-                if (xhr.status === 200) fetchFiles();
-                else alert("Falha no upload.");
+                if (xhr.status === 200) { fetchFiles(); showNotification("Upload concluído!"); }
+                else showNotification("Falha no upload.", true);
             };
-            xhr.onerror = function() { container.classList.add('hidden'); alert("Erro de conexão."); };
+            xhr.onerror = function() { container.classList.add('hidden'); showNotification("Erro de conexão.", true); };
             xhr.send(formData);
         }
 

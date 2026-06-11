@@ -139,10 +139,10 @@ class MainActivity : ComponentActivity() {
             RemoteCommandChannel.commands.collect { cmd ->
                 Logger.log("Activity captured command event: $cmd")
                 val keyCode = when (cmd) {
-                    "DPAD_UP" -> android.view.KeyEvent.KEYCODE_DPAD_UP
-                    "DPAD_DOWN" -> android.view.KeyEvent.KEYCODE_DPAD_DOWN
-                    "DPAD_LEFT" -> android.view.KeyEvent.KEYCODE_DPAD_LEFT
-                    "DPAD_RIGHT" -> android.view.KeyEvent.KEYCODE_DPAD_RIGHT
+                    "DPAD_UP", "UP" -> android.view.KeyEvent.KEYCODE_DPAD_UP
+                    "DPAD_DOWN", "DOWN" -> android.view.KeyEvent.KEYCODE_DPAD_DOWN
+                    "DPAD_LEFT", "LEFT" -> android.view.KeyEvent.KEYCODE_DPAD_LEFT
+                    "DPAD_RIGHT", "RIGHT" -> android.view.KeyEvent.KEYCODE_DPAD_RIGHT
                     "DPAD_CENTER", "OK" -> android.view.KeyEvent.KEYCODE_DPAD_CENTER
                     "BACK" -> android.view.KeyEvent.KEYCODE_BACK
                     "HOME" -> android.view.KeyEvent.KEYCODE_HOME
