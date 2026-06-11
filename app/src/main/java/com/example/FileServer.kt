@@ -43,23 +43,29 @@ class FileServer(private val context: Context) {
                     // Directory Discovery
                     get("/api/files") {
                         val rootPath = "/storage/emulated/0"
-                        val pathParam = call.request.queryParameters["path"] ?: rootPath
-                        val dir = File(pathParam)
-
-                        if (!dir.exists() || !dir.isDirectory) {
+                        val pathParam = (call.request.queryParameters["path"] ?: rootPath).replace("//", "/")
+                        
+                        // Check Android/data permission if navigating there
+                        val isDataFolder = pathParam.startsWith("/storage/emulated/0/Android/data")
+                        val hasDataPerm = FileUtils.hasAndroidDataPermission(this@FileServer.context)
+                        
+                        if (isDataFolder && !hasDataPerm) {
                             call.respondText(
-                                JSONObject().put("status", "error").put("message", "Requested path can't be found").toString(),
+                                JSONObject()
+                                    .put("status", "error")
+                                    .put("message", "Acesso negado à pasta Android/data. Conceda permissão na TV.")
+                                    .put("permission_required", "ANDROID_DATA")
+                                    .toString(),
                                 ContentType.Application.Json
                             )
                             return@get
                         }
 
-                        val isRoot = dir.absolutePath == rootPath || dir.absolutePath == "/"
-                        val filesList = dir.listFiles() ?: emptyArray()
+                        val unifiedList = FileUtils.listUnifiedFiles(this@FileServer.context, pathParam)
+                        val isRoot = pathParam == rootPath || pathParam == "/"
                         
                         val fileArray = JSONArray()
-                        for (f in filesList) {
-                            // Skip hidden system files to keep UI clean
+                        for (f in unifiedList) {
                             if (f.name.startsWith(".")) continue
                             
                             val obj = JSONObject()
@@ -68,12 +74,17 @@ class FileServer(private val context: Context) {
                             obj.put("isDirectory", f.isDirectory)
                             
                             if (f.isDirectory) {
-                                val sizeBytes = FileUtils.getFolderSize(f)
-                                val subfiles = f.listFiles()
-                                val count = subfiles?.size ?: 0
-                                obj.put("sizeFormatted", "$count items (${FileUtils.formatSize(sizeBytes)})")
+                                if (f.absolutePath.startsWith("/storage/emulated/0/Android/data")) {
+                                    val subItems = FileUtils.listUnifiedFiles(this@FileServer.context, f.absolutePath)
+                                    obj.put("sizeFormatted", "${subItems.size} itens")
+                                } else {
+                                    val sizeBytes = FileUtils.getFolderSize(File(f.absolutePath))
+                                    val subfiles = File(f.absolutePath).listFiles()
+                                    val count = subfiles?.size ?: 0
+                                    obj.put("sizeFormatted", "$count itens (${FileUtils.formatSize(sizeBytes)})")
+                                }
                             } else {
-                                obj.put("sizeFormatted", FileUtils.formatSize(f.length()))
+                                obj.put("sizeFormatted", FileUtils.formatSize(f.length))
                             }
                             fileArray.put(obj)
                         }
@@ -98,7 +109,7 @@ class FileServer(private val context: Context) {
                         val storagePercent = if (bytesTotal > 0) ((bytesUsed.toDouble() / bytesTotal.toDouble()) * 100).toInt() else 0
 
                         val response = JSONObject()
-                        response.put("currentPath", dir.absolutePath)
+                        response.put("currentPath", pathParam)
                         response.put("isRoot", isRoot)
                         response.put("files", sortedJsonArray)
                         response.put("ramPercent", Logger.getRamTelemetry().percentageUsed)
@@ -117,16 +128,38 @@ class FileServer(private val context: Context) {
                             return@get
                         }
 
-                        val file = File(path)
+                        val targetPath = path.replace("//", "/")
+                        Logger.log("Streaming file via download api: $targetPath")
+
+                        if (targetPath.startsWith("/storage/emulated/0/Android/data") && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                            val uri = FileUtils.getUriForPath(this@FileServer.context, targetPath)
+                            if (uri != null) {
+                                val mime = FileUtils.getMimeType(targetPath)
+                                call.respondOutputStream(ContentType.parse(mime), HttpStatusCode.OK) {
+                                    this@FileServer.context.contentResolver.openInputStream(uri)?.use { input ->
+                                        val buffer = ByteArray(64 * 1024)
+                                        var bytesRead: Int
+                                        while (input.read(buffer).also { bytesRead = it } != -1) {
+                                            write(buffer, 0, bytesRead)
+                                        }
+                                    }
+                                }
+                                return@get
+                            } else {
+                                call.respond(HttpStatusCode.NotFound, "File not found or permission denied in Android/data.")
+                                return@get
+                            }
+                        }
+
+                        val file = File(targetPath)
                         if (!file.exists() || file.isDirectory) {
                             call.respond(HttpStatusCode.NotFound, "File not found.")
                             return@get
                         }
 
-                        Logger.log("Streaming file: ${file.name}")
-                        call.respondOutputStream(ContentType.parse(FileUtils.getMimeType(file)), HttpStatusCode.OK) {
+                        call.respondOutputStream(ContentType.parse(FileUtils.getMimeType(file.name)), HttpStatusCode.OK) {
                             file.inputStream().use { input ->
-                                val buffer = ByteArray(64 * 1024) // 64KB buffer matching rules
+                                val buffer = ByteArray(64 * 1024)
                                 var bytesRead: Int
                                 while (input.read(buffer).also { bytesRead = it } != -1) {
                                     write(buffer, 0, bytesRead)
@@ -143,13 +176,8 @@ class FileServer(private val context: Context) {
                             return@post
                         }
 
-                        val file = File(path)
-                        if (!file.exists()) {
-                            call.respondText(JSONObject().put("status", "error").put("message", "File does not exist").toString(), ContentType.Application.Json)
-                            return@post
-                        }
-
-                        val success = FileUtils.openFile(this@FileServer.context, file)
+                        val targetPath = path.replace("//", "/")
+                        val success = FileUtils.openFile(this@FileServer.context, targetPath)
                         if (success) {
                             call.respondText(JSONObject().put("status", "success").toString(), ContentType.Application.Json)
                         } else {
@@ -416,21 +444,22 @@ class FileServer(private val context: Context) {
                         try {
                             when (action) {
                                 "MKDIR" -> {
-                                    success = file.mkdirs()
+                                    val parent = file.parent ?: "/storage/emulated/0"
+                                    val name = file.name
+                                    success = FileUtils.createUnifiedDirectory(this@FileServer.context, parent, name)
                                     if (success) Logger.log("Created folder: $path")
                                     else message = "Permission denied or folder exists"
                                 }
                                 "DELETE" -> {
-                                    success = if (file.isDirectory) file.deleteRecursively() else file.delete()
+                                    success = FileUtils.deleteUnifiedFile(this@FileServer.context, path)
                                     if (success) Logger.log("Deleted item: $path")
                                     else message = "Error deleting item"
                                 }
                                 "RENAME" -> {
                                     if (argument.isNotEmpty()) {
-                                        val target = File(file.parentFile, argument)
-                                        success = file.renameTo(target)
-                                        if (success) Logger.log("Renamed item to: ${target.name}")
-                                        else message = "Name collision or folder missing"
+                                        success = FileUtils.renameUnifiedFile(this@FileServer.context, path, argument)
+                                        if (success) Logger.log("Renamed item to: $argument")
+                                        else message = "Rename failed or item exists"
                                     } else {
                                         message = "Target name must be provided"
                                     }
@@ -438,19 +467,11 @@ class FileServer(private val context: Context) {
                                 "COPY" -> {
                                     if (argument.isNotEmpty()) {
                                         val srcFile = File(argument)
-                                        val destFile = File(file, srcFile.name)
-                                        if (srcFile.exists()) {
-                                            success = if (srcFile.isDirectory) {
-                                                srcFile.copyRecursively(destFile, overwrite = true)
-                                            } else {
-                                                srcFile.copyTo(destFile, overwrite = true)
-                                                true
-                                            }
-                                            if (success) Logger.log("Copied: ${srcFile.name} to ${destFile.absolutePath}")
-                                            else message = "Copy failed"
-                                        } else {
-                                            message = "Source file does not exist"
-                                        }
+                                        val destParent = file.absolutePath
+                                        val name = srcFile.name
+                                        success = FileUtils.copyUnifiedFile(this@FileServer.context, argument, destParent, name)
+                                        if (success) Logger.log("Copied: $argument to $destParent")
+                                        else message = "Copy failed"
                                     } else {
                                         message = "Source path must be provided"
                                     }
@@ -458,28 +479,11 @@ class FileServer(private val context: Context) {
                                 "MOVE" -> {
                                     if (argument.isNotEmpty()) {
                                         val srcFile = File(argument)
-                                        val destFile = File(file, srcFile.name)
-                                        if (srcFile.exists()) {
-                                            success = srcFile.renameTo(destFile)
-                                            if (!success) {
-                                                try {
-                                                    if (srcFile.isDirectory) {
-                                                        srcFile.copyRecursively(destFile, overwrite = true)
-                                                        srcFile.deleteRecursively()
-                                                    } else {
-                                                        srcFile.copyTo(destFile, overwrite = true)
-                                                        srcFile.delete()
-                                                    }
-                                                    success = true
-                                                } catch (e: Exception) {
-                                                    success = false
-                                                    message = "Move failed: ${e.message}"
-                                                }
-                                            }
-                                            if (success) Logger.log("Moved: ${srcFile.name} to ${destFile.absolutePath}")
-                                        } else {
-                                            message = "Source file does not exist"
-                                        }
+                                        val destParent = file.absolutePath
+                                        val name = srcFile.name
+                                        success = FileUtils.moveUnifiedFile(this@FileServer.context, argument, destParent, name)
+                                        if (success) Logger.log("Moved: $argument to $destParent")
+                                        else message = "Move failed"
                                     } else {
                                         message = "Source path must be provided"
                                     }
@@ -517,13 +521,7 @@ class FileServer(private val context: Context) {
 
                     // Multipart file uploads using 64KB streams mapping
                     post("/api/upload") {
-                        val pathParam = call.request.queryParameters["path"] ?: "/storage/emulated/0"
-                        val uploadDir = File(pathParam)
-
-                        if (!uploadDir.exists()) {
-                            uploadDir.mkdirs()
-                        }
-
+                        val pathParam = (call.request.queryParameters["path"] ?: "/storage/emulated/0").replace("//", "/")
                         val multipart = call.receiveMultipart()
                         var count = 0
 
@@ -531,21 +529,25 @@ class FileServer(private val context: Context) {
                             multipart.forEachPart { part ->
                                 if (part is PartData.FileItem) {
                                     val originalName = part.originalFileName ?: "uploaded_file_${System.currentTimeMillis()}"
-                                    val dst = File(uploadDir, originalName)
+                                    val outputStream = FileUtils.getOutputStreamForPath(this@FileServer.context, pathParam, originalName)
                                     
-                                    Logger.log("Receiving: $originalName")
-                                    part.streamProvider().use { input ->
-                                        dst.outputStream().use { output ->
-                                            val buffer = ByteArray(64 * 1024) // 64KB buffer
-                                            var bytesRead: Int
-                                            while (input.read(buffer).also { bytesRead = it } != -1) {
-                                                output.write(buffer, 0, bytesRead)
+                                    if (outputStream != null) {
+                                        Logger.log("Receiving and writing upload: $originalName to $pathParam")
+                                        part.streamProvider().use { input ->
+                                            outputStream.use { output ->
+                                                val buffer = ByteArray(64 * 1024) // 64KB buffer
+                                                var bytesRead: Int
+                                                while (input.read(buffer).also { bytesRead = it } != -1) {
+                                                    output.write(buffer, 0, bytesRead)
+                                                }
                                             }
                                         }
+                                        Logger.log("Stored file uploaded successfully: $originalName")
+                                        ServerState.postUploadNotification("Received file '$originalName' from your iPhone successfully!")
+                                        count++
+                                    } else {
+                                        Logger.log("Failed to create output stream for file: $originalName")
                                     }
-                                    Logger.log("Stored file: ${dst.name} (${FileUtils.formatSize(dst.length())})")
-                                    ServerState.postUploadNotification("Received file '${dst.name}' from your iPhone successfully!")
-                                    count++
                                 }
                                 part.dispose()
                             }

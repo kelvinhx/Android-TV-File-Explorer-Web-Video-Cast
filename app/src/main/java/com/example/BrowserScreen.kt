@@ -101,6 +101,86 @@ fun BrowserScreen(
                         override fun onPageFinished(view: WebView?, url: String?) {
                             super.onPageFinished(view, url)
                             view?.requestFocus()
+                            
+                            // Inject cursor for premium virtual pointer on TV screen (smart TCL, Samsung TV visual aid)
+                            view?.evaluateJavascript(
+                                """
+                                (function() {
+                                    if (window.tvCursorInitialized) return;
+                                    window.tvCursorInitialized = true;
+
+                                    const cursor = document.createElement('div');
+                                    cursor.id = 'tv-virtual-cursor';
+                                    cursor.style.position = 'fixed';
+                                    cursor.style.width = '26px';
+                                    cursor.style.height = '26px';
+                                    cursor.style.borderRadius = '50%';
+                                    cursor.style.backgroundColor = 'rgba(10, 132, 255, 0.45)';
+                                    cursor.style.border = '2px solid #0A84FF';
+                                    cursor.style.boxShadow = '0 0 12px rgba(10, 132, 255, 0.9)';
+                                    cursor.style.left = '50%';
+                                    cursor.style.top = '50%';
+                                    cursor.style.transform = 'translate(-13px, -13px)';
+                                    cursor.style.zIndex = '99999999';
+                                    cursor.style.pointerEvents = 'none';
+                                    cursor.style.transition = 'left 0.1s cubic-bezier(0.25, 0.8, 0.25, 1), top 0.1s cubic-bezier(0.25, 0.8, 0.25, 1)';
+                                    document.body.appendChild(cursor);
+
+                                    let x = window.innerWidth / 2;
+                                    let y = window.innerHeight / 2;
+                                    const speed = 40;
+
+                                    function updateCursor() {
+                                        cursor.style.left = x + 'px';
+                                        cursor.style.top = y + 'px';
+                                    }
+                                    updateCursor();
+
+                                    window.addEventListener('keydown', function(e) {
+                                        let handled = false;
+                                        switch(e.keyCode) {
+                                            case 37: // Left (DPAD LEFT)
+                                                x = Math.max(15, x - speed);
+                                                handled = true;
+                                                break;
+                                            case 38: // Up (DPAD UP)
+                                                y = Math.max(15, y - speed);
+                                                if (y < 80) {
+                                                    window.scrollBy(0, -120);
+                                                }
+                                                handled = true;
+                                                break;
+                                            case 39: // Right (DPAD RIGHT)
+                                                x = Math.min(window.innerWidth - 15, x + speed);
+                                                handled = true;
+                                                break;
+                                            case 40: // Down (DPAD DOWN)
+                                                y = Math.min(window.innerHeight - 15, y + speed);
+                                                if (y > window.innerHeight - 80) {
+                                                    window.scrollBy(0, 120);
+                                                }
+                                                handled = true;
+                                                break;
+                                            case 13: // Enter / Center (DPAD CENTER)
+                                                const el = document.elementFromPoint(x, y);
+                                                if (el) {
+                                                    el.click();
+                                                    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.contentEditable === 'true') {
+                                                        el.focus();
+                                                    }
+                                                }
+                                                handled = true;
+                                                break;
+                                        }
+                                        if (handled) {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            updateCursor();
+                                        }
+                                    }, true);
+                                })();
+                                """.trimIndent(), null
+                            )
                         }
 
                         override fun shouldInterceptRequest(
@@ -125,27 +205,8 @@ fun BrowserScreen(
                         }
                     }
 
-                    // Key events for DPAD nav in browser
-                    setOnKeyListener { v, keyCode, event ->
-                        if (event.action == KeyEvent.ACTION_DOWN) {
-                            when (keyCode) {
-                                KeyEvent.KEYCODE_DPAD_CENTER -> { return@setOnKeyListener false }
-                                KeyEvent.KEYCODE_DPAD_DOWN -> {
-                                    v.scrollBy(0, 100)
-                                    return@setOnKeyListener false
-                                }
-                                KeyEvent.KEYCODE_DPAD_UP -> {
-                                    v.scrollBy(0, -100)
-                                    return@setOnKeyListener false
-                                }
-                                KeyEvent.KEYCODE_DPAD_LEFT -> {
-                                    if (canGoBack) {
-                                        goBack()
-                                        return@setOnKeyListener true
-                                    }
-                                }
-                            }
-                        }
+                    // Key events for DPAD nav in browser: pass to WebView so JS capturer can handle
+                    setOnKeyListener { _, _, _ ->
                         false
                     }
 

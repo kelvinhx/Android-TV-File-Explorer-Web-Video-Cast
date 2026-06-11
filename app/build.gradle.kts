@@ -126,6 +126,7 @@ dependencies {
   "ksp"(libs.moshi.kotlin.codegen)
 
   // Ktor Server Engine & Netty
+  implementation("androidx.documentfile:documentfile:1.0.1")
   implementation("io.ktor:ktor-server-core:2.3.12")
   implementation("io.ktor:ktor-server-netty:2.3.12")
 }

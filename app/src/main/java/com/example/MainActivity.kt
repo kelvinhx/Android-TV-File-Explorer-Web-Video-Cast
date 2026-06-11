@@ -68,6 +68,35 @@ object AppState {
 
 class MainActivity : ComponentActivity() {
 
+    private val requestDocumentTree = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        if (uri != null) {
+            try {
+                val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                        Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                contentResolver.takePersistableUriPermission(uri, takeFlags)
+                Logger.log("Android/data folder permission granted successfully!")
+            } catch (e: Exception) {
+                Logger.log("Failed to persist Android/data folder permission: ${e.message}")
+            }
+        }
+    }
+
+    fun triggerAndroidDataPermissionRequest() {
+        try {
+            val documentUri = Uri.parse("content://com.android.externalstorage.documents/document/primary%3AAndroid%2Fdata")
+            requestDocumentTree.launch(documentUri)
+        } catch (e: Exception) {
+            Logger.log("Failed to target document URI, launching normal folder selector: ${e.message}")
+            try {
+                requestDocumentTree.launch(null)
+            } catch (e2: Exception) {
+                Logger.log("Fatal: could not request folder tree.")
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -97,7 +126,8 @@ class MainActivity : ComponentActivity() {
                                 .fillMaxSize()
                                 .padding(innerPadding),
                             onToggleServer = { toggleNexusService() },
-                            onRequestPermissions = { triggerPermissionRequest() }
+                            onRequestPermissions = { triggerPermissionRequest() },
+                            onRequestAndroidDataPermission = { triggerAndroidDataPermissionRequest() }
                         )
                     }
                 }
@@ -188,7 +218,8 @@ class MainActivity : ComponentActivity() {
 fun TvDashboardScreen(
     modifier: Modifier = Modifier,
     onToggleServer: () -> Unit,
-    onRequestPermissions: () -> Unit
+    onRequestPermissions: () -> Unit,
+    onRequestAndroidDataPermission: () -> Unit
 ) {
     val context = LocalContext.current
     var hasStoragePermission by remember { mutableStateOf(false) }
@@ -272,7 +303,10 @@ fun TvDashboardScreen(
             when (selectedSidebarItem) {
                 "On My TV" -> {
                     if (hasStoragePermission) {
-                        TvFilesBrowser(context = context)
+                        TvFilesBrowser(
+                            context = context,
+                            onRequestAndroidDataPermission = onRequestAndroidDataPermission
+                        )
                     } else {
                         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -499,35 +533,38 @@ fun IosFileIcon(modifier: Modifier = Modifier, extension: String) {
 }
 
 @Composable
-fun TvFilesBrowser(context: Context) {
+fun TvFilesBrowser(
+    context: Context,
+    onRequestAndroidDataPermission: () -> Unit
+) {
     var currentPath by remember { mutableStateOf("/storage/emulated/0") }
-    var files by remember { mutableStateOf<List<File>>(emptyList()) }
+    var files by remember { mutableStateOf<List<UnifiedFile>>(emptyList()) }
     var showOpenAsDialog by remember { mutableStateOf(false) }
 
     // Dialog state management
-    var fileToManage by remember { mutableStateOf<File?>(null) }
+    var fileToManage by remember { mutableStateOf<UnifiedFile?>(null) }
     var showContextMenu by remember { mutableStateOf(false) }
 
-    var fileToRename by remember { mutableStateOf<File?>(null) }
+    var fileToRename by remember { mutableStateOf<UnifiedFile?>(null) }
     var showRenameDialog by remember { mutableStateOf(false) }
     var renameNameText by remember { mutableStateOf("") }
 
     var showCreateFolderDialog by remember { mutableStateOf(false) }
     var newFolderNameText by remember { mutableStateOf("") }
 
-    var fileToDelete by remember { mutableStateOf<File?>(null) }
+    var fileToDelete by remember { mutableStateOf<UnifiedFile?>(null) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
-    var clipboardFile by remember { mutableStateOf<File?>(null) }
+    var clipboardFile by remember { mutableStateOf<UnifiedFile?>(null) }
 
     // Helper list fetch trigger
     var listKey by remember { mutableStateOf(0) }
 
+    val isDataFolder = currentPath.startsWith("/storage/emulated/0/Android/data")
+    val hasDataPerm = FileUtils.hasAndroidDataPermission(context)
+
     LaunchedEffect(currentPath, listKey) {
-        val dir = File(currentPath)
-        if (dir.exists() && dir.isDirectory) {
-            files = dir.listFiles()?.sortedWith(compareBy({ !it.isDirectory }, { it.name.lowercase() })) ?: emptyList()
-        }
+        files = FileUtils.listUnifiedFiles(context, currentPath)
     }
 
     Column(modifier = Modifier.fillMaxSize().padding(32.dp)) {
@@ -542,16 +579,22 @@ fun TvFilesBrowser(context: Context) {
                     icon = Icons.Default.ArrowBack,
                     tint = AppConfig.PrimaryBlue,
                     onClick = {
-                        val parent = File(currentPath).parent
-                        if (parent != null) {
+                        val parent = if (currentPath.endsWith("/")) {
+                            currentPath.substringBeforeLast('/').substringBeforeLast('/')
+                        } else {
+                            currentPath.substringBeforeLast('/')
+                        }
+                        if (parent.isNotEmpty()) {
                             currentPath = parent
+                        } else {
+                            currentPath = "/storage/emulated/0"
                         }
                     }
                 )
                 Spacer(modifier = Modifier.width(16.dp))
             }
 
-            val curName = if (currentPath == "/storage/emulated/0") "Na minha TV" else File(currentPath).name
+            val curName = if (currentPath == "/storage/emulated/0") "Na minha TV" else currentPath.substringAfterLast('/')
             Text(
                 text = curName,
                 color = Color.White,
@@ -562,20 +605,18 @@ fun TvFilesBrowser(context: Context) {
 
             Spacer(modifier = Modifier.width(16.dp))
 
-
-
-            Spacer(modifier = Modifier.width(12.dp))
-
             // Action: Create folder
-            DpadTvButton(
-                text = "Nova Pasta",
-                icon = Icons.Default.Share,
-                tint = AppConfig.ActiveGreen,
-                onClick = {
-                    newFolderNameText = ""
-                    showCreateFolderDialog = true
-                }
-            )
+            if (!isDataFolder || hasDataPerm) {
+                DpadTvButton(
+                    text = "Nova Pasta",
+                    icon = Icons.Default.Share,
+                    tint = AppConfig.ActiveGreen,
+                    onClick = {
+                        newFolderNameText = ""
+                        showCreateFolderDialog = true
+                    }
+                )
+            }
 
             // Dynamic Action: Clipboard paste
             if (clipboardFile != null) {
@@ -586,7 +627,7 @@ fun TvFilesBrowser(context: Context) {
                     tint = AppConfig.PrimaryBlue,
                     onClick = {
                         val src = clipboardFile!!
-                        val success = moveFileOrDirectory(src, File(currentPath))
+                        val success = FileUtils.moveUnifiedFile(context, src.absolutePath, currentPath, src.name)
                         if (success) {
                             Logger.log("Item movido com sucesso para: $currentPath")
                             clipboardFile = null
@@ -608,33 +649,84 @@ fun TvFilesBrowser(context: Context) {
         
         Spacer(modifier = Modifier.height(24.dp))
         
-        // File Grid
-        if (files.isEmpty()) {
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                Text("A pasta está vazia", color = Color.Gray, fontSize = 18.sp)
+        // Android/data permission check Card
+        if (isDataFolder && !hasDataPerm) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1C1C1E)),
+                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier.widthIn(max = 520.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(28.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "Acesso Requerido",
+                            tint = AppConfig.PrimaryBlue,
+                            modifier = Modifier.size(54.dp)
+                        )
+                        Text(
+                            text = "Acesso à Pasta Android/data",
+                            color = Color.White,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "O Android 11+ restringe o acesso direto a esta pasta. Clique no botão de confirmação e selecione 'USAR ESTA PASTA' no rodapé da próxima tela para liberar o controle completo.",
+                            color = Color.LightGray,
+                            fontSize = 14.sp,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        DpadTvButton(
+                            text = "Conceder Permissão",
+                            icon = Icons.Default.Check,
+                            tint = AppConfig.ActiveGreen,
+                            onClick = {
+                                onRequestAndroidDataPermission()
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
             }
         } else {
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(140.dp),
-                contentPadding = PaddingValues(bottom = 80.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalArrangement = Arrangement.spacedBy(24.dp)
-            ) {
-                items(files) { file ->
-                    TvFileGridItem(
-                        file = file,
-                        onClick = {
-                            if (file.isDirectory) {
-                                currentPath = file.absolutePath
-                            } else {
-                                openFileIntent(context, file)
+            // File Grid
+            if (files.isEmpty()) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    Text("A pasta está vazia", color = Color.Gray, fontSize = 18.sp)
+                }
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(140.dp),
+                    contentPadding = PaddingValues(bottom = 80.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(24.dp)
+                ) {
+                    items(files) { file ->
+                        TvFileGridItem(
+                            file = file,
+                            onClick = {
+                                if (file.isDirectory) {
+                                    currentPath = file.absolutePath
+                                } else {
+                                    FileUtils.openFile(context, file.absolutePath)
+                                }
+                            },
+                            onLongClick = {
+                                fileToManage = file
+                                showContextMenu = true
                             }
-                        },
-                        onLongClick = {
-                            fileToManage = file
-                            showContextMenu = true
-                        }
-                    )
+                        )
+                    }
                 }
             }
         }
@@ -657,7 +749,7 @@ fun TvFilesBrowser(context: Context) {
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    val descStr = if (fileToManage!!.isDirectory) "Pasta" else "Arquivo • ${formatTvFileSize(fileToManage!!.length())}"
+                    val descStr = if (fileToManage!!.isDirectory) "Pasta" else "Arquivo • ${formatTvFileSize(fileToManage!!.length)}"
                     Text(text = descStr, color = Color.Gray, fontSize = 14.sp)
                     Spacer(modifier = Modifier.height(12.dp))
                     
@@ -759,10 +851,9 @@ fun TvFilesBrowser(context: Context) {
                         onClick = {
                             val src = fileToRename!!
                             if (renameNameText.isNotBlank() && renameNameText != src.name) {
-                                val dest = File(src.parentFile, renameNameText.trim())
-                                val success = src.renameTo(dest)
+                                val success = FileUtils.renameUnifiedFile(context, src.absolutePath, renameNameText.trim())
                                 if (success) {
-                                    Logger.log("Item renomeado para: ${dest.name}")
+                                    Logger.log("Item renomeado para: ${renameNameText.trim()}")
                                     listKey++
                                 } else {
                                     Logger.log("Falha ao renomear item.")
@@ -791,7 +882,7 @@ fun TvFilesBrowser(context: Context) {
                         tint = Color(0xFF34C759),
                         onClick = {
                             showOpenAsDialog = false
-                            openFileAsIntent(context, fileToManage!!, "video/*")
+                            openFileAsIntent(context, fileToManage!!.absolutePath, "video/*")
                         },
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -801,7 +892,7 @@ fun TvFilesBrowser(context: Context) {
                         tint = Color(0xFFAF52DE),
                         onClick = {
                             showOpenAsDialog = false
-                            openFileAsIntent(context, fileToManage!!, "audio/*")
+                            openFileAsIntent(context, fileToManage!!.absolutePath, "audio/*")
                         },
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -811,7 +902,7 @@ fun TvFilesBrowser(context: Context) {
                         tint = Color(0xFFFF2D55),
                         onClick = {
                             showOpenAsDialog = false
-                            openFileAsIntent(context, fileToManage!!, "image/*")
+                            openFileAsIntent(context, fileToManage!!.absolutePath, "image/*")
                         },
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -821,7 +912,7 @@ fun TvFilesBrowser(context: Context) {
                         tint = Color(0xFF0A84FF),
                         onClick = {
                             showOpenAsDialog = false
-                            openFileAsIntent(context, fileToManage!!, "text/*")
+                            openFileAsIntent(context, fileToManage!!.absolutePath, "text/*")
                         },
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -876,10 +967,9 @@ fun TvFilesBrowser(context: Context) {
                         tint = AppConfig.ActiveGreen,
                         onClick = {
                             if (newFolderNameText.isNotBlank()) {
-                                val newDir = File(currentPath, newFolderNameText.trim())
-                                val success = newDir.mkdirs()
+                                val success = FileUtils.createUnifiedDirectory(context, currentPath, newFolderNameText.trim())
                                 if (success) {
-                                    Logger.log("Pasta criada com sucesso: ${newDir.name}")
+                                    Logger.log("Pasta criada com sucesso: ${newFolderNameText.trim()}")
                                     listKey++
                                 } else {
                                     Logger.log("Erro ao criar pasta.")
@@ -915,7 +1005,7 @@ fun TvFilesBrowser(context: Context) {
                         tint = AppConfig.ErrorRed,
                         onClick = {
                             val f = fileToDelete!!
-                            val success = f.deleteRecursively()
+                            val success = FileUtils.deleteUnifiedFile(context, f.absolutePath)
                             if (success) {
                                 Logger.log("Item excluído com sucesso: ${f.name}")
                                 listKey++
@@ -933,7 +1023,7 @@ fun TvFilesBrowser(context: Context) {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun TvFileGridItem(file: File, onClick: () -> Unit, onLongClick: () -> Unit) {
+fun TvFileGridItem(file: UnifiedFile, onClick: () -> Unit, onLongClick: () -> Unit) {
     var isFocused by remember { mutableStateOf(false) }
     
     val scale = animateFloatAsState(targetValue = if (isFocused) 1.05f else 1.0f).value
@@ -965,10 +1055,11 @@ fun TvFileGridItem(file: File, onClick: () -> Unit, onLongClick: () -> Unit) {
             if (file.isDirectory) {
                 IosFolderIcon(modifier = Modifier.size(54.dp))
             } else {
-                val ext = file.extension.lowercase()
+                val ext = file.extension
                 if (ext in listOf("jpg", "jpeg", "png", "webp", "gif")) {
+                    val model = if (file.uriString != null) Uri.parse(file.uriString) else File(file.absolutePath)
                     coil.compose.AsyncImage(
-                        model = file,
+                        model = model,
                         contentDescription = null,
                         modifier = Modifier
                             .fillMaxSize()
@@ -995,37 +1086,18 @@ fun TvFileGridItem(file: File, onClick: () -> Unit, onLongClick: () -> Unit) {
     }
 }
 
-fun openFileIntent(context: Context, file: File) {
+fun openFileAsIntent(context: Context, path: String, mimeType: String) {
     try {
-        val intent = Intent(Intent.ACTION_VIEW)
-        val uri = androidx.core.content.FileProvider.getUriForFile(
-            context,
-            context.packageName + ".provider",
-            file
-        )
-        // Basic MIME type guessing
-        val extension = file.extension.lowercase()
-        val mimeType = android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension) ?: "*/*"
-        intent.setDataAndType(uri, mimeType)
-        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        context.startActivity(intent)
-    } catch (e: Exception) {
-        Logger.log("Failed to open file on TV: ${e.message}")
-    }
-}
-
-fun openFileAsIntent(context: Context, file: File, mimeType: String) {
-    try {
-        val intent = Intent(Intent.ACTION_VIEW)
-        val uri = androidx.core.content.FileProvider.getUriForFile(
-            context,
-            context.packageName + ".provider",
-            file
-        )
-        intent.setDataAndType(uri, mimeType)
-        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val uri = FileUtils.getUriForPath(context, path)
+        if (uri == null) {
+            Logger.log("Failed to open file: URI is null")
+            return
+        }
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, mimeType)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
         context.startActivity(intent)
     } catch (e: Exception) {
         Logger.log("Failed to open file as $mimeType: ${e.message}")
