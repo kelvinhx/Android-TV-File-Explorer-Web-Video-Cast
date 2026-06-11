@@ -293,8 +293,8 @@ object WebInterface {
     <!-- Header -->
     <header class="ios-header" id="main-header">
         <div class="flex items-center gap-2">
-            <span>Browse</span>
-            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-[pulse_1.5s_infinite] shadow-[0_0_8px_#10b981]" title="Connected to TV"></span>
+            <span>Navegar</span>
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-[pulse_1.5s_infinite] shadow-[0_0_8px_#10b981]" title="Conectado à TV"></span>
         </div>
         <button class="text-[var(--ios-blue)] text-lg" onclick="openSettingsModal()"><i class="fa-solid fa-ellipsis-circle"></i></button>
     </header>
@@ -302,7 +302,7 @@ object WebInterface {
     <!-- Toolbar for Files -->
     <div class="toolbar" id="files-toolbar">
         <button class="toolbar-btn" onclick="navigateBack()" id="back-btn"><i class="fa-solid fa-chevron-left"></i></button>
-        <div class="flex-1 text-center font-semibold text-[15px] truncate px-4" id="path-title">On My TV</div>
+        <div class="flex-1 text-center font-semibold text-[15px] truncate px-4" id="path-title">Na minha TV</div>
         <input type="file" id="file-uploader" class="hidden" multiple onchange="handleUpload(this.files)">
         <button class="toolbar-btn text-sm" onclick="document.getElementById('file-uploader').click()"><i class="fa-solid fa-plus text-xl"></i></button>
         <button class="toolbar-btn text-sm" onclick="createNewFolder()"><i class="fa-solid fa-folder-plus text-xl"></i></button>
@@ -315,7 +315,7 @@ object WebInterface {
         <div id="view-files">
             <div class="search-bar">
                 <i class="fa-solid fa-magnifying-glass"></i>
-                <input type="text" id="search-input" placeholder="Search files...">
+                <input type="text" id="search-input" placeholder="Buscar arquivos...">
                 <i class="fa-solid fa-microphone"></i>
             </div>
 
@@ -323,8 +323,8 @@ object WebInterface {
             <div id="tv-status-bar" class="grid grid-cols-2 gap-3 mx-4 mb-4">
                 <div class="bg-[var(--ios-card)] px-3 py-2.5 rounded-xl border border-[rgba(255,255,255,0.05)] flex items-center justify-between">
                     <div>
-                        <div class="text-[10px] text-[var(--ios-gray)] font-semibold uppercase tracking-wider">TV Memory</div>
-                        <div class="text-[12px] font-bold mt-0.5 text-white" id="tv-ram-badge">RAM Loaded</div>
+                        <div class="text-[10px] text-[var(--ios-gray)] font-semibold uppercase tracking-wider">Memória da TV</div>
+                        <div class="text-[12px] font-bold mt-0.5 text-white" id="tv-ram-badge">RAM Carregada</div>
                     </div>
                     <div class="w-8 h-8 rounded-full border-2 border-stone-800 flex items-center justify-center text-[9px] font-extrabold text-[var(--ios-blue)]" id="tv-ram-ring">
                         --
@@ -332,8 +332,8 @@ object WebInterface {
                 </div>
                 <div class="bg-[var(--ios-card)] px-3 py-2.5 rounded-xl border border-[rgba(255,255,255,0.05)] flex items-center justify-between">
                     <div>
-                        <div class="text-[10px] text-[var(--ios-gray)] font-semibold uppercase tracking-wider">TV Storage</div>
-                        <div class="text-[11px] font-bold mt-0.5 text-emerald-400 truncate max-w-[80px]" id="tv-storage-badge">Disk Status</div>
+                        <div class="text-[10px] text-[var(--ios-gray)] font-semibold uppercase tracking-wider">Armazenamento</div>
+                        <div class="text-[11px] font-bold mt-0.5 text-emerald-400 truncate max-w-[80px]" id="tv-storage-badge">Status do Disco</div>
                     </div>
                     <div class="w-8 h-8 rounded-full border-2 border-stone-800 flex items-center justify-center text-[9px] font-extrabold text-[#34C759]" id="tv-storage-ring">
                         --
@@ -342,7 +342,7 @@ object WebInterface {
             </div>
             
             <div id="upload-progress-container" class="hidden ios-list mb-4 p-4 text-sm font-medium">
-                <div class="flex justify-between mb-2"><span>Uploading...</span><span id="upload-percent">0%</span></div>
+                <div class="flex justify-between mb-2"><span>Enviando...</span><span id="upload-percent">0%</span></div>
                 <div class="h-1.5 bg-stone-800 rounded-full overflow-hidden">
                     <div id="upload-bar" class="h-full bg-[var(--ios-blue)] w-0 transition-all"></div>
                 </div>
@@ -357,8 +357,8 @@ object WebInterface {
         <!-- Tab 2: Remote -->
         <div id="view-remote" class="hidden">
             <div class="px-6 text-center">
-                <h2 class="text-xl font-bold mb-1">Apple TV Remote</h2>
-                <p class="text-xs text-[var(--ios-gray)] mb-6">Swipe or tap to control Android TV</p>
+                <h2 class="text-xl font-bold mb-1">Controle Remoto TV</h2>
+                <p class="text-xs text-[var(--ios-gray)] mb-6">Toque para controlar a Android TV</p>
 
                 <!-- D-Pad -->
                 <div class="dpad-container">
@@ -395,18 +395,18 @@ object WebInterface {
                         <div class="w-16 h-16 rounded-full bg-[#1C1C1E] mx-auto border border-[var(--ios-blue)] flex items-center justify-center shadow-[0_0_15px_rgba(10,132,255,0.3)] mb-4">
                             <i class="fa-solid fa-wifi text-2xl text-[var(--ios-blue)]"></i>
                         </div>
-                        <h2 class="text-lg font-bold mb-1">AirPlay to TV Mode</h2>
-                        <p class="text-xs text-[var(--ios-gray)] mb-4">Send any web link directly to the TV Browser.</p>
+                        <h2 class="text-lg font-bold mb-1">Transmitir para TV</h2>
+                        <p class="text-xs text-[var(--ios-gray)] mb-4">Envie qualquer link de site diretamente para o Navegador da TV.</p>
                     </div>
 
                     <input type="text" id="cast-url" placeholder="https://..." class="w-full bg-[var(--ios-bg)] border border-[rgba(255,255,255,0.1)] text-white px-4 py-3 rounded-lg text-sm mb-4 outline-none">
                     
                     <button onclick="castUrl()" class="w-full bg-[var(--ios-blue)] text-white font-semibold py-3 rounded-xl mb-4">
-                        Cast via Network
+                        Transmitir via Rede
                     </button>
                 </div>
 
-                <h3 class="text-xs font-semibold text-[var(--ios-gray)] uppercase tracking-wider mb-2 px-2">Quick Apps</h3>
+                <h3 class="text-xs font-semibold text-[var(--ios-gray)] uppercase tracking-wider mb-2 px-2">Apps Rápidos</h3>
                 <div class="ios-list">
                     <button onclick="document.getElementById('cast-url').value='https://youtube.com/tv'; castUrl();" class="ios-list-item w-full text-left">
                         <img src="https://www.youtube.com/s/desktop/15e7ca63/img/favicon.ico" class="w-6 h-6 mr-3 rounded" onerror="this.src=''">
@@ -428,15 +428,15 @@ object WebInterface {
     <div class="tab-bar">
         <button id="tab-files" onclick="toggleView('files')" class="tab-item active">
             <i class="fa-solid fa-folder"></i>
-            <span>Browse</span>
+            <span>Navegar</span>
         </button>
         <button id="tab-remote" onclick="toggleView('remote')" class="tab-item">
             <i class="fa-solid fa-gamepad"></i>
-            <span>Remote</span>
+            <span>Controle</span>
         </button>
         <button id="tab-browser" onclick="toggleView('browser')" class="tab-item">
             <i class="fa-solid fa-display"></i>
-            <span>Cast</span>
+            <span>Transmitir</span>
         </button>
     </div>
 
@@ -446,37 +446,37 @@ object WebInterface {
         <input type="hidden" id="context-file-type" value="">
         
         <button onclick="execContextAction('OPEN')" class="context-item">
-            <span>Play on TV</span>
+            <span>Abrir na TV</span>
             <i class="fa-solid fa-play text-[var(--ios-blue)]"></i>
         </button>
         <div class="h-[1px] bg-[rgba(255,255,255,0.1)] w-full"></div>
         <button onclick="execContextAction('STREAM')" class="context-item">
-            <span>View on iPhone</span>
+            <span>Ver no Celular</span>
             <i class="fa-solid fa-mobile-screen-button text-purple-400"></i>
         </button>
         <div class="h-[1px] bg-[rgba(255,255,255,0.1)] w-full"></div>
         <button id="context-download-btn" onclick="execContextAction('DOWNLOAD')" class="context-item">
-            <span>Download</span>
+            <span>Baixar</span>
             <i class="fa-solid fa-cloud-arrow-down text-emerald-400"></i>
         </button>
         <div class="h-[1px] bg-[rgba(255,255,255,0.1)] w-full"></div>
         <button onclick="execContextAction('CUT')" class="context-item">
-            <span>Cut (Recortar)</span>
+            <span>Recortar</span>
             <i class="fa-solid fa-scissors text-amber-500"></i>
         </button>
         <div class="h-[1px] bg-[rgba(255,255,255,0.1)] w-full"></div>
         <button onclick="execContextAction('COPY')" class="context-item">
-            <span>Copy (Copiar)</span>
+            <span>Copiar</span>
             <i class="fa-solid fa-copy text-teal-400"></i>
         </button>
         <div class="h-[1px] bg-[rgba(255,255,255,0.1)] w-full"></div>
         <button onclick="execContextAction('RENAME')" class="context-item">
-            <span>Rename</span>
+            <span>Renomear</span>
             <i class="fa-solid fa-pen text-sky-400"></i>
         </button>
         <div class="h-[1px] bg-[rgba(255,255,255,0.1)] w-full"></div>
         <button onclick="execContextAction('DELETE')" class="context-item danger">
-            <span>Delete</span>
+            <span>Excluir</span>
             <i class="fa-solid fa-trash-can text-red-500"></i>
         </button>
     </div>
@@ -487,14 +487,14 @@ object WebInterface {
             <i class="fa-solid fa-scissors text-[var(--ios-blue)] text-lg animate-pulse" id="clipboard-icon"></i>
             <div class="text-xs">
                 <div class="font-bold text-white text-ellipsis overflow-hidden max-w-[150px]" id="clipboard-item-name">Item</div>
-                <div class="text-gray-400" id="clipboard-mode-text">Ready to move</div>
+                <div class="text-gray-400" id="clipboard-mode-text">Pronto para mover</div>
             </div>
         </div>
         <div class="flex gap-2">
-            <button onclick="clearClipboard()" class="bg-stone-800 text-stone-300 font-semibold px-3 py-1.5 rounded-lg text-xs">Cancel</button>
+            <button onclick="clearClipboard()" class="bg-stone-800 text-stone-300 font-semibold px-3 py-1.5 rounded-lg text-xs">Cancelar</button>
             <button onclick="pasteClipboard()" class="bg-[var(--ios-blue)] text-white font-semibold px-4 py-1.5 rounded-lg text-xs flex items-center gap-1">
                 <i class="fa-solid fa-paste"></i>
-                <span>Paste</span>
+                <span>Colar</span>
             </button>
         </div>
     </div>
@@ -503,11 +503,11 @@ object WebInterface {
     <div id="media-modal" class="modal-overlay" onclick="closeMediaModal(event)">
         <div class="modal-sheet" onclick="event.stopPropagation()">
             <div class="w-10 h-1.5 bg-[var(--ios-gray)] rounded-full mx-auto mb-4"></div>
-            <h3 class="text-lg font-bold mb-3 text-center truncate" id="media-title">Streaming File</h3>
+            <h3 class="text-lg font-bold mb-3 text-center truncate" id="media-title">Transmitindo</h3>
             <div class="bg-black rounded-xl overflow-hidden w-full flex items-center justify-center min-h-[220px]" id="media-container">
                 <!-- Dynamic target player goes here -->
             </div>
-            <button onclick="closeMediaModal('close')" class="w-full bg-[var(--ios-card-hover)] py-3 rounded-xl text-white font-bold text-lg mt-6">Close Player</button>
+            <button onclick="closeMediaModal('close')" class="w-full bg-[var(--ios-card-hover)] py-3 rounded-xl text-white font-bold text-lg mt-6">Fechar Reprodutor</button>
         </div>
     </div>
 
@@ -515,18 +515,18 @@ object WebInterface {
     <div id="settings-modal" class="modal-overlay" onclick="closeSettingsModal(event)">
         <div class="modal-sheet" onclick="event.stopPropagation()">
             <div class="w-10 h-1.5 bg-[var(--ios-gray)] rounded-full mx-auto mb-6"></div>
-            <h2 class="text-xl font-bold mb-4">Settings</h2>
+            <h2 class="text-xl font-bold mb-4">Configurações</h2>
             <div class="ios-list bg-[var(--ios-bg)] border border-[rgba(255,255,255,0.1)]">
                 <div class="ios-list-item justify-between">
-                    <span>Show Hidden Files</span>
+                    <span>Mostrar Itens Ocultos</span>
                     <input type="checkbox" id="toggle-hidden" class="accent-[var(--ios-blue)] scale-125">
                 </div>
                 <div class="ios-list-item justify-between">
-                    <span>Grid View</span>
+                    <span>Visualização em Grade</span>
                     <input type="checkbox" id="toggle-grid" checked class="accent-[var(--ios-blue)] scale-125">
                 </div>
             </div>
-            <button onclick="closeSettingsModal('close')" class="w-full bg-[var(--ios-card)] py-3 rounded-xl text-[var(--ios-blue)] font-bold text-lg mt-4">Done</button>
+            <button onclick="closeSettingsModal('close')" class="w-full bg-[var(--ios-card)] py-3 rounded-xl text-[var(--ios-blue)] font-bold text-lg mt-4">Concluído</button>
         </div>
     </div>
 
@@ -600,18 +600,18 @@ object WebInterface {
             if (view === 'files') {
                 document.getElementById('view-files').classList.remove('hidden');
                 document.getElementById('tab-files').classList.add('active');
-                document.getElementById('main-header').firstElementChild.textContent = "Browse";
+                document.getElementById('main-header').firstElementChild.textContent = "Navegar";
                 document.getElementById('files-toolbar').style.display = "flex";
                 fetchFiles();
             } else if (view === 'remote') {
                 document.getElementById('view-remote').classList.remove('hidden');
                 document.getElementById('tab-remote').classList.add('active');
-                document.getElementById('main-header').firstElementChild.textContent = "Remote";
+                document.getElementById('main-header').firstElementChild.textContent = "Controle";
                 document.getElementById('files-toolbar').style.display = "none";
             } else if (view === 'browser') {
                 document.getElementById('view-browser').classList.remove('hidden');
                 document.getElementById('tab-browser').classList.add('active');
-                document.getElementById('main-header').firstElementChild.textContent = "Cast";
+                document.getElementById('main-header').firstElementChild.textContent = "Transmitir";
                 document.getElementById('files-toolbar').style.display = "none";
             }
         }
@@ -632,7 +632,7 @@ object WebInterface {
             .then(data => {
                 if (data.status === 'success') {
                     urlInput.value = "";
-                } else alert("Casting failed: " + data.message);
+                } else alert("Falha na transmissão: " + data.message);
             }).catch(console.error);
         }
 
@@ -643,7 +643,7 @@ object WebInterface {
                     currentPath = data.currentPath;
                     let pathParts = currentPath.split('/');
                     let folderName = pathParts[pathParts.length - 1];
-                    if (currentPath === "/storage/emulated/0") folderName = "On My TV";
+                    if (currentPath === "/storage/emulated/0") folderName = "Na minha TV";
                     
                     document.getElementById('path-title').textContent = folderName;
                     
@@ -653,9 +653,9 @@ object WebInterface {
 
                     // Update hardware metrics overlay
                     if (data.ramPercent !== undefined) {
-                        document.getElementById('tv-ram-badge').textContent = data.ramPercent + "% Loaded";
+                        document.getElementById('tv-ram-badge').textContent = data.ramPercent + "% Carregada";
                         document.getElementById('tv-ram-ring').textContent = data.ramPercent + "%";
-                        document.getElementById('tv-storage-badge').textContent = data.storageFreeFormatted + " Free";
+                        document.getElementById('tv-storage-badge').textContent = data.storageFreeFormatted + " Livre";
                         document.getElementById('tv-storage-ring').textContent = data.storagePercent + "%";
                     }
 
@@ -665,7 +665,7 @@ object WebInterface {
                     if (data.files.length === 0) {
                         list.innerHTML = `
                             <div class="col-span-full text-center py-20 text-[var(--ios-gray)]">
-                                <span class="text-sm">Folder corresponds to no items.</span>
+                                <span class="text-sm">A pasta está vazia.</span>
                             </div>
                         `;
                         return;
@@ -789,14 +789,14 @@ object WebInterface {
             else if (action === 'CUT' || action === 'COPY') {
                 clipboard = { action: action, path: absolutePath, name: fileName };
                 document.getElementById('clipboard-item-name').textContent = fileName;
-                document.getElementById('clipboard-mode-text').textContent = action === 'CUT' ? 'Ready to Move' : 'Ready to Copy';
+                document.getElementById('clipboard-mode-text').textContent = action === 'CUT' ? 'Pronto para mover' : 'Pronto para copiar';
                 document.getElementById('clipboard-icon').className = action === 'CUT' ? 'fa-solid fa-scissors text-[var(--ios-blue)] text-lg animate-pulse' : 'fa-solid fa-copy text-[var(--ios-blue)] text-lg animate-pulse';
                 document.getElementById('clipboard-bar').classList.remove('hidden');
             } else if (action === 'RENAME') {
-                const newName = prompt("Rename to:");
+                const newName = prompt("Renomear para:");
                 if (newName) processFileAction('RENAME', absolutePath, newName.trim());
             } else if (action === 'DELETE') {
-                if (confirm("Delete this item?")) processFileAction('DELETE', absolutePath);
+                if (confirm("Deseja realmente excluir este item?")) processFileAction('DELETE', absolutePath);
             }
         }
 
@@ -836,7 +836,7 @@ object WebInterface {
             } else if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) {
                 container.innerHTML = '<img src="' + streamUrl + '" class="max-w-full max-h-[400px] object-contain rounded-lg shadow-xl">';
             } else {
-                container.innerHTML = '<div class="text-gray-400 p-6 text-center"><i class="fa-solid fa-file text-5xl mb-3"></i><br>Format not streamable on phone. Download or Play on TV instead!</div>';
+                container.innerHTML = '<div class="text-gray-400 p-6 text-center"><i class="fa-solid fa-file text-5xl mb-3"></i><br>Formato não transmissível no celular. Baixe ou abra na TV!</div>';
             }
             
             document.getElementById('media-modal').style.display = 'flex';
@@ -869,14 +869,14 @@ object WebInterface {
             fetch('/api/open?path=' + encodeURIComponent(absolutePath), { method: 'POST' })
                 .then(res => res.json())
                 .then(data => {
-                    if (data.status === 'success') { /* success */ }
-                    else alert("Error opening file: " + data.message);
+                     if (data.status === 'success') { /* sucesso */ }
+                     else alert("Erro ao abrir o arquivo: " + data.message);
                 }).catch(console.error);
         }
 
         function createNewFolder() {
             doVibrate(30);
-            const name = prompt("New Folder Name:");
+            const name = prompt("Nome da Nova Pasta:");
             if (name) processFileAction('MKDIR', currentPath + '/' + name.trim());
         }
 
@@ -887,7 +887,7 @@ object WebInterface {
                 body: JSON.stringify({ action: action, path: path, argument: argument })
             }).then(res => res.json()).then(data => {
                 if (data.status === 'success') fetchFiles();
-                else alert("Failure: " + data.message);
+                else alert("Falha: " + data.message);
             }).catch(console.error);
         }
 
@@ -921,9 +921,9 @@ object WebInterface {
                 doVibrate(90);
                 setTimeout(() => container.classList.add('hidden'), 1000);
                 if (xhr.status === 200) fetchFiles();
-                else alert("Upload failed.");
+                else alert("Falha no upload.");
             };
-            xhr.onerror = function() { container.classList.add('hidden'); alert("Connection error."); };
+            xhr.onerror = function() { container.classList.add('hidden'); alert("Erro de conexão."); };
             xhr.send(formData);
         }
 

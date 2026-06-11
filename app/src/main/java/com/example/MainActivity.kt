@@ -56,6 +56,11 @@ import kotlinx.coroutines.launch
 import java.io.File
 import com.example.BrowserScreen
 import kotlinx.coroutines.flow.MutableStateFlow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.*
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 
 object AppState {
     val browserUrl = MutableStateFlow<String?>(null)
@@ -209,52 +214,81 @@ fun TvDashboardScreen(
     }
 
     var selectedSidebarItem by remember { mutableStateOf("On My TV") }
+    var isSidebarVisible by remember { mutableStateOf(true) }
+    val sidebarFocusRequester = remember { FocusRequester() }
 
     Row(
         modifier = modifier
             .fillMaxSize()
             .background(Color(0xFF000000))
+            .onPreviewKeyEvent { keyEvent ->
+                // Detect DPAD_LEFT to show and focus the sidebar when it's closed
+                if (!isSidebarVisible &&
+                    keyEvent.type == KeyEventType.KeyDown &&
+                    keyEvent.key == Key.DirectionLeft) {
+                    isSidebarVisible = true
+                    try {
+                        sidebarFocusRequester.requestFocus()
+                    } catch (e: Exception) {}
+                    true
+                } else {
+                    false
+                }
+            }
     ) {
         // --- Sidebar (Locations) ---
-        Column(
-            modifier = Modifier
-                .width(260.dp)
-                .fillMaxHeight()
-                .background(Color(0xFF1C1C1E))
-                .padding(20.dp)
+        androidx.compose.animation.AnimatedVisibility(
+            visible = isSidebarVisible,
+            enter = slideInHorizontally(initialOffsetX = { -it }) + fadeIn(),
+            exit = slideOutHorizontally(targetOffsetX = { -it }) + fadeOut(),
         ) {
-            Text(
-                text = "Locations",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                modifier = Modifier.padding(bottom = 16.dp, start = 8.dp)
-            )
+            Column(
+                modifier = Modifier
+                    .width(260.dp)
+                    .fillMaxHeight()
+                    .background(Color(0xFF1C1C1E))
+                    .onFocusChanged { state ->
+                        // Automatically close the sidebar when it loses focus
+                        if (!state.hasFocus && !state.isFocused) {
+                            isSidebarVisible = false
+                        }
+                    }
+                    .padding(20.dp)
+            ) {
+                Text(
+                    text = "Locais",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    modifier = Modifier.padding(bottom = 16.dp, start = 8.dp)
+                )
 
-            TvSidebarItem(
-                text = "On My TV",
-                icon = Icons.Default.Home,
-                isSelected = selectedSidebarItem == "On My TV",
-                onClick = { selectedSidebarItem = "On My TV" }
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            TvSidebarItem(
-                text = "Host Server",
-                icon = Icons.Default.Share,
-                isSelected = selectedSidebarItem == "Host Server",
-                onClick = { selectedSidebarItem = "Host Server" }
-            )
-            
-            Spacer(modifier = Modifier.weight(1f))
-            
-            TvSidebarItem(
-                text = "Settings",
-                icon = Icons.Default.Settings,
-                isSelected = selectedSidebarItem == "Settings",
-                onClick = { selectedSidebarItem = "Settings" }
-            )
+                TvSidebarItem(
+                    text = "Na minha TV",
+                    icon = Icons.Default.Home,
+                    isSelected = selectedSidebarItem == "On My TV",
+                    onClick = { selectedSidebarItem = "On My TV" },
+                    modifier = Modifier.focusRequester(sidebarFocusRequester)
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                TvSidebarItem(
+                    text = "Servidor Host",
+                    icon = Icons.Default.Share,
+                    isSelected = selectedSidebarItem == "Host Server",
+                    onClick = { selectedSidebarItem = "Host Server" }
+                )
+                
+                Spacer(modifier = Modifier.weight(1f))
+                
+                TvSidebarItem(
+                    text = "Configurações",
+                    icon = Icons.Default.Settings,
+                    isSelected = selectedSidebarItem == "Settings",
+                    onClick = { selectedSidebarItem = "Settings" }
+                )
+            }
         }
 
         // --- Main Content Area ---
@@ -273,12 +307,12 @@ fun TvDashboardScreen(
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Icon(Icons.Default.Lock, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(64.dp))
                                 Spacer(modifier = Modifier.height(16.dp))
-                                Text("Storage Permission Required", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                                Text("Acesso ao Armazenamento Necessário", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                                 Spacer(modifier = Modifier.height(8.dp))
-                                Text("Please grant access in Settings to view files.", color = Color.Gray, fontSize = 14.sp)
+                                Text("Por favor, conceda permissão para ver os arquivos.", color = Color.Gray, fontSize = 14.sp)
                                 Spacer(modifier = Modifier.height(24.dp))
                                 DpadTvButton(
-                                    text = "Grant Permission",
+                                    text = "Conceder Permissão",
                                     icon = Icons.Default.Check,
                                     tint = AppConfig.PrimaryBlue,
                                     onClick = onRequestPermissions
@@ -293,10 +327,10 @@ fun TvDashboardScreen(
                 "Settings" -> {
                     Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Settings", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                            Text("Configurações", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
                             Spacer(modifier = Modifier.height(20.dp))
                             DpadTvButton(
-                                text = "Manage Permissions",
+                                text = "Gerenciar Permissões",
                                 icon = Icons.Default.Lock,
                                 tint = AppConfig.AccentGold,
                                 onClick = onRequestPermissions
@@ -350,7 +384,13 @@ fun TvDashboardScreen(
 }
 
 @Composable
-fun TvSidebarItem(text: String, icon: ImageVector, isSelected: Boolean, onClick: () -> Unit) {
+fun TvSidebarItem(
+    text: String,
+    icon: ImageVector,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     var isFocused by remember { mutableStateOf(false) }
     
     val backgroundColor = when {
@@ -366,7 +406,7 @@ fun TvSidebarItem(text: String, icon: ImageVector, isSelected: Boolean, onClick:
     }
 
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
             .background(backgroundColor)
@@ -382,12 +422,118 @@ fun TvSidebarItem(text: String, icon: ImageVector, isSelected: Boolean, onClick:
     }
 }
 
+fun formatTvFileSize(bytes: Long): String {
+    if (bytes <= 0) return "0 KB"
+    val classes = arrayOf("B", "KB", "MB", "GB")
+    var value = bytes.toDouble()
+    var index = 0
+    while (value >= 1024 && index < classes.size - 1) {
+        value /= 1024
+        index++
+    }
+    return String.format("%.1f %s", value, classes[index])
+}
+
+fun moveFileOrDirectory(src: File, destDir: File): Boolean {
+    try {
+        if (!src.exists()) return false
+        val target = File(destDir, src.name)
+        return src.renameTo(target)
+    } catch (e: Exception) {
+        return false
+    }
+}
+
+@Composable
+fun IosFolderIcon(modifier: Modifier = Modifier) {
+    androidx.compose.foundation.Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        
+        val folderColor = Color(0xFF2F80ED)
+        val tabColor = Color(0xFF56CCF2)
+        val shadowColor = Color(0x22000000)
+
+        // Draw tab top-left
+        drawRoundRect(
+            color = tabColor,
+            topLeft = androidx.compose.ui.geometry.Offset(w * 0.12f, h * 0.15f),
+            size = androidx.compose.ui.geometry.Size(w * 0.40f, h * 0.22f),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx(), 4.dp.toPx())
+        )
+        
+        // Draw main body
+        drawRoundRect(
+            color = folderColor,
+            topLeft = androidx.compose.ui.geometry.Offset(w * 0.05f, h * 0.28f),
+            size = androidx.compose.ui.geometry.Size(w * 0.9f, h * 0.62f),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(6.dp.toPx(), 6.dp.toPx())
+        )
+
+        // Draw shadow/shading line
+        drawRoundRect(
+            color = shadowColor,
+            topLeft = androidx.compose.ui.geometry.Offset(w * 0.05f, h * 0.32f),
+            size = androidx.compose.ui.geometry.Size(w * 0.9f, h * 0.08f),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(0f)
+        )
+    }
+}
+
+@Composable
+fun IosFileIcon(modifier: Modifier = Modifier, extension: String) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 14.dp, bottomEnd = 4.dp, bottomStart = 4.dp))
+            .background(Color(0xFF1C1C1E))
+            .border(1.5.dp, Color(0xFF3A3A3C), RoundedCornerShape(topStart = 4.dp, topEnd = 14.dp, bottomEnd = 4.dp, bottomStart = 4.dp))
+            .padding(4.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            Icon(
+                imageVector = Icons.Default.Info,
+                contentDescription = null,
+                tint = Color(0xFF8E8E93),
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = extension.uppercase().take(4),
+                color = Color.LightGray,
+                fontSize = 8.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
+            )
+        }
+    }
+}
+
 @Composable
 fun TvFilesBrowser(context: Context) {
     var currentPath by remember { mutableStateOf("/storage/emulated/0") }
     var files by remember { mutableStateOf<List<File>>(emptyList()) }
 
-    LaunchedEffect(currentPath) {
+    // Dialog state management
+    var fileToManage by remember { mutableStateOf<File?>(null) }
+    var showContextMenu by remember { mutableStateOf(false) }
+
+    var fileToRename by remember { mutableStateOf<File?>(null) }
+    var showRenameDialog by remember { mutableStateOf(false) }
+    var renameNameText by remember { mutableStateOf("") }
+
+    var showCreateFolderDialog by remember { mutableStateOf(false) }
+    var newFolderNameText by remember { mutableStateOf("") }
+
+    var fileToDelete by remember { mutableStateOf<File?>(null) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
+    var clipboardFile by remember { mutableStateOf<File?>(null) }
+
+    // Helper list fetch trigger
+    var listKey by remember { mutableStateOf(0) }
+
+    LaunchedEffect(currentPath, listKey) {
         val dir = File(currentPath)
         if (dir.exists() && dir.isDirectory) {
             files = dir.listFiles()?.sortedWith(compareBy({ !it.isDirectory }, { it.name.lowercase() })) ?: emptyList()
@@ -395,11 +541,14 @@ fun TvFilesBrowser(context: Context) {
     }
 
     Column(modifier = Modifier.fillMaxSize().padding(32.dp)) {
-        // Top Bar
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        // Top Bar Path Navigator & Action Buttons
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
             if (currentPath != "/storage/emulated/0" && currentPath != "/storage") {
                 DpadTvButton(
-                    text = "Back",
+                    text = "Voltar",
                     icon = Icons.Default.ArrowBack,
                     tint = AppConfig.PrimaryBlue,
                     onClick = {
@@ -411,12 +560,56 @@ fun TvFilesBrowser(context: Context) {
                 )
                 Spacer(modifier = Modifier.width(16.dp))
             }
+
+            val curName = if (currentPath == "/storage/emulated/0") "Na minha TV" else File(currentPath).name
             Text(
-                text = File(currentPath).name,
+                text = curName,
                 color = Color.White,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f)
             )
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            // Action: Create folder
+            DpadTvButton(
+                text = "Nova Pasta",
+                icon = Icons.Default.Share,
+                tint = AppConfig.ActiveGreen,
+                onClick = {
+                    newFolderNameText = ""
+                    showCreateFolderDialog = true
+                }
+            )
+
+            // Dynamic Action: Clipboard paste
+            if (clipboardFile != null) {
+                Spacer(modifier = Modifier.width(12.dp))
+                DpadTvButton(
+                    text = "Colar aqui",
+                    icon = Icons.Default.Check,
+                    tint = AppConfig.PrimaryBlue,
+                    onClick = {
+                        val src = clipboardFile!!
+                        val success = moveFileOrDirectory(src, File(currentPath))
+                        if (success) {
+                            Logger.log("Item movido com sucesso para: $currentPath")
+                            clipboardFile = null
+                            listKey++
+                        } else {
+                            Logger.log("Erro ao mover item.")
+                        }
+                    }
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                DpadTvButton(
+                    text = "Cancelar",
+                    icon = Icons.Default.Close,
+                    tint = AppConfig.ErrorRed,
+                    onClick = { clipboardFile = null }
+                )
+            }
         }
         
         Spacer(modifier = Modifier.height(24.dp))
@@ -424,7 +617,7 @@ fun TvFilesBrowser(context: Context) {
         // File Grid
         if (files.isEmpty()) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                Text("Folder is empty", color = Color.Gray, fontSize = 18.sp)
+                Text("A pasta está vazia", color = Color.Gray, fontSize = 18.sp)
             }
         } else {
             LazyVerticalGrid(
@@ -434,21 +627,233 @@ fun TvFilesBrowser(context: Context) {
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
                 items(files) { file ->
-                    TvFileGridItem(file = file, onClick = {
-                        if (file.isDirectory) {
-                            currentPath = file.absolutePath
-                        } else {
-                            openFileIntent(context, file)
+                    TvFileGridItem(
+                        file = file,
+                        onClick = {
+                            if (file.isDirectory) {
+                                currentPath = file.absolutePath
+                            } else {
+                                openFileIntent(context, file)
+                            }
+                        },
+                        onLongClick = {
+                            fileToManage = file
+                            showContextMenu = true
                         }
-                    })
+                    )
                 }
             }
         }
     }
+
+    // Modal Sheet Option Dialogs
+    if (showContextMenu && fileToManage != null) {
+        AlertDialog(
+            onDismissRequest = { showContextMenu = false },
+            containerColor = Color(0xFF1C1C1E),
+            title = {
+                Text(
+                    text = fileToManage!!.name,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    val descStr = if (fileToManage!!.isDirectory) "Pasta" else "Arquivo • ${formatTvFileSize(fileToManage!!.length())}"
+                    Text(text = descStr, color = Color.Gray, fontSize = 14.sp)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    DpadTvButton(
+                        text = "Mover / Recortar",
+                        icon = Icons.Default.Share,
+                        tint = Color(0xFFFF9500),
+                        onClick = {
+                            clipboardFile = fileToManage
+                            showContextMenu = false
+                            Logger.log("Item copiado para a área de transferência: ${fileToManage!!.name}")
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    DpadTvButton(
+                        text = "Renomear",
+                        icon = Icons.Default.Info,
+                        tint = Color(0xFF0A84FF),
+                        onClick = {
+                            renameNameText = fileToManage!!.name
+                            fileToRename = fileToManage
+                            showContextMenu = false
+                            showRenameDialog = true
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    DpadTvButton(
+                        text = "Excluir",
+                        icon = Icons.Default.Close,
+                        tint = Color(0xFFFF3B30),
+                        onClick = {
+                            fileToDelete = fileToManage
+                            showContextMenu = false
+                            showDeleteConfirm = true
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showContextMenu = false }) {
+                    Text("Cancelar", color = Color.LightGray)
+                }
+            }
+        )
+    }
+
+    if (showRenameDialog && fileToRename != null) {
+        AlertDialog(
+            onDismissRequest = { showRenameDialog = false },
+            containerColor = Color(0xFF1C1C1E),
+            title = { Text("Renomear Item", color = Color.White, fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text("Digite o novo nome para o item:", color = Color.Gray, fontSize = 14.sp)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    TextField(
+                        value = renameNameText,
+                        onValueChange = { renameNameText = it },
+                        textStyle = androidx.compose.ui.text.TextStyle(color = Color.White),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color(0xFF2C2C2E),
+                            unfocusedContainerColor = Color(0xFF2C2C2E),
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            cursorColor = Color.White
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = { showRenameDialog = false }) {
+                        Text("Cancelar", color = Color.Gray)
+                    }
+                    Button(
+                        colors = ButtonDefaults.buttonColors(containerColor = AppConfig.PrimaryBlue),
+                        onClick = {
+                            val src = fileToRename!!
+                            if (renameNameText.isNotBlank() && renameNameText != src.name) {
+                                val dest = File(src.parentFile, renameNameText.trim())
+                                val success = src.renameTo(dest)
+                                if (success) {
+                                    Logger.log("Item renomeado para: ${dest.name}")
+                                    listKey++
+                                } else {
+                                    Logger.log("Falha ao renomear item.")
+                                }
+                            }
+                            showRenameDialog = false
+                        }
+                    ) {
+                        Text("Salvar", color = Color.White)
+                    }
+                }
+            }
+        )
+    }
+
+    if (showCreateFolderDialog) {
+        AlertDialog(
+            onDismissRequest = { showCreateFolderDialog = false },
+            containerColor = Color(0xFF1C1C1E),
+            title = { Text("Nova Pasta", color = Color.White, fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text("Digite o nome da nova pasta:", color = Color.Gray, fontSize = 14.sp)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    TextField(
+                        value = newFolderNameText,
+                        onValueChange = { newFolderNameText = it },
+                        textStyle = androidx.compose.ui.text.TextStyle(color = Color.White),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color(0xFF2C2C2E),
+                            unfocusedContainerColor = Color(0xFF2C2C2E),
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            cursorColor = Color.White
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = { showCreateFolderDialog = false }) {
+                        Text("Cancelar", color = Color.Gray)
+                    }
+                    Button(
+                        colors = ButtonDefaults.buttonColors(containerColor = AppConfig.PrimaryBlue),
+                        onClick = {
+                            if (newFolderNameText.isNotBlank()) {
+                                val newDir = File(currentPath, newFolderNameText.trim())
+                                val success = newDir.mkdirs()
+                                if (success) {
+                                    Logger.log("Pasta criada com sucesso: ${newDir.name}")
+                                    listKey++
+                                } else {
+                                    Logger.log("Erro ao criar pasta.")
+                                }
+                            }
+                            showCreateFolderDialog = false
+                        }
+                    ) {
+                        Text("Criar", color = Color.White)
+                    }
+                }
+            }
+        )
+    }
+
+    if (showDeleteConfirm && fileToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            containerColor = Color(0xFF1C1C1E),
+            title = { Text("Excluir Item", color = Color.White, fontWeight = FontWeight.Bold) },
+            text = {
+                Text("Deseja realmente excluir permanentemente '${fileToDelete!!.name}'?", color = Color.LightGray)
+            },
+            confirmButton = {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = { showDeleteConfirm = false }) {
+                        Text("Cancelar", color = Color.Gray)
+                    }
+                    Button(
+                        colors = ButtonDefaults.buttonColors(containerColor = AppConfig.ErrorRed),
+                        onClick = {
+                            val f = fileToDelete!!
+                            val success = f.deleteRecursively()
+                            if (success) {
+                                Logger.log("Item excluído com sucesso: ${f.name}")
+                                listKey++
+                            } else {
+                                Logger.log("Erro ao excluir item.")
+                            }
+                            showDeleteConfirm = false
+                        }
+                    ) {
+                        Text("Excluir", color = Color.White)
+                    }
+                }
+            }
+        )
+    }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun TvFileGridItem(file: File, onClick: () -> Unit) {
+fun TvFileGridItem(file: File, onClick: () -> Unit, onLongClick: () -> Unit) {
     var isFocused by remember { mutableStateOf(false) }
     
     val scale = animateFloatAsState(targetValue = if (isFocused) 1.05f else 1.0f).value
@@ -465,22 +870,36 @@ fun TvFileGridItem(file: File, onClick: () -> Unit) {
             .border(if (isFocused) BorderStroke(2.dp, Color.White) else BorderStroke(0.dp, Color.Transparent), RoundedCornerShape(12.dp))
             .onFocusChanged { isFocused = it.isFocused }
             .focusable()
-            .clickable { onClick() }
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
             .padding(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        val icon = if (file.isDirectory) Icons.Default.List else Icons.Default.Info
-        val iconTint = if (file.isDirectory) Color(0xFF007AFF) else Color(0xFF8E8E93)
-
         Box(
             modifier = Modifier
                 .size(70.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(Color(0xFF1C1C1E))
                 .shadow(if (isFocused) 8.dp else 4.dp),
             contentAlignment = Alignment.Center
         ) {
-            Icon(imageVector = icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(36.dp))
+            if (file.isDirectory) {
+                IosFolderIcon(modifier = Modifier.size(54.dp))
+            } else {
+                val ext = file.extension.lowercase()
+                if (ext in listOf("jpg", "jpeg", "png", "webp", "gif")) {
+                    coil.compose.AsyncImage(
+                        model = file,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(10.dp)),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                    )
+                } else {
+                    IosFileIcon(modifier = Modifier.size(50.dp), extension = ext)
+                }
+            }
         }
         
         Spacer(modifier = Modifier.height(10.dp))
@@ -526,7 +945,7 @@ fun TvServerDashboard(onToggleServer: () -> Unit) {
     val logs by Logger.logs.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize().padding(32.dp)) {
-        Text("Network Host", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+        Text("Servidor Host", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(24.dp))
         
         Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
@@ -544,24 +963,36 @@ fun TvServerDashboard(onToggleServer: () -> Unit) {
                 Spacer(modifier = Modifier.height(24.dp))
                 
                 if (!isConnected) {
-                    Text("SCAN TO CONNECT", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("ESCANEE PARA CONECTAR", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(16.dp))
                     
                     val serverUrl = "http://$serverIp:${AppConfig.PORT}"
-                    Box(modifier = Modifier.size(160.dp).background(Color.White).padding(8.dp), contentAlignment = Alignment.Center) {
-                        Text(text = "QR\n$serverUrl", color = Color.Black, fontSize = 10.sp, textAlign = TextAlign.Center)
+                    Box(
+                        modifier = Modifier
+                            .size(160.dp)
+                            .background(Color.White)
+                            .padding(8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        val encodedUrl = java.net.URLEncoder.encode(serverUrl, "UTF-8")
+                        val qrCodeUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=$encodedUrl&color=000000&bgcolor=ffffff"
+                        coil.compose.AsyncImage(
+                            model = qrCodeUrl,
+                            contentDescription = "Código QR",
+                            modifier = Modifier.size(144.dp)
+                        )
                     }
                 } else {
                     Icon(Icons.Default.CheckCircle, contentDescription = null, tint = AppConfig.ActiveGreen, modifier = Modifier.size(80.dp))
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("CLIENT CONNECTED", color = AppConfig.ActiveGreen, fontWeight = FontWeight.Bold)
+                    Text("CLIENTE CONECTADO", color = AppConfig.ActiveGreen, fontWeight = FontWeight.Bold)
                     Text("IP: $clientIp", color = Color.White)
                 }
 
                 Spacer(modifier = Modifier.weight(1f))
                 
                 DpadTvButton(
-                    text = if (isRunning) "Stop Server" else "Start Server",
+                    text = if (isRunning) "Parar Servidor" else "Iniciar Servidor",
                     icon = if (isRunning) Icons.Default.Close else Icons.Default.PlayArrow,
                     tint = if (isRunning) AppConfig.ErrorRed else AppConfig.PrimaryBlue,
                     onClick = onToggleServer
@@ -577,7 +1008,7 @@ fun TvServerDashboard(onToggleServer: () -> Unit) {
                     .background(Color(0xFF1C1C1E))
                     .padding(24.dp)
             ) {
-                Text("TELEMETRY LOGS", color = Color.Gray, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text("LOGS DE TELEMETRIA", color = Color.Gray, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -610,8 +1041,8 @@ fun HostStatusIndicator(isRunning: Boolean, serverIp: String) {
         Box(modifier = Modifier.size(12.dp).clip(CircleShape).background(if (isRunning) AppConfig.ActiveGreen else AppConfig.ErrorRed))
         Spacer(modifier = Modifier.width(16.dp))
         Column {
-            Text(if (isRunning) "ONLINE" else "OFFLINE", color = if (isRunning) AppConfig.ActiveGreen else AppConfig.ErrorRed, fontWeight = FontWeight.Bold)
-            Text(if (isRunning) "http://$serverIp:${AppConfig.PORT}" else "Server is stopped", color = Color.Gray, fontSize = 12.sp)
+            Text(if (isRunning) "ONLINE" else "DESATIVADO", color = if (isRunning) AppConfig.ActiveGreen else AppConfig.ErrorRed, fontWeight = FontWeight.Bold)
+            Text(if (isRunning) "http://$serverIp:${AppConfig.PORT}" else "O servidor de rede está parado", color = Color.Gray, fontSize = 12.sp)
         }
     }
 }
