@@ -105,6 +105,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private var nsdHelper: NsdHelper? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -112,31 +114,56 @@ class MainActivity : ComponentActivity() {
         // Write initial log
         Logger.log("Nexus Explorer Pro launched.")
         
-        // Auto start background Server
-        startNexusService()
+        val uiModeManager = getSystemService(Context.UI_MODE_SERVICE) as android.app.UiModeManager
+        val isTv = uiModeManager.currentModeType == android.content.res.Configuration.UI_MODE_TYPE_TELEVISION
+
+        if (isTv) {
+            // Auto start background Server on TV
+            startNexusService()
+            nsdHelper = NsdHelper(this)
+            nsdHelper?.registerService(AppConfig.PORT)
+        } else {
+            nsdHelper = NsdHelper(this)
+            nsdHelper?.discoverServices()
+        }
 
         setContent {
             val browserUrl by AppState.browserUrl.collectAsState()
+            val discoveredIp by nsdHelper?.discoveredIp?.collectAsState(initial = null) ?: remember { mutableStateOf(null) }
 
             MyApplicationTheme {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     containerColor = AppConfig.BackgroundDark
                 ) { innerPadding ->
-                    if (browserUrl != null) {
-                        BrowserScreen(
-                            initialUrl = browserUrl!!,
-                            onClose = { AppState.browserUrl.value = null }
-                        )
+                    if (isTv) {
+                        if (browserUrl != null) {
+                            BrowserScreen(
+                                initialUrl = browserUrl!!,
+                                onClose = { AppState.browserUrl.value = null }
+                            )
+                        } else {
+                            TvDashboardScreen(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(innerPadding),
+                                onToggleServer = { toggleNexusService() },
+                                onRequestPermissions = { triggerPermissionRequest() },
+                                onRequestAndroidDataPermission = { triggerAndroidDataPermissionRequest() }
+                            )
+                        }
                     } else {
-                        TvDashboardScreen(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(innerPadding),
-                            onToggleServer = { toggleNexusService() },
-                            onRequestPermissions = { triggerPermissionRequest() },
-                            onRequestAndroidDataPermission = { triggerAndroidDataPermissionRequest() }
-                        )
+                        // Phone UI
+                        if (discoveredIp != null) {
+                            // Show the web interface
+                            BrowserScreen(
+                                initialUrl = "http://$discoveredIp:${AppConfig.PORT}",
+                                onClose = { this@MainActivity.finish() }
+                            )
+                        } else {
+                            // Discovering
+                            PhoneDiscoveryScreen(modifier = Modifier.fillMaxSize().padding(innerPadding))
+                        }
                     }
                 }
             }
@@ -169,6 +196,12 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        nsdHelper?.stopDiscovery()
+        nsdHelper?.stopRegistration()
     }
 
     private fun startNexusService() {
@@ -240,6 +273,21 @@ class MainActivity : ComponentActivity() {
             )
             context.requestPermissions(permissions, 101)
         }
+    }
+}
+
+@Composable
+fun PhoneDiscoveryScreen(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.fillMaxSize().background(Color(0xFF1C1C1E)),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        CircularProgressIndicator(color = AppConfig.ActiveGreen)
+        Spacer(modifier = Modifier.height(16.dp))
+        Text("Procurando Nexus TV na rede local...", color = Color.White, fontSize = 16.sp)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text("Certifique-se de que a TV está conectada ao mesmo Wi-Fi.", color = Color.Gray, fontSize = 12.sp)
     }
 }
 
