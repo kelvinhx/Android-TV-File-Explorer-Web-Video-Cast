@@ -41,6 +41,7 @@ class NsdHelper(context: Context) {
         }
     }
 
+    @Suppress("DEPRECATION")
     fun discoverServices() {
         discoveryListener = object : NsdManager.DiscoveryListener {
             override fun onDiscoveryStarted(regType: String) {

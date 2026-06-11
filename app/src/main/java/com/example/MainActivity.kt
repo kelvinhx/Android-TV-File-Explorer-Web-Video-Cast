@@ -356,9 +356,9 @@ fun TvDashboardScreen(
                         isAutoUpdating = true
                         val repoOwner = "rebeijar"
                         val repoName = "NexusTv"
-                        val workflowFile = "android.yml"
+                        val workflowFile = "build.yml"
                         val branch = "main"
-                        val artifactName = "app-release"
+                        val artifactName = "app-debug"
                         val url = "https://nightly.link/$repoOwner/$repoName/workflows/$workflowFile/$branch/$artifactName.zip"
                         scope.launch {
                             Updater.downloadExtractAndInstall(
@@ -533,9 +533,9 @@ fun TvDashboardScreen(
                                         // Usar nightly.link para acessar artefatos do GitHub Actions sem autenticação
                                         val repoOwner = "rebeijar"
                                         val repoName = "NexusTv"
-                                        val workflowFile = "android.yml"
+                                        val workflowFile = "build.yml"
                                         val branch = "main"
-                                        val artifactName = "app-release"
+                                        val artifactName = "app-debug"
                                         
                                         val tempUrl = "https://nightly.link/$repoOwner/$repoName/workflows/$workflowFile/$branch/$artifactName.zip"
                                         
