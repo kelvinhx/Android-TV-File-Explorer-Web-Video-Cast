@@ -663,12 +663,12 @@ object WebInterface {
             let url = document.getElementById('browser-url').value.trim();
             if(!url) return;
             
-            // Allow searching with duckduckgo
+            // Allow searching with duckduckgo/google
             if (!url.startsWith('http://') && !url.startsWith('https://')) {
                 if(url.includes('.') && !url.includes(' ')) {
                     url = 'https://' + url;
                 } else {
-                    url = 'https://lite.duckduckgo.com/lite/?q=' + encodeURIComponent(url);
+                    url = 'https://www.google.com/search?q=' + encodeURIComponent(url);
                 }
             }
             
@@ -959,7 +959,7 @@ object WebInterface {
 
             if (action === 'OPEN') requestOpenFile(absolutePath);
             else if (action === 'STREAM') playOnPhone(absolutePath, fileName);
-            else if (action === 'DOWNLOAD') window.open('/api/download?path=' + encodeURIComponent(absolutePath), '_blank');
+            else if (action === 'DOWNLOAD') window.open('/api/download?path=' + encodeURIComponent(absolutePath) + '&download=1', '_blank');
             else if (action === 'CUT' || action === 'COPY') {
                 clipboard = { action: action, path: absolutePath, name: fileName };
                 document.getElementById('clipboard-item-name').textContent = fileName;

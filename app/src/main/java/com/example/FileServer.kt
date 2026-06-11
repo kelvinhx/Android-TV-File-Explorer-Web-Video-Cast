@@ -141,6 +141,7 @@ class FileServer(private val context: Context) {
                     // File Downloading/Streaming
                     get("/api/download") {
                         val path = call.request.queryParameters["path"]
+                        val isDownload = call.request.queryParameters["download"] == "1"
                         if (path.isNullOrEmpty()) {
                             call.respond(HttpStatusCode.BadRequest, "Path parameter is required.")
                             return@get
@@ -153,6 +154,11 @@ class FileServer(private val context: Context) {
                         }
                         
                         Logger.log("Streaming file via download api: $targetPath")
+
+                        if (isDownload) {
+                            val fileName = targetPath.substringAfterLast("/")
+                            call.response.header(HttpHeaders.ContentDisposition, "attachment; filename=\"$fileName\"")
+                        }
 
                         if (targetPath.startsWith("/storage/emulated/0/Android/data") && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
                             val uri = FileUtils.getUriForPath(this@FileServer.context, targetPath)
@@ -446,10 +452,39 @@ class FileServer(private val context: Context) {
                                             window.parent.postMessage({type: 'navigate', url: a.href}, '*');
                                         }
                                     });
+
+                                    window.addEventListener('submit', e => {
+                                        const form = e.target;
+                                        if (form && form.action) {
+                                            e.preventDefault();
+                                            let action = form.action.startsWith('http') ? form.action : new URL(form.action, window.location.href).href;
+                                            if (form.method.toUpperCase() === 'GET') {
+                                                const formData = new FormData(form);
+                                                const params = new URLSearchParams(formData);
+                                                let urlObj = new URL(action);
+                                                for (const [key, value] of params.entries()) {
+                                                    urlObj.searchParams.append(key, value);
+                                                }
+                                                window.parent.postMessage({type: 'navigate', url: urlObj.href}, '*');
+                                            } else {
+                                                // Support POST if needed, but DuckDuckGo lite uses POST and requires form-urlencoded data. We can pass it to a proxy POST endpoint, 
+                                                // or just fallback to GET for duckduckgo lite. Duckduckgo lite search form actually uses POST.
+                                                // Let's proxy all forms as GETs just in case, or inform the parent to use POST.
+                                                // Actually duckduckgo /lite/ supports GET !q=... 
+                                                const formData = new FormData(form);
+                                                const params = new URLSearchParams(formData);
+                                                let urlObj = new URL(action);
+                                                for (const [key, value] of params.entries()) {
+                                                    urlObj.searchParams.append(key, value);
+                                                }
+                                                window.parent.postMessage({type: 'navigate', url: urlObj.href}, '*');
+                                            }
+                                        }
+                                    });
                                     </script>
                                 """.trimIndent()
 
-                                html = html.replace("<head>", "<head><base href=\"$basePath\">$inject")
+                                html = html.replace("<head>", "<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no\"><base href=\"$basePath\">$inject")
                                 call.respondText(html, ContentType.Text.Html)
                             } else {
                                 // If not HTML (e.g. image/json/etc), stream directly
