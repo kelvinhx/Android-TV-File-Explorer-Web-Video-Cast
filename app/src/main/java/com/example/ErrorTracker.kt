@@ -19,7 +19,7 @@ object ErrorTracker {
 
         // Try to write to file
         try {
-            if (Environment.isExternalStorageManager()) {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R && Environment.isExternalStorageManager()) {
                 val nexusFolder = File(Environment.getExternalStorageDirectory(), "Nexus Explorer/Logs")
                 if (!nexusFolder.exists()) {
                     nexusFolder.mkdirs()
