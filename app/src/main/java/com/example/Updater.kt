@@ -18,10 +18,10 @@ import java.util.zip.ZipInputStream
 
 object Updater {
 
-    suspend fun isUpdateAvailable(context: Context): Boolean {
+    suspend fun isUpdateAvailable(context: Context, repoOwner: String = "rebeijar", repoName: String = "NexusTv"): Boolean {
         return withContext(Dispatchers.IO) {
             try {
-                val url = URL("https://api.github.com/repos/rebeijar/NexusTv/actions/runs?branch=main&status=success")
+                val url = java.net.URL("https://api.github.com/repos/$repoOwner/$repoName/actions/runs?status=success")
                 val connection = url.openConnection() as HttpURLConnection
                 connection.setRequestProperty("Accept", "application/vnd.github.v3+json")
                 if (connection.responseCode in 200..299) {
@@ -91,14 +91,32 @@ object Updater {
                             val urlStr = "https://nightly.link/$repoOwner/$repoName/workflows/$workflow/$branch/$artifact.zip"
                             try {
                                 val conn = URL(urlStr).openConnection() as HttpURLConnection
-                                conn.instanceFollowRedirects = true
+                                conn.instanceFollowRedirects = false
                                 conn.setRequestProperty("User-Agent", "Mozilla/5.0")
                                 conn.connect()
-                                if (conn.responseCode in 200..299) {
-                                    connection = conn
+                                
+                                var finalConn = conn
+                                var redirects = 0
+                                while ((finalConn.responseCode == HttpURLConnection.HTTP_MOVED_TEMP || 
+                                       finalConn.responseCode == HttpURLConnection.HTTP_MOVED_PERM || 
+                                       finalConn.responseCode == HttpURLConnection.HTTP_SEE_OTHER ||
+                                       finalConn.responseCode == 307 ||
+                                       finalConn.responseCode == 308) && redirects < 5) {
+                                    val location = finalConn.getHeaderField("Location")
+                                    finalConn.disconnect()
+                                    val nextUrl = URL(URL(urlStr), location)
+                                    finalConn = nextUrl.openConnection() as HttpURLConnection
+                                    finalConn.instanceFollowRedirects = false
+                                    finalConn.setRequestProperty("User-Agent", "Mozilla/5.0")
+                                    finalConn.connect()
+                                    redirects++
+                                }
+
+                                if (finalConn.responseCode in 200..299) {
+                                    connection = finalConn
                                     break@search
                                 } else {
-                                    conn.disconnect()
+                                    finalConn.disconnect()
                                 }
                             } catch (e: Exception) {
                                 // ignore and try next
