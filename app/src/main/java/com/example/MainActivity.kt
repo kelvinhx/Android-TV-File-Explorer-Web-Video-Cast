@@ -122,6 +122,9 @@ class MainActivity : ComponentActivity() {
             startNexusService()
             nsdHelper = NsdHelper(this)
             nsdHelper?.registerService(AppConfig.PORT)
+            lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                Updater.cleanUpOldUpdates()
+            }
         } else {
             nsdHelper = NsdHelper(this)
             nsdHelper?.discoverServices()
@@ -319,6 +322,82 @@ fun TvDashboardScreen(
             delay(6000)
             ServerState.postUploadNotification("")
         }
+    }
+
+    var showUpdateDialog by remember { mutableStateOf(false) }
+    var autoUpdatingMessage by remember { mutableStateOf("") }
+    var isAutoUpdating by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        if (Updater.isUpdateAvailable(context)) {
+            showUpdateDialog = true
+        }
+    }
+
+    if (showUpdateDialog) {
+        AlertDialog(
+            onDismissRequest = { if (!isAutoUpdating) showUpdateDialog = false },
+            title = { Text("Nexus Update") },
+            text = { 
+                Column {
+                    Text("Há uma nova versão do aplicativo disponível no GitHub. Deseja baixar e instalar agora?")
+                    if (isAutoUpdating) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        CircularProgressIndicator(color = Color(0xFFE91E63), modifier = Modifier.size(32.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(autoUpdatingMessage, color = Color.White, fontSize = 14.sp)
+                    }
+                }
+            },
+            confirmButton = {
+                if (!isAutoUpdating) {
+                    TextButton(onClick = {
+                        isAutoUpdating = true
+                        val repoOwner = "rebeijar"
+                        val repoName = "NexusTv"
+                        val workflowFile = "android.yml"
+                        val branch = "main"
+                        val artifactName = "app-release"
+                        val url = "https://nightly.link/$repoOwner/$repoName/workflows/$workflowFile/$branch/$artifactName.zip"
+                        scope.launch {
+                            Updater.downloadExtractAndInstall(
+                                context = context,
+                                zipUrl = url,
+                                onProgress = { msg ->
+                                    autoUpdatingMessage = msg
+                                    if (msg.isEmpty() || msg.startsWith("Erro") || msg.startsWith("Iniciando")) {
+                                        if (msg.isEmpty() || msg.startsWith("Iniciando")) {
+                                            // Keep dialog open until system closes the app
+                                        } else {
+                                            launch {
+                                                delay(4000)
+                                                if (autoUpdatingMessage == msg) {
+                                                    isAutoUpdating = false
+                                                    showUpdateDialog = false
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                    }) {
+                        Text("Sim, Atualizar", color = Color(0xFFE91E63))
+                    }
+                }
+            },
+            dismissButton = {
+                if (!isAutoUpdating) {
+                    TextButton(onClick = { showUpdateDialog = false }) {
+                        Text("Mais tarde", color = Color.Gray)
+                    }
+                }
+            },
+            containerColor = Color(0xFF1C1C1E),
+            titleContentColor = Color.White,
+            textContentColor = Color(0xFFEBEBEB)
+        )
     }
 
     var selectedSidebarItem by remember { mutableStateOf("On My TV") }

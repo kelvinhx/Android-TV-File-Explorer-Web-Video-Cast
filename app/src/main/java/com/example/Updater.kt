@@ -2,9 +2,11 @@ package com.example
 
 import android.content.Context
 import android.content.Intent
+import android.os.Environment
 import androidx.core.content.FileProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileInputStream
@@ -15,13 +17,60 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 
 object Updater {
+
+    suspend fun isUpdateAvailable(context: Context): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                val url = URL("https://api.github.com/repos/rebeijar/NexusTv/actions/runs?branch=main&status=success")
+                val connection = url.openConnection() as HttpURLConnection
+                connection.setRequestProperty("Accept", "application/vnd.github.v3+json")
+                if (connection.responseCode in 200..299) {
+                    val jsonStr = connection.inputStream.bufferedReader().readText()
+                    val json = JSONObject(jsonStr)
+                    val runs = json.optJSONArray("workflow_runs")
+                    if (runs != null && runs.length() > 0) {
+                        val latestRun = runs.optJSONObject(0)
+                        val runId = latestRun.optLong("id")
+                        
+                        val prefs = context.getSharedPreferences("updater_prefs", Context.MODE_PRIVATE)
+                        val lastRunId = prefs.getLong("last_installed_run_id", 0L)
+                        
+                        if (runId > lastRunId) {
+                            prefs.edit().putLong("latest_available_run_id", runId).apply()
+                            return@withContext true
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            return@withContext false
+        }
+    }
+
+    fun cleanUpOldUpdates() {
+        try {
+            val nexusDir = File(Environment.getExternalStorageDirectory(), "Nexus")
+            if (nexusDir.exists() && nexusDir.isDirectory) {
+                nexusDir.listFiles()?.forEach { file ->
+                    if (file.name.endsWith(".apk") || file.name.endsWith(".zip")) {
+                        file.delete()
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
     
     suspend fun downloadExtractAndInstall(context: Context, zipUrl: String, onProgress: (String) -> Unit) {
         withContext(Dispatchers.IO) {
             try {
                 onProgress("Conectando ao GitHub...")
-                val cacheDir = context.cacheDir
-                val zipFile = File(cacheDir, "update.zip")
+                val nexusDir = File(Environment.getExternalStorageDirectory(), "Nexus")
+                if (!nexusDir.exists()) nexusDir.mkdirs()
+                
+                val zipFile = File(nexusDir, "update.zip")
                 if (zipFile.exists()) zipFile.delete()
                 
                 val connection = URL(zipUrl).openConnection() as HttpURLConnection
@@ -56,13 +105,19 @@ object Updater {
                 input.close()
                 
                 onProgress("Extraindo atualização do arquivo ZIP...")
-                val apkFile = extractApkFromZip(zipFile, cacheDir)
+                val apkFile = extractApkFromZip(zipFile, nexusDir)
                 
                 // Excluir arquivo zip extraído
                 zipFile.delete()
                 
                 if (apkFile != null) {
                     onProgress("Iniciando instalação...")
+                    
+                    // Mark as installed before firing intent
+                    val prefs = context.getSharedPreferences("updater_prefs", Context.MODE_PRIVATE)
+                    val latest = prefs.getLong("latest_available_run_id", 0L)
+                    prefs.edit().putLong("last_installed_run_id", latest).apply()
+
                     installApk(context, apkFile)
                     onProgress("")
                 } else {
