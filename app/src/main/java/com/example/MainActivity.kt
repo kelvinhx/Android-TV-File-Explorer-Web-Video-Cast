@@ -214,81 +214,52 @@ fun TvDashboardScreen(
     }
 
     var selectedSidebarItem by remember { mutableStateOf("On My TV") }
-    var isSidebarVisible by remember { mutableStateOf(true) }
-    val sidebarFocusRequester = remember { FocusRequester() }
 
     Row(
         modifier = modifier
             .fillMaxSize()
             .background(Color(0xFF000000))
-            .onPreviewKeyEvent { keyEvent ->
-                // Detect DPAD_LEFT to show and focus the sidebar when it's closed
-                if (!isSidebarVisible &&
-                    keyEvent.type == KeyEventType.KeyDown &&
-                    keyEvent.key == Key.DirectionLeft) {
-                    isSidebarVisible = true
-                    try {
-                        sidebarFocusRequester.requestFocus()
-                    } catch (e: Exception) {}
-                    true
-                } else {
-                    false
-                }
-            }
     ) {
         // --- Sidebar (Locations) ---
-        androidx.compose.animation.AnimatedVisibility(
-            visible = isSidebarVisible,
-            enter = slideInHorizontally(initialOffsetX = { -it }) + fadeIn(),
-            exit = slideOutHorizontally(targetOffsetX = { -it }) + fadeOut(),
+        Column(
+            modifier = Modifier
+                .width(260.dp)
+                .fillMaxHeight()
+                .background(Color(0xFF1C1C1E))
+                .padding(20.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .width(260.dp)
-                    .fillMaxHeight()
-                    .background(Color(0xFF1C1C1E))
-                    .onFocusChanged { state ->
-                        // Automatically close the sidebar when it loses focus
-                        if (!state.hasFocus && !state.isFocused) {
-                            isSidebarVisible = false
-                        }
-                    }
-                    .padding(20.dp)
-            ) {
-                Text(
-                    text = "Locais",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    modifier = Modifier.padding(bottom = 16.dp, start = 8.dp)
-                )
+            Text(
+                text = "Locais",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                modifier = Modifier.padding(bottom = 16.dp, start = 8.dp)
+            )
 
-                TvSidebarItem(
-                    text = "Na minha TV",
-                    icon = Icons.Default.Home,
-                    isSelected = selectedSidebarItem == "On My TV",
-                    onClick = { selectedSidebarItem = "On My TV" },
-                    modifier = Modifier.focusRequester(sidebarFocusRequester)
-                )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                TvSidebarItem(
-                    text = "Servidor Host",
-                    icon = Icons.Default.Share,
-                    isSelected = selectedSidebarItem == "Host Server",
-                    onClick = { selectedSidebarItem = "Host Server" }
-                )
-                
-                Spacer(modifier = Modifier.weight(1f))
-                
-                TvSidebarItem(
-                    text = "Configurações",
-                    icon = Icons.Default.Settings,
-                    isSelected = selectedSidebarItem == "Settings",
-                    onClick = { selectedSidebarItem = "Settings" }
-                )
-            }
+            TvSidebarItem(
+                text = "Na minha TV",
+                icon = Icons.Default.Home,
+                isSelected = selectedSidebarItem == "On My TV",
+                onClick = { selectedSidebarItem = "On My TV" }
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            TvSidebarItem(
+                text = "Servidor Host",
+                icon = Icons.Default.Share,
+                isSelected = selectedSidebarItem == "Host Server",
+                onClick = { selectedSidebarItem = "Host Server" }
+            )
+            
+            Spacer(modifier = Modifier.weight(1f))
+            
+            TvSidebarItem(
+                text = "Configurações",
+                icon = Icons.Default.Settings,
+                isSelected = selectedSidebarItem == "Settings",
+                onClick = { selectedSidebarItem = "Settings" }
+            )
         }
 
         // --- Main Content Area ---
@@ -513,6 +484,7 @@ fun IosFileIcon(modifier: Modifier = Modifier, extension: String) {
 fun TvFilesBrowser(context: Context) {
     var currentPath by remember { mutableStateOf("/storage/emulated/0") }
     var files by remember { mutableStateOf<List<File>>(emptyList()) }
+    var isManageMode by remember { mutableStateOf(false) }
 
     // Dialog state management
     var fileToManage by remember { mutableStateOf<File?>(null) }
@@ -572,6 +544,16 @@ fun TvFilesBrowser(context: Context) {
 
             Spacer(modifier = Modifier.width(16.dp))
 
+            // Action: Toggle Manage Mode
+            DpadTvButton(
+                text = if (isManageMode) "Modo: Gerenciar" else "Modo: Navegar",
+                icon = if (isManageMode) Icons.Default.Settings else Icons.Default.Home,
+                tint = if (isManageMode) AppConfig.AccentGold else AppConfig.PrimaryBlue,
+                onClick = { isManageMode = !isManageMode }
+            )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
             // Action: Create folder
             DpadTvButton(
                 text = "Nova Pasta",
@@ -630,10 +612,15 @@ fun TvFilesBrowser(context: Context) {
                     TvFileGridItem(
                         file = file,
                         onClick = {
-                            if (file.isDirectory) {
-                                currentPath = file.absolutePath
+                            if (isManageMode) {
+                                fileToManage = file
+                                showContextMenu = true
                             } else {
-                                openFileIntent(context, file)
+                                if (file.isDirectory) {
+                                    currentPath = file.absolutePath
+                                } else {
+                                    openFileIntent(context, file)
+                                }
                             }
                         },
                         onLongClick = {
@@ -704,9 +691,12 @@ fun TvFilesBrowser(context: Context) {
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showContextMenu = false }) {
-                    Text("Cancelar", color = Color.LightGray)
-                }
+                DpadTvButton(
+                    text = "Cancelar",
+                    icon = Icons.Default.Close,
+                    tint = Color.Gray,
+                    onClick = { showContextMenu = false }
+                )
             }
         )
     }
@@ -736,12 +726,17 @@ fun TvFilesBrowser(context: Context) {
                 }
             },
             confirmButton = {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(onClick = { showRenameDialog = false }) {
-                        Text("Cancelar", color = Color.Gray)
-                    }
-                    Button(
-                        colors = ButtonDefaults.buttonColors(containerColor = AppConfig.PrimaryBlue),
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    DpadTvButton(
+                        text = "Cancelar",
+                        icon = Icons.Default.Close,
+                        tint = Color.Gray,
+                        onClick = { showRenameDialog = false }
+                    )
+                    DpadTvButton(
+                        text = "Salvar",
+                        icon = Icons.Default.Check,
+                        tint = AppConfig.ActiveGreen,
                         onClick = {
                             val src = fileToRename!!
                             if (renameNameText.isNotBlank() && renameNameText != src.name) {
@@ -756,9 +751,7 @@ fun TvFilesBrowser(context: Context) {
                             }
                             showRenameDialog = false
                         }
-                    ) {
-                        Text("Salvar", color = Color.White)
-                    }
+                    )
                 }
             }
         )
@@ -789,12 +782,17 @@ fun TvFilesBrowser(context: Context) {
                 }
             },
             confirmButton = {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(onClick = { showCreateFolderDialog = false }) {
-                        Text("Cancelar", color = Color.Gray)
-                    }
-                    Button(
-                        colors = ButtonDefaults.buttonColors(containerColor = AppConfig.PrimaryBlue),
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    DpadTvButton(
+                        text = "Cancelar",
+                        icon = Icons.Default.Close,
+                        tint = Color.Gray,
+                        onClick = { showCreateFolderDialog = false }
+                    )
+                    DpadTvButton(
+                        text = "Criar",
+                        icon = Icons.Default.Check,
+                        tint = AppConfig.ActiveGreen,
                         onClick = {
                             if (newFolderNameText.isNotBlank()) {
                                 val newDir = File(currentPath, newFolderNameText.trim())
@@ -808,9 +806,7 @@ fun TvFilesBrowser(context: Context) {
                             }
                             showCreateFolderDialog = false
                         }
-                    ) {
-                        Text("Criar", color = Color.White)
-                    }
+                    )
                 }
             }
         )
@@ -825,12 +821,17 @@ fun TvFilesBrowser(context: Context) {
                 Text("Deseja realmente excluir permanentemente '${fileToDelete!!.name}'?", color = Color.LightGray)
             },
             confirmButton = {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(onClick = { showDeleteConfirm = false }) {
-                        Text("Cancelar", color = Color.Gray)
-                    }
-                    Button(
-                        colors = ButtonDefaults.buttonColors(containerColor = AppConfig.ErrorRed),
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    DpadTvButton(
+                        text = "Cancelar",
+                        icon = Icons.Default.Close,
+                        tint = Color.Gray,
+                        onClick = { showDeleteConfirm = false }
+                    )
+                    DpadTvButton(
+                        text = "Excluir",
+                        icon = Icons.Default.Check,
+                        tint = AppConfig.ErrorRed,
                         onClick = {
                             val f = fileToDelete!!
                             val success = f.deleteRecursively()
@@ -842,9 +843,7 @@ fun TvFilesBrowser(context: Context) {
                             }
                             showDeleteConfirm = false
                         }
-                    ) {
-                        Text("Excluir", color = Color.White)
-                    }
+                    )
                 }
             }
         )
@@ -867,13 +866,12 @@ fun TvFileGridItem(file: File, onClick: () -> Unit, onLongClick: () -> Unit) {
             }
             .clip(RoundedCornerShape(12.dp))
             .background(if (isFocused) Color(0xFF2C2C2E) else Color.Transparent)
-            .border(if (isFocused) BorderStroke(2.dp, Color.White) else BorderStroke(0.dp, Color.Transparent), RoundedCornerShape(12.dp))
             .onFocusChanged { isFocused = it.isFocused }
-            .focusable()
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick
             )
+            .border(if (isFocused) BorderStroke(2.dp, Color.White) else BorderStroke(0.dp, Color.Transparent), RoundedCornerShape(12.dp))
             .padding(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -1067,10 +1065,9 @@ fun DpadTvButton(
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .clip(RoundedCornerShape(14.dp))
             .background(buttonBackground)
-            .border(if (isFocused) BorderStroke(3.dp, Color.White) else BorderStroke(1.dp, Color.Transparent), RoundedCornerShape(14.dp))
             .onFocusChanged { state -> isFocused = state.isFocused }
-            .focusable()
             .clickable { onClick() }
+            .border(if (isFocused) BorderStroke(3.dp, Color.White) else BorderStroke(1.dp, Color.Transparent), RoundedCornerShape(14.dp))
             .padding(horizontal = 20.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
