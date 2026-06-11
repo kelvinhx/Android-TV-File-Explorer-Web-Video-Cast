@@ -62,6 +62,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.input.key.*
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.activity.compose.BackHandler
 
 object AppState {
     val browserUrl = MutableStateFlow<String?>(null)
@@ -676,6 +677,15 @@ fun TvHomeDashboardScreen(
     var cleanedRamAmount by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
 
+    val isAnyTvDialogOpen = showWifiShareDialog || showMemoryCleanedDialog
+    BackHandler(enabled = isAnyTvDialogOpen) {
+        if (showWifiShareDialog) {
+            showWifiShareDialog = false
+        } else if (showMemoryCleanedDialog) {
+            showMemoryCleanedDialog = false
+        }
+    }
+
     LaunchedEffect(Unit) {
         while(true) {
             ramStats = getDetailedRamStats(context)
@@ -1069,7 +1079,7 @@ fun TvDashboardScreen(
     if (showUpdateDialog) {
         AlertDialog(
             onDismissRequest = { if (!isAutoUpdating) showUpdateDialog = false },
-            title = { Text("Nexus Update") },
+            title = { Text("Atualização do Nexus Explorer Pro") },
             text = { 
                 Column {
                     Text("Há uma nova versão do aplicativo disponível no GitHub. Deseja baixar e instalar agora?")
@@ -1801,6 +1811,33 @@ fun TvFilesBrowser(
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
     var clipboardFile by remember { mutableStateOf<UnifiedFile?>(null) }
+
+    BackHandler(enabled = true) {
+        if (showContextMenu) {
+            showContextMenu = false
+        } else if (showRenameDialog) {
+            showRenameDialog = false
+        } else if (showCreateFolderDialog) {
+            showCreateFolderDialog = false
+        } else if (showDeleteConfirm) {
+            showDeleteConfirm = false
+        } else if (showOpenAsDialog) {
+            showOpenAsDialog = false
+        } else if (currentPath != "/storage/emulated/0" && currentPath != "/storage") {
+            val parent = if (currentPath.endsWith("/")) {
+                currentPath.substringBeforeLast('/').substringBeforeLast('/')
+            } else {
+                currentPath.substringBeforeLast('/')
+            }
+            if (parent.isNotEmpty()) {
+                currentPath = parent
+            } else {
+                currentPath = "/storage/emulated/0"
+            }
+        } else {
+            onBackToDashboard?.invoke()
+        }
+    }
 
     val isDataFolder = currentPath.startsWith("/storage/emulated/0/Android/data")
     val hasDataPerm = FileUtils.hasAndroidDataPermission(context)
@@ -2636,6 +2673,13 @@ fun TvServerDashboard(onToggleServer: () -> Unit) {
     }
 }
 
+private fun formatTime(ms: Int): String {
+    val totalSeconds = ms / 1000
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return String.format("%02d:%02d", minutes, seconds)
+}
+
 @Composable
 fun InternalMediaViewer(file: UnifiedFile, onClose: () -> Unit) {
     val context = LocalContext.current
@@ -2644,11 +2688,83 @@ fun InternalMediaViewer(file: UnifiedFile, onClose: () -> Unit) {
     val isVideo = ext in listOf("mp4", "mkv", "avi", "mov", "webm", "3gp")
     val isAudio = ext in listOf("mp3", "wav", "flac", "ogg", "m4a", "aac")
     
+    var videoViewInstance by remember { mutableStateOf<android.widget.VideoView?>(null) }
+    var isPlayingState by remember { mutableStateOf(true) }
+    var currentPosState by remember { mutableStateOf(0) }
+    var durationState by remember { mutableStateOf(0) }
+    var controlsVisible by remember { mutableStateOf(true) }
+
+    // D-Pad Back Button support inside player
+    BackHandler(enabled = true) {
+        onClose()
+    }
+
+    // Controls slide/fade autohide timer
+    LaunchedEffect(controlsVisible) {
+        if (controlsVisible) {
+            delay(5000)
+            controlsVisible = false
+        }
+    }
+
+    // Local loop timer for video duration/position syncing
+    LaunchedEffect(videoViewInstance, isPlayingState) {
+        if (videoViewInstance != null) {
+            while (true) {
+                try {
+                    currentPosState = videoViewInstance!!.currentPosition
+                    durationState = videoViewInstance!!.duration
+                } catch (e: Exception) {}
+                delay(250)
+            }
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
-            .clickable { onClose() },
+            .clickable { controlsVisible = true }
+            .onKeyEvent { keyEvent ->
+                controlsVisible = true
+                if (keyEvent.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN) {
+                    when (keyEvent.nativeKeyEvent.keyCode) {
+                        android.view.KeyEvent.KEYCODE_DPAD_CENTER,
+                        android.view.KeyEvent.KEYCODE_ENTER,
+                        android.view.KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                            videoViewInstance?.let { vv ->
+                                if (isPlayingState) {
+                                    vv.pause()
+                                    isPlayingState = false
+                                } else {
+                                    vv.start()
+                                    isPlayingState = true
+                                }
+                            }
+                            true
+                        }
+                        android.view.KeyEvent.KEYCODE_DPAD_LEFT,
+                        android.view.KeyEvent.KEYCODE_MEDIA_REWIND -> {
+                            videoViewInstance?.let { vv ->
+                                val newPos = (vv.currentPosition - 10000).coerceAtLeast(0)
+                                vv.seekTo(newPos)
+                                currentPosState = newPos
+                            }
+                            true
+                        }
+                        android.view.KeyEvent.KEYCODE_DPAD_RIGHT,
+                        android.view.KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> {
+                            videoViewInstance?.let { vv ->
+                                val newPos = (vv.currentPosition + 10000).coerceAtMost(vv.duration)
+                                vv.seekTo(newPos)
+                                currentPosState = newPos
+                            }
+                            true
+                        }
+                        else -> false
+                    }
+                } else false
+            },
         contentAlignment = Alignment.Center
     ) {
         if (isImage) {
@@ -2665,13 +2781,11 @@ fun InternalMediaViewer(file: UnifiedFile, onClose: () -> Unit) {
                     android.widget.VideoView(ctx).apply {
                         val uri = if (file.uriString != null) Uri.parse(file.uriString) else Uri.fromFile(File(file.absolutePath))
                         setVideoURI(uri)
-                        val mediaController = android.widget.MediaController(ctx)
-                        mediaController.setAnchorView(this)
-                        setMediaController(mediaController)
                         setOnPreparedListener { mp ->
                             mp.isLooping = true
                             start()
                         }
+                        videoViewInstance = this
                     }
                 },
                 modifier = Modifier.fillMaxSize()
@@ -2684,14 +2798,133 @@ fun InternalMediaViewer(file: UnifiedFile, onClose: () -> Unit) {
             }
         }
         
-        // Close Button
-        DpadTvButton(
-            text = "Fechar",
-            icon = Icons.Default.Close,
-            tint = Color.White,
-            onClick = onClose,
+        // Auto-hiding Top Close Button
+        AnimatedVisibility(
+            visible = controlsVisible,
+            enter = fadeIn() + slideInVertically(initialOffsetY = { -it }),
+            exit = fadeOut() + slideOutVertically(targetOffsetY = { -it }),
             modifier = Modifier.align(Alignment.TopEnd).padding(32.dp)
-        )
+        ) {
+            DpadTvButton(
+                text = "Fechar",
+                icon = Icons.Default.Close,
+                tint = Color.White,
+                onClick = onClose
+            )
+        }
+
+        // Custom UI TV Playback Controls
+        AnimatedVisibility(
+            visible = (isVideo || isAudio) && controlsVisible,
+            enter = fadeIn() + slideInVertically(initialOffsetY = { it }),
+            exit = fadeOut() + slideOutVertically(targetOffsetY = { it }),
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f))
+                        )
+                    )
+                    .padding(horizontal = 32.dp, vertical = 24.dp)
+            ) {
+                // Progress slider bar
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = formatTime(currentPosState),
+                        color = Color.LightGray,
+                        fontSize = 12.sp,
+                        fontFamily = FontFamily.Monospace
+                    )
+                    
+                    val progress = if (durationState > 0) currentPosState.toFloat() / durationState.toFloat() else 0f
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 16.dp)
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(Color.DarkGray)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .fillMaxWidth(progress)
+                                .clip(RoundedCornerShape(3.dp))
+                                .background(AppConfig.PrimaryBlue)
+                        )
+                    }
+                    
+                    Text(
+                        text = formatTime(durationState),
+                        color = Color.LightGray,
+                        fontSize = 12.sp,
+                        fontFamily = FontFamily.Monospace
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Control buttons row
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    DpadTvButton(
+                        text = "-10 Segundos",
+                        icon = Icons.Default.Refresh,
+                        tint = Color.White,
+                        onClick = {
+                            videoViewInstance?.let { vv ->
+                                val newPos = (vv.currentPosition - 10000).coerceAtLeast(0)
+                                vv.seekTo(newPos)
+                                currentPosState = newPos
+                            }
+                        }
+                    )
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    DpadTvButton(
+                        text = if (isPlayingState) "Pausar" else "Reproduzir",
+                        icon = if (isPlayingState) Icons.Default.PlayArrow else Icons.Default.PlayArrow,
+                        tint = if (isPlayingState) Color(0xFFFF9500) else Color(0xFF30D158),
+                        onClick = {
+                            videoViewInstance?.let { vv ->
+                                if (isPlayingState) {
+                                    vv.pause()
+                                    isPlayingState = false
+                                } else {
+                                    vv.start()
+                                    isPlayingState = true
+                                }
+                            }
+                        }
+                    )
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    DpadTvButton(
+                        text = "+10 Segundos",
+                        icon = Icons.Default.PlayArrow,
+                        tint = Color.White,
+                        onClick = {
+                            videoViewInstance?.let { vv ->
+                                val newPos = (vv.currentPosition + 10000).coerceAtMost(vv.duration)
+                                vv.seekTo(newPos)
+                                currentPosState = newPos
+                            }
+                        }
+                    )
+                }
+            }
+        }
     }
 }
 
