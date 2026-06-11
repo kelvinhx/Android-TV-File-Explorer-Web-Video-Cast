@@ -133,6 +133,14 @@ class MainActivity : ComponentActivity() {
         setContent {
             val browserUrl by AppState.browserUrl.collectAsState()
             val discoveredIp by nsdHelper?.discoveredIp?.collectAsState(initial = null) ?: remember { mutableStateOf(null) }
+            var showSplash by remember { mutableStateOf(isTv) }
+
+            LaunchedEffect(isTv) {
+                if (isTv) {
+                    kotlinx.coroutines.delay(1000)
+                    showSplash = false
+                }
+            }
 
             MyApplicationTheme {
                 Scaffold(
@@ -140,7 +148,9 @@ class MainActivity : ComponentActivity() {
                     containerColor = AppConfig.BackgroundDark
                 ) { innerPadding ->
                     if (isTv) {
-                        if (browserUrl != null) {
+                        if (showSplash) {
+                            TvSplashScreen()
+                        } else if (browserUrl != null) {
                             BrowserScreen(
                                 initialUrl = browserUrl!!,
                                 onClose = { AppState.browserUrl.value = null }
@@ -1576,5 +1586,63 @@ fun DpadTvButton(
         Icon(imageVector = icon, contentDescription = null, tint = if (isFocused) Color.White else tint, modifier = Modifier.size(20.dp))
         Spacer(modifier = Modifier.width(12.dp))
         Text(text = text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = contentColor)
+    }
+}
+
+@Composable
+fun TvSplashScreen() {
+    var scale by remember { mutableStateOf(0.8f) }
+    val animatedScale by animateFloatAsState(
+        targetValue = scale,
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = 800, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+        label = "SplashScale"
+    )
+    
+    LaunchedEffect(Unit) {
+        scale = 1.0f
+    }
+
+    Box(
+        modifier = Modifier.fillMaxSize().background(AppConfig.BackgroundDark),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            androidx.compose.foundation.Image(
+                painter = androidx.compose.ui.res.painterResource(id = R.drawable.ic_nexus_logo),
+                contentDescription = "Nexus Logo",
+                modifier = Modifier
+                    .size(160.dp)
+                    .graphicsLayer {
+                        scaleX = animatedScale
+                        scaleY = animatedScale
+                    }
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                "NEXUS",
+                color = Color.White,
+                fontSize = 36.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 4.sp,
+                modifier = Modifier.graphicsLayer {
+                    scaleX = animatedScale
+                    scaleY = animatedScale
+                }
+            )
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.graphicsLayer {
+                    scaleX = animatedScale
+                    scaleY = animatedScale
+                }.padding(top = 4.dp)) {
+                Text(
+                    "PRO",
+                    color = Color.LightGray,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Light,
+                    letterSpacing = 2.sp
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Box(modifier = Modifier.width(20.dp).height(4.dp).background(Color(0xFFFF9933), shape = RoundedCornerShape(2.dp)))
+            }
+        }
     }
 }
