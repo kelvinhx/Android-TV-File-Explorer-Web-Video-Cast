@@ -1144,6 +1144,46 @@ fun TvDashboardScreen(
 
     var selectedSidebarItem by remember { mutableStateOf("On My TV") }
     var tvBrowsingPath by remember { mutableStateOf<String?>(null) }
+    
+    val pInfo = remember(context) { context.packageManager.getPackageInfo(context.packageName, 0) }
+    val currentVersionCode = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+        pInfo.longVersionCode.toInt()
+    } else {
+        pInfo.versionCode
+    }
+
+    var showChangelogOverlay by remember {
+        mutableStateOf(ChangelogManager.shouldShowChangelogForCurrentVersion(context, currentVersionCode))
+    }
+    var showAboutDialog by remember { mutableStateOf(false) }
+
+    val isAnyTvDialogOpen = showChangelogOverlay || showAboutDialog
+    BackHandler(enabled = isAnyTvDialogOpen) {
+        if (showChangelogOverlay) {
+            showChangelogOverlay = false
+            ChangelogManager.markChangelogAsShown(context, currentVersionCode)
+        } else if (showAboutDialog) {
+            showAboutDialog = false
+        }
+    }
+
+    if (showChangelogOverlay) {
+        ChangelogPopup(
+            context = context,
+            onDismiss = {
+                showChangelogOverlay = false
+                ChangelogManager.markChangelogAsShown(context, currentVersionCode)
+            }
+        )
+    }
+
+    if (showAboutDialog) {
+        AboutVersionDialog(
+            context = context,
+            onDismiss = { showAboutDialog = false }
+        )
+    }
+
     val isDarkTheme by AppState.isDarkTheme.collectAsState()
     val externalDirs = remember { FileUtils.getExternalStorageRoots(context) }
     
@@ -1369,6 +1409,14 @@ fun TvDashboardScreen(
                                 icon = Icons.Default.Info,
                                 tint = AppConfig.ActiveGreen,
                                 onClick = onRequestAndroidDataPermission
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            DpadTvButton(
+                                text = "Sobre esta Versão & Criador",
+                                icon = Icons.Default.Info,
+                                tint = Color(0xFF5AC8FA),
+                                onClick = { showAboutDialog = true }
                             )
                             Spacer(modifier = Modifier.height(16.dp))
 
@@ -3037,4 +3085,256 @@ fun TvSplashScreen() {
             }
         }
     }
+}
+
+@Composable
+fun ChangelogPopup(
+    context: Context,
+    onDismiss: () -> Unit
+) {
+    val pInfo = remember(context) { context.packageManager.getPackageInfo(context.packageName, 0) }
+    val localVersionName = pInfo.versionName ?: "1.1.3"
+    val localVersionCode = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+        pInfo.longVersionCode.toInt()
+    } else {
+        pInfo.versionCode
+    }
+
+    val currentChangelog = ChangelogManager.changelogs.firstOrNull { it.versionCode == localVersionCode } 
+        ?: ChangelogManager.changelogs.first()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color(0xFF151517),
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    tint = AppConfig.PrimaryBlue,
+                    modifier = Modifier.size(28.dp)
+                )
+                Column {
+                    Text(
+                        text = "Novidades Instaladas!",
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Versão ${currentChangelog.versionName} • Build ${currentChangelog.versionCode}",
+                        color = Color.Gray,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Normal
+                    )
+                }
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 280.dp)
+            ) {
+                Text(
+                    text = "O aplicativo foi atualizado com sucesso por ${ChangelogManager.creatorName}! Abaixo estão as melhorias realizadas nesta versão para deixar seu Nexus ainda mais robusto:",
+                    color = Color.LightGray,
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+                
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    items(currentChangelog.highlights) { bullet ->
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "•",
+                                color = AppConfig.PrimaryBlue,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp
+                            )
+                            Text(
+                                text = bullet,
+                                color = Color.White,
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                DpadTvButton(
+                    text = "Entendi, Excelente!",
+                    icon = Icons.Default.Check,
+                    tint = Color(0xFF30D158),
+                    onClick = onDismiss,
+                    modifier = Modifier.widthIn(min = 180.dp)
+                )
+            }
+        },
+        shape = RoundedCornerShape(20.dp)
+    )
+}
+
+@Composable
+fun AboutVersionDialog(
+    context: Context,
+    onDismiss: () -> Unit
+) {
+    val pInfo = remember(context) { context.packageManager.getPackageInfo(context.packageName, 0) }
+    val localVersionName = pInfo.versionName ?: "1.1.3"
+    val localVersionCode = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+        pInfo.longVersionCode.toInt()
+    } else {
+        pInfo.versionCode
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color(0xFF151517),
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    tint = AppConfig.PrimaryBlue,
+                    modifier = Modifier.size(28.dp)
+                )
+                Column {
+                    Text(
+                        text = "Sobre esta Versão",
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Nexus Explorer Pro",
+                        color = Color.Gray,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Normal
+                    )
+                }
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 350.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp)
+                        .background(Color(0xFF232325), RoundedCornerShape(12.dp))
+                        .padding(14.dp)
+                ) {
+                    Column {
+                        Text(
+                            text = "DESENVOLVEDOR DO PROJETO",
+                            color = Color.Gray,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = ChangelogManager.creatorName,
+                            color = Color.White,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "GitHub: ${ChangelogManager.creatorGithub}",
+                            color = AppConfig.PrimaryBlue,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+
+                Text(
+                    text = "HISTÓRICO COMPLETO DE ATUALIZAÇÕES",
+                    color = Color.Gray,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    items(ChangelogManager.changelogs) { item ->
+                        Column {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Versão ${item.versionName} (${item.releaseDate})",
+                                    color = AppConfig.PrimaryBlue,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Build ${item.versionCode}",
+                                    color = Color.Gray,
+                                    fontSize = 11.sp
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            item.highlights.forEach { highlight ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(start = 6.dp, bottom = 3.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(text = "•", color = Color(0xFFFF9933), fontSize = 12.sp)
+                                    Text(text = highlight, color = Color.LightGray, fontSize = 12.sp)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                DpadTvButton(
+                    text = "Fechar",
+                    icon = Icons.Default.Close,
+                    tint = Color.Gray,
+                    onClick = onDismiss,
+                    modifier = Modifier.widthIn(min = 120.dp)
+                )
+            }
+        },
+        shape = RoundedCornerShape(20.dp)
+    )
 }
