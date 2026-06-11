@@ -1157,13 +1157,43 @@ fun TvDashboardScreen(
     }
     var showAboutDialog by remember { mutableStateOf(false) }
 
-    val isAnyTvDialogOpen = showChangelogOverlay || showAboutDialog
+    var isSidebarVisible by remember { mutableStateOf(false) }
+    val sidebarFocusRequester = remember { FocusRequester() }
+    
+    // Automatic focus transfer when the sidebar is toggled open
+    LaunchedEffect(isSidebarVisible) {
+        if (isSidebarVisible) {
+            delay(150)
+            try {
+                sidebarFocusRequester.requestFocus()
+            } catch (e: Exception) {}
+        }
+    }
+
+    var hasStandardPermissionState by remember { mutableStateOf(false) }
+    var hasAndroidDataPermissionState by remember { mutableStateOf(false) }
+    
+    LaunchedEffect(Unit) {
+        while (true) {
+            hasStandardPermissionState = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                android.os.Environment.isExternalStorageManager()
+            } else {
+                androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            }
+            hasAndroidDataPermissionState = FileUtils.hasAndroidDataPermission(context)
+            delay(2000)
+        }
+    }
+
+    val isAnyTvDialogOpen = showChangelogOverlay || showAboutDialog || isSidebarVisible
     BackHandler(enabled = isAnyTvDialogOpen) {
         if (showChangelogOverlay) {
             showChangelogOverlay = false
             ChangelogManager.markChangelogAsShown(context, currentVersionCode)
         } else if (showAboutDialog) {
             showAboutDialog = false
+        } else if (isSidebarVisible) {
+            isSidebarVisible = false
         }
     }
 
@@ -1188,7 +1218,6 @@ fun TvDashboardScreen(
     val externalDirs = remember { FileUtils.getExternalStorageRoots(context) }
     
     val bgColor = if (isDarkTheme) Color(0xFF000000) else Color(0xFFF2F2F7)
-    val sidebarColor = if (isDarkTheme) Color(0xFF1C1C1E) else Color(0xFFFFFFFF)
     val textColor = if (isDarkTheme) Color.White else Color.Black
     val textMutedColor = if (isDarkTheme) Color.Gray else Color.DarkGray
 
@@ -1197,82 +1226,113 @@ fun TvDashboardScreen(
             .fillMaxSize()
             .background(bgColor)
     ) {
-        // --- Sidebar (Locations) ---
-        Column(
-            modifier = Modifier
-                .width(260.dp)
-                .fillMaxHeight()
-                .background(sidebarColor)
-                .padding(20.dp)
+        // --- Sidebar (Locations) with modern liquid glass styling & auto-slide ---
+        androidx.compose.animation.AnimatedVisibility(
+            visible = isSidebarVisible,
+            enter = slideInHorizontally { -it } + fadeIn(),
+            exit = slideOutHorizontally { -it } + fadeOut()
         ) {
-            Text(
-                text = "Locais",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = textColor,
-                modifier = Modifier.padding(bottom = 16.dp, start = 8.dp)
-            )
-
-            TvSidebarItem(
-                text = "Na minha TV",
-                icon = Icons.Default.Home,
-                isSelected = selectedSidebarItem == "On My TV",
-                onClick = { tvBrowsingPath = null; selectedSidebarItem = "On My TV" }
-            )
-            
-            externalDirs.forEachIndexed { index, path ->
-                if (path != "/storage/emulated/0") {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    TvSidebarItem(
-                        text = "USB ${index}",
-                        icon = Icons.Default.List,
-                        isSelected = selectedSidebarItem == "USB_$index",
-                        onClick = { AppState.browserUrl.value = null; selectedSidebarItem = "USB_$index"; tvBrowsingPath = path }
+            Column(
+                modifier = Modifier
+                    .width(260.dp)
+                    .fillMaxHeight()
+                    .background(
+                        if (isDarkTheme) Color(0xE6151517) else Color(0xE6EFEFF4)
                     )
+                    .border(
+                        border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.15f)),
+                        shape = RoundedCornerShape(0.dp)
+                    )
+                    .padding(20.dp)
+            ) {
+                Text(
+                    text = "Locais",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = textColor,
+                    modifier = Modifier.padding(bottom = 16.dp, start = 8.dp)
+                )
+
+                TvSidebarItem(
+                    text = "Na minha TV",
+                    icon = Icons.Default.Home,
+                    isSelected = selectedSidebarItem == "On My TV",
+                    onClick = { 
+                        tvBrowsingPath = null 
+                        selectedSidebarItem = "On My TV"
+                        isSidebarVisible = false
+                    },
+                    modifier = Modifier.focusRequester(sidebarFocusRequester)
+                )
+                
+                externalDirs.forEachIndexed { index, path ->
+                    if (path != "/storage/emulated/0") {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        TvSidebarItem(
+                            text = "USB ${index}",
+                            icon = Icons.Default.List,
+                            isSelected = selectedSidebarItem == "USB_$index",
+                            onClick = { 
+                                AppState.browserUrl.value = null 
+                                selectedSidebarItem = "USB_$index" 
+                                tvBrowsingPath = path
+                                isSidebarVisible = false
+                            }
+                        )
+                    }
                 }
-            }
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            TvSidebarItem(
-                text = "Buscar",
-                icon = Icons.Default.Search,
-                isSelected = selectedSidebarItem == "Search",
-                onClick = { selectedSidebarItem = "Search" }
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            TvSidebarItem(
-                text = "Servidor Host",
-                icon = Icons.Default.Share,
-                isSelected = selectedSidebarItem == "Host Server",
-                onClick = { selectedSidebarItem = "Host Server" }
-            )
-            
-            Spacer(modifier = Modifier.weight(1f))
-            
-            TvSidebarItem(
-                text = "Configurações",
-                icon = Icons.Default.Settings,
-                isSelected = selectedSidebarItem == "Settings",
-                onClick = { selectedSidebarItem = "Settings" }
-            )
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            Divider(color = Color.DarkGray)
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            var metrics by remember { mutableStateOf(getSystemMetrics(context)) }
-            LaunchedEffect(Unit) {
-                while (true) {
-                    delay(5000)
-                    metrics = getSystemMetrics(context)
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                TvSidebarItem(
+                    text = "Buscar",
+                    icon = Icons.Default.Search,
+                    isSelected = selectedSidebarItem == "Search",
+                    onClick = { 
+                        selectedSidebarItem = "Search"
+                        isSidebarVisible = false
+                    }
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                TvSidebarItem(
+                    text = "Servidor Host",
+                    icon = Icons.Default.Share,
+                    isSelected = selectedSidebarItem == "Host Server",
+                    onClick = { 
+                        selectedSidebarItem = "Host Server"
+                        isSidebarVisible = false
+                    }
+                )
+                
+                Spacer(modifier = Modifier.weight(1f))
+                
+                TvSidebarItem(
+                    text = "Configurações",
+                    icon = Icons.Default.Settings,
+                    isSelected = selectedSidebarItem == "Settings",
+                    onClick = { 
+                        selectedSidebarItem = "Settings"
+                        isSidebarVisible = false
+                    }
+                )
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                Divider(color = Color.DarkGray)
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                var metrics by remember { mutableStateOf(getSystemMetrics(context)) }
+                LaunchedEffect(Unit) {
+                    while (true) {
+                        delay(5000)
+                        metrics = getSystemMetrics(context)
+                    }
                 }
+                Text(metrics.ramUsed, color = textMutedColor, fontSize = 11.sp, maxLines = 1)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(metrics.storageUsed, color = textMutedColor, fontSize = 11.sp, maxLines = 1)
             }
-            Text(metrics.ramUsed, color = textMutedColor, fontSize = 11.sp, maxLines = 1)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(metrics.storageUsed, color = textMutedColor, fontSize = 11.sp, maxLines = 1)
         }
 
         // --- Main Content Area ---
@@ -1384,33 +1444,27 @@ fun TvDashboardScreen(
                             )
                             Spacer(modifier = Modifier.height(16.dp))
 
-                            DpadTvButton(
-                                text = "Configurações do Android TV",
-                                icon = Icons.Default.Settings,
-                                tint = AppConfig.PrimaryBlue,
-                                onClick = { 
-                                    try {
-                                        context.startActivity(android.content.Intent(android.provider.Settings.ACTION_SETTINGS).apply {
-                                            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                                        })
-                                    } catch (e: Exception) {}
-                                }
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            DpadTvButton(
-                                text = "Gerenciar Permissões Padrão",
-                                icon = Icons.Default.Lock,
-                                tint = AppConfig.AccentGold,
-                                onClick = onRequestPermissions
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            DpadTvButton(
-                                text = "Permitir Acesso Completo ao Android/data",
-                                icon = Icons.Default.Info,
-                                tint = AppConfig.ActiveGreen,
-                                onClick = onRequestAndroidDataPermission
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
+                            // Standard Android permissions button: hidden once permission is granted
+                            if (!hasStandardPermissionState) {
+                                DpadTvButton(
+                                    text = "Gerenciar Permissões Padrão",
+                                    icon = Icons.Default.Lock,
+                                    tint = AppConfig.AccentGold,
+                                    onClick = onRequestPermissions
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                            }
+
+                            // Android/data permission button: hidden once permission is granted
+                            if (!hasAndroidDataPermissionState) {
+                                DpadTvButton(
+                                    text = "Permitir Acesso Completo ao Android/data",
+                                    icon = Icons.Default.Info,
+                                    tint = AppConfig.ActiveGreen,
+                                    onClick = onRequestAndroidDataPermission
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                            }
 
                             DpadTvButton(
                                 text = "Sobre esta Versão & Criador",
@@ -1419,62 +1473,7 @@ fun TvDashboardScreen(
                                 onClick = { showAboutDialog = true }
                             )
                             Spacer(modifier = Modifier.height(16.dp))
-
-                            var isUpdating by remember { mutableStateOf(false) }
-                            var updateMessage by remember { mutableStateOf("") }
-                            val scope = rememberCoroutineScope()
-
-                            DpadTvButton(
-                                text = "Procurar e Instalar Atualizações",
-                                icon = Icons.Default.Refresh,
-                                tint = Color(0xFFE91E63),
-                                onClick = {
-                                    if (!isUpdating) {
-                                        isUpdating = true
-                                        val repoOwner = "kelvinhx"
-                                        val repoName = "Android-TV-File-Explorer-Web-Video-Cast"
-                                        val artifactName = "app-debug"
-                                        
-                                        scope.launch {
-                                            updateMessage = "Verificando se há atualizações no GitHub..."
-                                            val isAvailable = Updater.isUpdateAvailable(context)
-                                            if (isAvailable) {
-                                                Updater.downloadExtractAndInstall(
-                                                    context = context,
-                                                    repoOwner = repoOwner,
-                                                    repoName = repoName,
-                                                    artifactName = artifactName,
-                                                    onProgress = { msg ->
-                                                        updateMessage = msg
-                                                        if (msg.isEmpty() || msg.startsWith("Erro") || msg.startsWith("Iniciando")) {
-                                                            if (msg.isEmpty() || msg.startsWith("Iniciando")) {
-                                                                isUpdating = false
-                                                            } else {
-                                                                scope.launch {
-                                                                    kotlinx.coroutines.delay(4000)
-                                                                    if (updateMessage == msg) {
-                                                                        isUpdating = false
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                )
-                                            } else {
-                                                updateMessage = "O aplicativo já está na versão mais recente!"
-                                                scope.launch {
-                                                    kotlinx.coroutines.delay(4000)
-                                                    isUpdating = false
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            )
                             
-                            Spacer(modifier = Modifier.height(16.dp))
-                            
-                            val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
                             val localVersionName = pInfo.versionName ?: "1.0"
                             val localVersionCode = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
                                 pInfo.longVersionCode
@@ -1488,15 +1487,53 @@ fun TvDashboardScreen(
                                 fontSize = 12.sp,
                                 modifier = Modifier.padding(top = 8.dp)
                             )
-                            
-                            if (isUpdating) {
-                                Spacer(modifier = Modifier.height(24.dp))
-                                CircularProgressIndicator(color = Color(0xFFE91E63), modifier = Modifier.size(32.dp))
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(updateMessage, color = Color.White, fontSize = 14.sp)
-                            }
                         }
                     }
+                }
+            }
+
+            // Floating "Menu Locais 🧭" Pill styled as iOS 26 Liquid Glass
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 20.dp, end = 20.dp)
+            ) {
+                var isMenuBtnFocused by remember { mutableStateOf(false) }
+                val scale by animateFloatAsState(if (isMenuBtnFocused) 1.08f else 1.0f)
+                
+                Row(
+                    modifier = Modifier
+                        .graphicsLayer { scaleX = scale; scaleY = scale }
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(
+                            if (isMenuBtnFocused) AppConfig.PrimaryBlue.copy(alpha = 0.9f)
+                            else if (isDarkTheme) Color.White.copy(alpha = 0.08f)
+                            else Color.Black.copy(alpha = 0.05f)
+                        )
+                        .border(
+                            width = if (isMenuBtnFocused) 2.dp else 1.dp,
+                            color = if (isMenuBtnFocused) Color.White else Color.White.copy(alpha = 0.15f),
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                        .onFocusChanged { isMenuBtnFocused = it.isFocused }
+                        .focusable()
+                        .clickable { isSidebarVisible = !isSidebarVisible }
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Menu,
+                        contentDescription = "Menu Locais",
+                        tint = if (isMenuBtnFocused) Color.White else if (isDarkTheme) Color.White else Color.Black,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Menu Locais",
+                        color = if (isMenuBtnFocused) Color.White else if (isDarkTheme) Color.White else Color.Black,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
             }
 
@@ -3204,8 +3241,14 @@ fun AboutVersionDialog(
         pInfo.versionCode
     }
 
+    var checkStateMessage by remember { mutableStateOf("") }
+    var isCheckingUpdates by remember { mutableStateOf(false) }
+    var updateFound by remember { mutableStateOf(false) }
+    var isDownloadingUpdate by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!isDownloadingUpdate) onDismiss() },
         containerColor = Color(0xFF151517),
         title = {
             Row(
@@ -3320,19 +3363,90 @@ fun AboutVersionDialog(
             }
         },
         confirmButton = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp),
-                contentAlignment = Alignment.CenterEnd
+            Column(
+                modifier = Modifier.fillMaxWidth()
             ) {
-                DpadTvButton(
-                    text = "Fechar",
-                    icon = Icons.Default.Close,
-                    tint = Color.Gray,
-                    onClick = onDismiss,
-                    modifier = Modifier.widthIn(min = 120.dp)
-                )
+                if (checkStateMessage.isNotEmpty()) {
+                    Text(
+                        text = checkStateMessage,
+                        color = if (updateFound) Color(0xFFE91E63) else Color.Green,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(bottom = 12.dp, start = 4.dp)
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (updateFound) {
+                        DpadTvButton(
+                            text = if (isDownloadingUpdate) "Espere..." else "Baixar e Atualizar",
+                            icon = Icons.Default.Refresh,
+                            tint = Color(0xFFE91E63),
+                            onClick = {
+                                if (!isDownloadingUpdate) {
+                                    isDownloadingUpdate = true
+                                    checkStateMessage = "Iniciando download..."
+                                    scope.launch {
+                                        val repoOwner = "kelvinhx"
+                                        val repoName = "Android-TV-File-Explorer-Web-Video-Cast"
+                                        val artifactName = "app-debug"
+                                        Updater.downloadExtractAndInstall(
+                                            context = context,
+                                            repoOwner = repoOwner,
+                                            repoName = repoName,
+                                            artifactName = artifactName,
+                                            onProgress = { msg ->
+                                                checkStateMessage = msg
+                                                if (msg.startsWith("Erro")) {
+                                                    isDownloadingUpdate = false
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
+                            },
+                            modifier = Modifier.widthIn(min = 180.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                    } else {
+                        DpadTvButton(
+                            text = if (isCheckingUpdates) "Consultando..." else "Verificar Nova Versão",
+                            icon = Icons.Default.Refresh,
+                            tint = AppConfig.PrimaryBlue,
+                            onClick = {
+                                if (!isCheckingUpdates) {
+                                    isCheckingUpdates = true
+                                    checkStateMessage = "Verificando se há atualizações no GitHub..."
+                                    scope.launch {
+                                        val available = Updater.isUpdateAvailable(context)
+                                        if (available) {
+                                            checkStateMessage = "Nova versão encontrada no repositório!"
+                                            updateFound = true
+                                        } else {
+                                            checkStateMessage = "Você já está na versão mais recente!"
+                                            updateFound = false
+                                        }
+                                        isCheckingUpdates = false
+                                    }
+                                }
+                            },
+                            modifier = Modifier.widthIn(min = 180.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                    }
+
+                    DpadTvButton(
+                        text = "Fechar",
+                        icon = Icons.Default.Close,
+                        tint = Color.Gray,
+                        onClick = { if (!isDownloadingUpdate) onDismiss() },
+                        modifier = Modifier.widthIn(min = 120.dp)
+                    )
+                }
             }
         },
         shape = RoundedCornerShape(20.dp)
