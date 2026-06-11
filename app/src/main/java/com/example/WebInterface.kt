@@ -354,61 +354,55 @@ object WebInterface {
             </div>
         </div>
 
-        <!-- Tab 2: Remote -->
-        <div id="view-remote" class="hidden">
-            <div class="px-6 text-center">
-                <h2 class="text-xl font-bold mb-1">Controle Remoto TV</h2>
-                <p class="text-xs text-[var(--ios-gray)] mb-6">Toque para controlar a Android TV</p>
+        <!-- Tab 3: Browser Cast -->
+        <div id="view-browser" class="hidden flex-col absolute top-[60px] bottom-[5px] left-0 right-0 z-40 bg-[var(--ios-bg)]">
+            
+            <div id="video-sniffer-bar" class="hidden bg-[#ff3b30] text-white px-4 py-3 text-sm flex justify-between items-center shadow-lg shrink-0 w-full rounded-b-xl border-b border-[#ff3b30]">
+                <span class="font-bold flex items-center"><i class="fa-solid fa-play-circle mr-2 animate-pulse text-lg"></i> Vídeo Encontrado!</span>
+                <button onclick="castSniffedVideo()" class="bg-white text-[#ff3b30] px-4 py-2 rounded-full font-bold shadow-sm active:opacity-70 flex items-center gap-2"><i class="fa-solid fa-tv"></i> Cast TV</button>
+            </div>
 
-                <!-- D-Pad -->
-                <div class="dpad-container">
-                    <button onclick="sendRemoteCmd('UP')" class="dpad-btn dpad-up"><i class="fa-solid fa-chevron-up"></i></button>
-                    <button onclick="sendRemoteCmd('DOWN')" class="dpad-btn dpad-down"><i class="fa-solid fa-chevron-down"></i></button>
-                    <button onclick="sendRemoteCmd('LEFT')" class="dpad-btn dpad-left"><i class="fa-solid fa-chevron-left"></i></button>
-                    <button onclick="sendRemoteCmd('RIGHT')" class="dpad-btn dpad-right"><i class="fa-solid fa-chevron-right"></i></button>
-                    <button onclick="sendRemoteCmd('OK')" class="dpad-btn dpad-ok">OK</button>
-                </div>
-
-                <!-- Auxiliary Buttons -->
-                <div class="flex justify-center gap-6 mt-8">
-                    <button onclick="sendRemoteCmd('BACK')" class="w-14 h-14 rounded-full bg-[var(--ios-card)] flex items-center justify-center text-[var(--ios-gray)]"><i class="fa-solid fa-arrow-left text-xl"></i></button>
-                    <button onclick="sendRemoteCmd('HOME')" class="w-14 h-14 rounded-full bg-[var(--ios-card)] flex items-center justify-center text-[var(--ios-gray)]"><i class="fa-solid fa-tv text-xl"></i></button>
-                    <button onclick="sendRemoteCmd('SETTINGS')" class="w-14 h-14 rounded-full bg-[var(--ios-card)] flex items-center justify-center text-[var(--ios-gray)]"><i class="fa-solid fa-gear text-xl"></i></button>
-                </div>
+            <!-- Start Page (Bookmarks/History) -->
+            <div id="browser-start-page" class="flex-1 w-full bg-[var(--ios-bg)] p-6 overflow-y-auto hidden">
+                <h2 class="text-3xl font-bold mb-6 text-white text-center">Navegador</h2>
                 
-                <!-- Volume & Media -->
-                <div class="flex justify-center gap-4 mt-8">
-                    <div class="bg-[var(--ios-card)] rounded-xl flex items-center p-1">
-                        <button onclick="sendRemoteCmd('VOL_DOWN')" class="px-4 py-2 text-xl text-[var(--ios-gray)]"><i class="fa-solid fa-volume-low"></i></button>
-                        <div class="w-[1px] h-6 bg-[rgba(255,255,255,0.1)]"></div>
-                        <button onclick="sendRemoteCmd('VOL_UP')" class="px-4 py-2 text-xl text-[var(--ios-gray)]"><i class="fa-solid fa-volume-high"></i></button>
-                    </div>
+                <h3 class="font-bold text-gray-400 mb-3 text-sm uppercase px-2">Favoritos</h3>
+                <div class="ios-list mb-8" id="bookmarks-list">
+                    <!-- Populated by JS -->
+                </div>
+
+                <h3 class="font-bold text-gray-400 mb-3 text-sm uppercase px-2">Histórico Recente</h3>
+                <div class="ios-list" id="history-list">
+                    <!-- Populated by JS -->
                 </div>
             </div>
-        </div>
 
-        <!-- Tab 3: Browser Cast -->
-        <div id="view-browser" class="hidden flex-col absolute top-[60px] bottom-[84px] left-0 right-0">
-            <div class="flex items-center gap-1 p-2 bg-[#1C1C1E] border-b border-[rgba(255,255,255,0.1)] z-10 w-full shrink-0">
-                <button onclick="document.getElementById('internal-browser').contentWindow.history.back()" class="p-2 text-[var(--ios-blue)]"><i class="fa-solid fa-chevron-left"></i></button>
-                <div class="flex-1 bg-black rounded-lg flex items-center px-3 py-1.5 border border-stone-800">
-                    <i class="fa-solid fa-lock text-xs text-[#34C759] mr-2"></i>
-                    <input type="text" id="browser-url" class="bg-transparent text-sm text-white w-full outline-none" value="https://www.google.com.br">
+            <!-- Web Frame -->
+            <div class="flex-1 relative bg-white w-full h-full overflow-hidden" id="browser-frame-container">
+                <iframe id="internal-browser" class="w-full h-full border-none absolute inset-0 bg-white" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
+                <div id="browser-loading" class="absolute inset-0 bg-[rgba(0,0,0,0.7)] flex flex-col items-center justify-center hidden z-20 backdrop-blur-md">
+                    <i class="fa-solid fa-circle-notch fa-spin text-5xl text-[var(--ios-blue)] mb-4"></i>
+                    <span class="text-[10px] font-bold tracking-widest text-[var(--ios-blue)] mt-2">CARREGANDO</span>
                 </div>
-                <button onclick="loadInternalBrowser()" class="p-2 text-[var(--ios-blue)]"><i class="fa-solid fa-arrow-rotate-right"></i></button>
-                <button onclick="castCurrentPage()" class="p-2 text-[var(--ios-blue)] ml-1"><i class="fa-solid fa-tv"></i></button>
             </div>
             
-            <div id="video-sniffer-bar" class="hidden bg-emerald-600 text-white px-3 py-2 text-xs flex justify-between items-center shadow-lg shrink-0">
-                <span class="font-bold flex items-center"><i class="fa-solid fa-video mr-1.5 animate-pulse"></i> Vídeo Detectado!</span>
-                <button onclick="castSniffedVideo()" class="bg-white text-emerald-800 px-3 py-1.5 rounded-full font-bold shadow-sm">Transmitir à TV</button>
-            </div>
-
-            <div class="flex-1 relative bg-white w-full h-full overflow-hidden">
-                <iframe id="internal-browser" class="w-full h-full border-none absolute inset-0" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
-                <div id="browser-loading" class="absolute inset-0 bg-[rgba(0,0,0,0.7)] flex flex-col items-center justify-center hidden z-20">
-                    <i class="fa-solid fa-spinner fa-spin text-4xl text-[var(--ios-blue)] mb-4"></i>
-                    <span class="text-sm font-semibold text-white tracking-wider">CARREGANDO...</span>
+            <!-- Safari iOS Bottom Bar -->
+            <div class="bg-[rgba(28,28,30,0.85)] backdrop-blur-xl border-t border-[rgba(255,255,255,0.1)] p-2 pb-[max(env(safe-area-inset-bottom),12px)] w-full shrink-0 flex flex-col pt-3">
+                <div class="flex items-center bg-[rgba(255,255,255,0.1)] rounded-xl h-12 px-3 shadow-lg flex-1 mb-2 mx-2">
+                    <button onclick="toggleStartPage()" class="text-gray-400 text-lg p-2 mr-1 active:opacity-50"><i class="fa-solid fa-book-open" id="startpage-icon"></i></button>
+                    <div class="flex-1 h-full flex items-center justify-center relative">
+                        <i class="fa-solid fa-lock text-[10px] text-gray-400 absolute left-2 top-1/2 -translate-y-1/2"></i>
+                        <input type="text" id="browser-url" class="bg-transparent text-white w-full h-full outline-none text-center text-[15px] font-medium pl-8 pr-2" value="Google" placeholder="Pesquisar ou digitar URL">
+                    </div>
+                    <button onclick="loadInternalBrowser()" class="text-gray-400 text-lg p-2 ml-1 active:opacity-50"><i class="fa-solid fa-rotate-right"></i></button>
+                </div>
+                <!-- Bottom controls -->
+                <div class="flex justify-between items-center px-6 w-full pt-2">
+                    <button onclick="document.getElementById('internal-browser').contentWindow.history.back()" class="text-[var(--ios-blue)] text-xl p-2 active:opacity-50"><i class="fa-solid fa-chevron-left"></i></button>
+                    <button onclick="document.getElementById('internal-browser').contentWindow.history.forward()" class="text-[var(--ios-blue)] text-xl p-2 active:opacity-50"><i class="fa-solid fa-chevron-right"></i></button>
+                    <button onclick="castCurrentPage()" class="text-[var(--ios-blue)] text-xl p-2 active:opacity-50 flex items-center justify-center w-10 h-10 rounded-full bg-[rgba(10,132,255,0.1)]"><i class="fa-solid fa-arrow-up-from-bracket"></i></button>
+                    <button onclick="addBookmark()" class="text-[var(--ios-blue)] text-xl p-2 active:opacity-50"><i class="fa-regular fa-bookmark" id="bookmark-icon"></i></button>
+                    <button onclick="toggleView('files')" class="text-[var(--ios-blue)] text-xl p-2 active:opacity-50"><i class="fa-regular fa-clone"></i></button>
                 </div>
             </div>
         </div>
@@ -417,17 +411,13 @@ object WebInterface {
 
     <!-- Tab Bar -->
     <div class="tab-bar">
-        <button id="tab-files" onclick="toggleView('files')" class="tab-item active">
+        <button id="tab-files" onclick="toggleView('files')" class="tab-item active" style="width: 50%;">
             <i class="fa-solid fa-folder"></i>
             <span>Navegar</span>
         </button>
-        <button id="tab-remote" onclick="toggleView('remote')" class="tab-item">
-            <i class="fa-solid fa-gamepad"></i>
-            <span>Controle</span>
-        </button>
-        <button id="tab-browser" onclick="toggleView('browser')" class="tab-item">
-            <i class="fa-solid fa-display"></i>
-            <span>Transmitir</span>
+        <button id="tab-browser" onclick="toggleView('browser')" class="tab-item" style="width: 50%;">
+            <i class="fa-solid fa-compass"></i>
+            <span>Browser Cast</span>
         </button>
     </div>
 
@@ -618,46 +608,115 @@ object WebInterface {
             activeView = view;
             
             document.getElementById('view-files').classList.add('hidden');
-            document.getElementById('view-remote').classList.add('hidden');
             document.getElementById('view-browser').classList.add('hidden');
             
             document.getElementById('tab-files').classList.remove('active');
-            document.getElementById('tab-remote').classList.remove('active');
             document.getElementById('tab-browser').classList.remove('active');
 
             if (view === 'files') {
                 document.getElementById('view-files').classList.remove('hidden');
                 document.getElementById('tab-files').classList.add('active');
                 document.getElementById('main-header').firstElementChild.textContent = "Navegar";
+                document.getElementById('main-header').style.display = "flex";
                 document.getElementById('files-toolbar').style.display = "flex";
                 fetchFiles();
-            } else if (view === 'remote') {
-                document.getElementById('view-remote').classList.remove('hidden');
-                document.getElementById('tab-remote').classList.add('active');
-                document.getElementById('main-header').firstElementChild.textContent = "Controle";
-                document.getElementById('files-toolbar').style.display = "none";
             } else if (view === 'browser') {
                 document.getElementById('view-browser').classList.remove('hidden');
                 document.getElementById('tab-browser').classList.add('active');
-                document.getElementById('main-header').firstElementChild.textContent = "Transmitir";
+                document.getElementById('main-header').style.display = "none";
                 document.getElementById('files-toolbar').style.display = "none";
                 
                 const iframe = document.getElementById('internal-browser');
                 if (!iframe.src || iframe.src === window.location.href) {
-                    loadInternalBrowser();
+                    loadStartPage();
                 }
             }
         }
 
         let sniffedVideoUrl = null;
+        let isStartPage = false;
+        
+        function toggleStartPage(forceShow = false) {
+            isStartPage = forceShow || !isStartPage;
+            if (isStartPage) {
+                document.getElementById('browser-frame-container').classList.add('hidden');
+                document.getElementById('browser-start-page').classList.remove('hidden');
+                loadStartPage();
+            } else {
+                document.getElementById('browser-frame-container').classList.remove('hidden');
+                document.getElementById('browser-start-page').classList.add('hidden');
+            }
+        }
 
         function loadInternalBrowser() {
             let url = document.getElementById('browser-url').value.trim();
             if(!url) return;
-            if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url;
+            
+            // Allow searching with duckduckgo
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                if(url.includes('.') && !url.includes(' ')) {
+                    url = 'https://' + url;
+                } else {
+                    url = 'https://lite.duckduckgo.com/lite/?q=' + encodeURIComponent(url);
+                }
+            }
+            
             document.getElementById('browser-url').value = url;
+            
+            toggleStartPage(false);
+            
             document.getElementById('browser-loading').classList.remove('hidden');
             document.getElementById('internal-browser').src = '/api/proxy?url=' + encodeURIComponent(url);
+            
+            saveToHistory(url);
+        }
+
+        function saveToHistory(url) {
+            let history = JSON.parse(localStorage.getItem('browser_history') || '[]');
+            history = history.filter(item => item !== url); // Remove duplicate
+            history.unshift(url);
+            if(history.length > 20) history.pop();
+            localStorage.setItem('browser_history', JSON.stringify(history));
+        }
+
+        function addBookmark() {
+            let url = document.getElementById('browser-url').value.trim();
+            if(!url || !url.startsWith('http')) return;
+            let bookmarks = JSON.parse(localStorage.getItem('browser_bookmarks') || '[]');
+            
+            const idx = bookmarks.indexOf(url);
+            if(idx > -1) {
+                bookmarks.splice(idx, 1);
+                document.getElementById('bookmark-icon').className = "fa-regular fa-bookmark";
+                showNotification("Removido dos favoritos");
+            } else {
+                bookmarks.unshift(url);
+                document.getElementById('bookmark-icon').className = "fa-solid fa-bookmark";
+                showNotification("Adicionado aos favoritos!");
+            }
+            localStorage.setItem('browser_bookmarks', JSON.stringify(bookmarks));
+        }
+
+        function loadStartPage() {
+            let bookmarks = JSON.parse(localStorage.getItem('browser_bookmarks') || '[]');
+            let history = JSON.parse(localStorage.getItem('browser_history') || '[]');
+            
+            const bList = document.getElementById('bookmarks-list');
+            bList.innerHTML = bookmarks.length === 0 ? '<div class="p-4 text-center text-gray-500 text-sm">Nenhum favorito</div>' : '';
+            bookmarks.forEach(url => {
+                bList.innerHTML += '<div onclick="openUrl(\'' + url + '\')" class="ios-list-item justify-between cursor-pointer"><span class="truncate pr-4">' + url + '</span><i class="fa-solid fa-chevron-right text-gray-500"></i></div>';
+            });
+
+            const hList = document.getElementById('history-list');
+            hList.innerHTML = history.length === 0 ? '<div class="p-4 text-center text-gray-500 text-sm">Nenhum histórico</div>' : '';
+            history.forEach(url => {
+                hList.innerHTML += '<div onclick="openUrl(\'' + url + '\')" class="ios-list-item justify-between cursor-pointer"><span class="truncate pr-4">' + url + '</span><i class="fa-solid fa-chevron-right text-gray-500"></i></div>';
+            });
+        }
+        
+        function openUrl(url) {
+            document.getElementById('browser-url').value = url;
+            loadInternalBrowser();
         }
 
         document.getElementById('internal-browser').addEventListener('load', function() {

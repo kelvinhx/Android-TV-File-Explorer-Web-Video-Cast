@@ -88,6 +88,7 @@ fun BrowserScreen(
                         setSupportZoom(true)
                         builtInZoomControls = true
                         displayZoomControls = false
+                        setSupportMultipleWindows(false) // Disable popups
                         userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
                     }
 
@@ -189,17 +190,36 @@ fun BrowserScreen(
                             request: WebResourceRequest?
                         ): WebResourceResponse? {
                             request?.url?.toString()?.let { urlString ->
-                                // Simple Ad / Pop-up blocker logic
+                                val lowerUrl = urlString.lowercase()
+                                
+                                // Extensive Ad / Pop-up / Tracker blocker logic
                                 val adDomains = listOf(
-                                    "googlesyndication.com",
-                                    "adservice.google.com",
-                                    "doubleclick.net",
-                                    "adnxs.com",
-                                    "outbrain.com",
-                                    "taboola.com"
+                                    "googlesyndication.com", "adservice.google.com", "doubleclick.net",
+                                    "adnxs.com", "outbrain.com", "taboola.com", "popads.net",
+                                    "propellerads.com", "adsterra.com", "onclickads.net",
+                                    "exoclick.com", "criteo.com", "adroll.com", "quantserve.com",
+                                    "scorecardresearch.com", "zedo.com", "yieldmanager.com",
+                                    "pubmatic.com", "rubiconproject.com", "appnexus.com",
+                                    "amazon-adsystem.com", "rlcdn.com", "adform.net",
+                                    "bidswitch.net", "casalemedia.com", "crwdcntrl.net",
+                                    "demdex.net", "bluekai.com", "mathtag.com",
+                                    "mxptint.net", "openx.net", "adskeeper.co.uk",
+                                    "mgid.com", "revcontent.com", "adblade.com",
+                                    "sharethrough.com", "teads.tv", "spotxchange.com",
+                                    "tremorhub.com", "vungle.com", "unityads.unity3d.com",
+                                    "chartboost.com", "inmobi.com", "startappexchange.com",
+                                    "adcolony.com", "tapjoy.com", "mocean.mobi",
+                                    "smaato.net", "inner-active.mobi", "ads.", "analytics."
                                 )
-                                if (adDomains.any { urlString.contains(it) }) {
-                                    return WebResourceResponse("text/plain", "UTF-8", null)
+                                
+                                val isPopupOrTracking = lowerUrl.contains("/popup") || 
+                                                        lowerUrl.contains("/click") ||
+                                                        lowerUrl.contains("tracking") ||
+                                                        lowerUrl.contains("banner") ||
+                                                        lowerUrl.contains("popunder")
+                                
+                                if (adDomains.any { lowerUrl.contains(it) } || isPopupOrTracking) {
+                                    return WebResourceResponse("text/plain", "UTF-8", java.io.ByteArrayInputStream(ByteArray(0)))
                                 }
                             }
                             return super.shouldInterceptRequest(view, request)
