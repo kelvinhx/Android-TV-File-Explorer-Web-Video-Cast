@@ -110,6 +110,9 @@ object WebInterface {
         <button id="tab-remote" onclick="toggleView('remote')" class="flex-1 py-3 text-sm font-semibold rounded-xl text-center transition bg-stone-900/40 text-stone-400 border border-transparent">
             <i class="fa-solid fa-gamepad mr-1.5"></i> D-Pad RC
         </button>
+        <button id="tab-browser" onclick="toggleView('browser')" class="flex-1 py-3 text-sm font-semibold rounded-xl text-center transition bg-stone-900/40 text-stone-400 border border-transparent">
+            <i class="fa-solid fa-globe mr-1.5"></i> Cast Web
+        </button>
     </div>
 
     <!-- MAIN VIEW: FILES & STORAGE -->
@@ -226,6 +229,30 @@ object WebInterface {
         </div>
     </div>
 
+    <!-- BROWSER / CAST VIEW -->
+    <div id="view-browser" class="hidden">
+        <div class="liquid-panel p-5 text-center mb-6">
+            <h2 class="text-md font-bold text-stone-300 mb-4 tracking-wide"><i class="fa-solid fa-earth-americas mr-1.5 text-blue-500"></i> WEB & VIDEO CASTING</h2>
+            <p class="text-xs text-stone-400 mb-4">Paste a URL here (YouTube, web page, video link) to instantly cast it to your Android TV's built-in browser. Ad-blocking is enabled on the TV.</p>
+            
+            <input type="text" id="cast-url" placeholder="https://youtube.com/..." class="w-full bg-stone-900 border border-stone-700 text-white p-3 rounded-lg text-sm mb-4 outline-none focus:border-blue-500">
+            
+            <button onclick="castUrl()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-xl shadow-lg border border-blue-400 active:scale-95 transition-all">
+                <i class="fa-solid fa-tv mr-2"></i> Cast to TV
+            </button>
+
+            <div class="mt-6 text-left">
+                <p class="text-xs font-semibold text-stone-500 mb-2 uppercase">Quick Cast Shortcuts</p>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="document.getElementById('cast-url').value='https://youtube.com'; castUrl();" class="p-2 bg-stone-800 rounded text-xs text-stone-300 border border-stone-700"><i class="fa-brands fa-youtube text-red-500"></i> YouTube</button>
+                    <button onclick="document.getElementById('cast-url').value='https://twitch.tv'; castUrl();" class="p-2 bg-stone-800 rounded text-xs text-stone-300 border border-stone-700"><i class="fa-brands fa-twitch text-purple-500"></i> Twitch</button>
+                    <button onclick="document.getElementById('cast-url').value='https://google.com'; castUrl();" class="p-2 bg-stone-800 rounded text-xs text-stone-300 border border-stone-700"><i class="fa-brands fa-google text-blue-400"></i> Google</button>
+                    <button onclick="document.getElementById('cast-url').value='https://netflix.com'; castUrl();" class="p-2 bg-stone-800 rounded text-xs text-stone-300 border border-stone-700"><i class="fa-solid fa-n text-red-600"></i> Netflix</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Long Press Haptic Context Menu -->
     <div id="context-menu" class="context-menu">
         <!-- Set context target dynamically -->
@@ -274,18 +301,63 @@ object WebInterface {
         function toggleView(view) {
             doVibrate(30);
             activeView = view;
+            
+            // Hide all
+            document.getElementById('view-files').classList.add('hidden');
+            document.getElementById('view-remote').classList.add('hidden');
+            document.getElementById('view-browser').classList.add('hidden');
+            
+            // Reset tabs
+            const inactiveClass = "flex-1 py-3 text-sm font-semibold rounded-xl text-center transition bg-stone-900/40 text-stone-400 border border-transparent";
+            const activeClass = "flex-1 py-3 text-sm font-semibold rounded-xl text-center transition bg-white/10 text-white border border-white/5 shadow";
+            
+            document.getElementById('tab-files').className = inactiveClass;
+            document.getElementById('tab-remote').className = inactiveClass;
+            document.getElementById('tab-browser').className = inactiveClass;
+
             if (view === 'files') {
                 document.getElementById('view-files').classList.remove('hidden');
-                document.getElementById('view-remote').classList.add('hidden');
-                document.getElementById('tab-files').className = "flex-1 py-3 text-sm font-semibold rounded-xl text-center transition bg-white/10 text-white border border-white/5 shadow";
-                document.getElementById('tab-remote').className = "flex-1 py-3 text-sm font-semibold rounded-xl text-center transition bg-stone-900/40 text-stone-400 border border-transparent";
+                document.getElementById('tab-files').className = activeClass;
                 fetchFiles();
-            } else {
-                document.getElementById('view-files').classList.add('hidden');
+            } else if (view === 'remote') {
                 document.getElementById('view-remote').classList.remove('hidden');
-                document.getElementById('tab-remote').className = "flex-1 py-3 text-sm font-semibold rounded-xl text-center transition bg-white/10 text-white border border-white/5 shadow";
-                document.getElementById('tab-files').className = "flex-1 py-3 text-sm font-semibold rounded-xl text-center transition bg-stone-900/40 text-stone-400 border border-transparent";
+                document.getElementById('tab-remote').className = activeClass;
+            } else if (view === 'browser') {
+                document.getElementById('view-browser').classList.remove('hidden');
+                document.getElementById('tab-browser').className = activeClass;
             }
+        }
+
+        function castUrl() {
+            doVibrate(50);
+            const urlInput = document.getElementById('cast-url');
+            let url = urlInput.value.trim();
+            if (!url) {
+                alert("Please enter a URL first.");
+                return;
+            }
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                url = 'https://' + url;
+            }
+            
+            fetch('/api/cast', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: url })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert("Casting to TV! Look at the Android screen.");
+                    urlInput.value = "";
+                } else {
+                    alert("Casting failed: " + data.message);
+                }
+            })
+            .catch(err => {
+                console.error("Cast API error", err);
+                alert("Error communicating with TV.");
+            });
         }
 
         function fetchFiles() {

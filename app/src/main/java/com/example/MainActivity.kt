@@ -50,6 +50,12 @@ import com.example.ui.theme.MyApplicationTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
+import com.example.BrowserScreen
+import kotlinx.coroutines.flow.MutableStateFlow
+
+object AppState {
+    val browserUrl = MutableStateFlow<String?>(null)
+}
 
 class MainActivity : ComponentActivity() {
 
@@ -64,18 +70,27 @@ class MainActivity : ComponentActivity() {
         startNexusService()
 
         setContent {
+            val browserUrl by AppState.browserUrl.collectAsState()
+
             MyApplicationTheme {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     containerColor = AppConfig.BackgroundDark
                 ) { innerPadding ->
-                    TvDashboardScreen(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding),
-                        onToggleServer = { toggleNexusService() },
-                        onRequestPermissions = { triggerPermissionRequest() }
-                    )
+                    if (browserUrl != null) {
+                        BrowserScreen(
+                            initialUrl = browserUrl!!,
+                            onClose = { AppState.browserUrl.value = null }
+                        )
+                    } else {
+                        TvDashboardScreen(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(innerPadding),
+                            onToggleServer = { toggleNexusService() },
+                            onRequestPermissions = { triggerPermissionRequest() }
+                        )
+                    }
                 }
             }
         }

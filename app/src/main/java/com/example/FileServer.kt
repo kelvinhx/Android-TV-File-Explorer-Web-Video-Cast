@@ -143,6 +143,20 @@ class FileServer(private val context: Context) {
                         }
                     }
 
+                    // Open Browser to cast video or webpage
+                    post("/api/cast") {
+                        val requestBody = call.receiveText()
+                        val json = JSONObject(requestBody)
+                        val url = json.optString("url")
+                        if (url.isNotEmpty()) {
+                            Logger.log("Casting URL to TV browser: $url")
+                            AppState.browserUrl.value = url
+                            call.respondText(JSONObject().put("status", "success").toString(), ContentType.Application.Json)
+                        } else {
+                            call.respondText(JSONObject().put("status", "error").put("message", "URL missing").toString(), ContentType.Application.Json)
+                        }
+                    }
+
                     // Native operations actions (MKDIR, DELETE, RENAME)
                     post("/api/action") {
                         val requestBody = call.receiveText()
