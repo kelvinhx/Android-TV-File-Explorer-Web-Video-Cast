@@ -54,7 +54,17 @@ object FileUtils {
         val results = mutableListOf<UnifiedFile>()
         val q = query.lowercase().trim()
         if (q.isEmpty()) return@withContext results
-        
+
+        val audioExtensions = setOf("mp3", "wav", "flac", "ogg", "m4a", "aac", "mid", "wma", "opus")
+        val videoExtensions = setOf("mp4", "mkv", "avi", "mov", "m3u8", "webm", "flv", "3gp", "ts")
+        val imageExtensions = setOf("jpg", "jpeg", "png", "webp", "gif", "bmp")
+        val documentExtensions = setOf("pdf", "epub", "txt", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "xml", "json", "html", "css", "js", "kt")
+
+        val targetAudio = q == "category_audio" || q == "musicas" || q == "músicas" || q == "audio" || q == "áudio"
+        val targetVideo = q == "category_videos" || q == "videos" || q == "vídeos" || q == "video"
+        val targetImage = q == "category_images" || q == "fotos" || q == "foto" || q == "imagens" || q == "imagem"
+        val targetDocs = q == "category_documents" || q == "documentos" || q == "documento" || q == "texto" || q == "text" || q == "docs"
+
         val isExtensionSearch = q.startsWith(".") || listOf("mp3", "apk", "pdf", "mp4", "jpg", "png", "zip", "rar", "mkv").contains(q)
         val extQuery = if (q.startsWith(".")) q.substring(1) else q
 
@@ -70,9 +80,18 @@ object FileUtils {
                     .forEach { f ->
                         if (!f.isDirectory) {
                             val fName = f.name.lowercase()
-                            if (fName.contains(q)) {
-                                results.add(UnifiedFile(f.name, f.absolutePath, f.isDirectory, f.length(), f.extension))
-                            } else if (isExtensionSearch && f.extension.lowercase() == extQuery) {
+                            val fExt = f.extension.lowercase()
+                            
+                            var matches = fName.contains(q)
+                            if (!matches) {
+                                if (targetAudio && audioExtensions.contains(fExt)) matches = true
+                                else if (targetVideo && videoExtensions.contains(fExt)) matches = true
+                                else if (targetImage && imageExtensions.contains(fExt)) matches = true
+                                else if (targetDocs && documentExtensions.contains(fExt)) matches = true
+                                else if (isExtensionSearch && fExt == extQuery) matches = true
+                            }
+                            
+                            if (matches) {
                                 results.add(UnifiedFile(f.name, f.absolutePath, f.isDirectory, f.length(), f.extension))
                             }
                             if (results.size >= 150) return@withContext results

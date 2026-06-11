@@ -69,6 +69,7 @@ object AppState {
     val isDarkTheme = MutableStateFlow(true)
     val isGridLayout = MutableStateFlow(true)
     val tvSearchQuery = MutableStateFlow("")
+    val tvClipboardFile = MutableStateFlow<UnifiedFile?>(null)
 }
 
 class MainActivity : ComponentActivity() {
@@ -998,11 +999,11 @@ fun TvHomeDashboardScreen(
                 )
 
                 val categories = listOf(
-                    Triple("Vídeos", "mp4", Color(0xFFFF453A)),
-                    Triple("Músicas", "mp3", Color(0xFF30D158)),
-                    Triple("Fotos", "jpg", Color(0xFFFF9F0A)),
+                    Triple("Vídeos", "category_videos", Color(0xFFFF453A)),
+                    Triple("Músicas", "category_audio", Color(0xFF30D158)),
+                    Triple("Fotos", "category_images", Color(0xFFFF9F0A)),
                     Triple("APKs", "apk", Color(0xFFBF5AF2)),
-                    Triple("Documentos", "pdf", Color(0xFF64D2FF)),
+                    Triple("Documentos", "category_documents", Color(0xFF64D2FF)),
                     Triple("Downloads", "Download", Color(0xFF0A84FF))
                 )
 
@@ -1379,6 +1380,15 @@ fun TvDashboardScreen(
                                         selectedSidebarItem = "On My TV"
                                     }
                                     tvBrowsingPath = null
+                                },
+                                isSidebarVisible = isSidebarVisible,
+                                onRequestSidebarFocus = {
+                                    try {
+                                        sidebarFocusRequester.requestFocus()
+                                    } catch (e: Exception) {}
+                                },
+                                onPathChanged = { newPath ->
+                                    tvBrowsingPath = newPath
                                 }
                             )
                         }
@@ -1403,7 +1413,13 @@ fun TvDashboardScreen(
                 }
                 selectedSidebarItem == "Search" -> {
                     if (hasStoragePermission) {
-                        TvSearchScreen(context = context)
+                        TvSearchScreen(
+                            context = context,
+                            onNavigateToFolder = { path ->
+                                tvBrowsingPath = path
+                                selectedSidebarItem = "On My TV"
+                            }
+                        )
                     } else {
                         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -1725,7 +1741,10 @@ fun IosFileIcon(modifier: Modifier = Modifier, extension: String) {
 }
 
 @Composable
-fun TvSearchScreen(context: Context) {
+fun TvSearchScreen(
+    context: Context,
+    onNavigateToFolder: ((String) -> Unit)? = null
+) {
     var query by remember { mutableStateOf("") }
     val globalSearchQuery by AppState.tvSearchQuery.collectAsState()
     
@@ -1743,6 +1762,42 @@ fun TvSearchScreen(context: Context) {
     val textColor = if (isDarkTheme) Color.White else Color.Black
     var fileToPlay by remember { mutableStateOf<UnifiedFile?>(null) }
 
+    // Dialog state management for Search manipulations
+    var fileToManage by remember { mutableStateOf<UnifiedFile?>(null) }
+    var showContextMenu by remember { mutableStateOf(false) }
+
+    var fileToRename by remember { mutableStateOf<UnifiedFile?>(null) }
+    var showRenameDialog by remember { mutableStateOf(false) }
+    var renameNameText by remember { mutableStateOf("") }
+
+    var fileToDelete by remember { mutableStateOf<UnifiedFile?>(null) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
+    var refreshKey by remember { mutableStateOf(0) }
+    val coroutineScope = rememberCoroutineScope()
+    var isProcessing by remember { mutableStateOf(false) }
+    var processingText by remember { mutableStateOf("") }
+
+    val handleAction: (String, suspend () -> Boolean) -> Unit = { text, action ->
+        coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            isProcessing = true
+            processingText = text
+            val success = action()
+            kotlinx.coroutines.delay(300) // minimum loading duration for visual feedback
+            isProcessing = false
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                if (success) {
+                    Logger.log("Ação '$text' concluída.")
+                    android.widget.Toast.makeText(context, "Concluído: $text", android.widget.Toast.LENGTH_SHORT).show()
+                } else {
+                    Logger.log("Falha na ação '$text'.")
+                    android.widget.Toast.makeText(context, "Falha: $text", android.widget.Toast.LENGTH_LONG).show()
+                }
+                refreshKey++
+            }
+        }
+    }
+
     LaunchedEffect(Unit) {
         delay(150)
         try {
@@ -1750,7 +1805,7 @@ fun TvSearchScreen(context: Context) {
         } catch (e: Exception) {}
     }
 
-    LaunchedEffect(query) {
+    LaunchedEffect(query, refreshKey) {
         if (query.trim().isEmpty()) {
             results = null
             return@LaunchedEffect
@@ -1805,20 +1860,16 @@ fun TvSearchScreen(context: Context) {
                                 file = file,
                                 onClick = {
                                     if (file.isDirectory) {
-                                        // cannot navigate easily here, so we do nothing for now
-                                        // or could set AppState.browserUrl... no, File Browser uses state
+                                        onNavigateToFolder?.invoke(file.absolutePath)
                                     } else {
-                                        val intent = Intent(Intent.ACTION_VIEW)
-                                        intent.setDataAndType(Uri.fromFile(java.io.File(file.absolutePath)), "*/*")
-                                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
-                                        try {
-                                            context.startActivity(intent)
-                                        } catch (e: Exception) {
-                                            fileToPlay = file
-                                        }
+                                        fileToManage = file
+                                        showContextMenu = true
                                     }
                                 },
-                                onLongClick = {}
+                                onLongClick = {
+                                    fileToManage = file
+                                    showContextMenu = true
+                                }
                             )
                         }
                     }
@@ -1834,6 +1885,214 @@ fun TvSearchScreen(context: Context) {
     if (fileToPlay != null) {
         InternalMediaViewer(file = fileToPlay!!, onClose = { fileToPlay = null })
     }
+
+    // Context Menu Dialog
+    if (showContextMenu && fileToManage != null) {
+        AlertDialog(
+            onDismissRequest = { showContextMenu = false },
+            containerColor = Color(0xFF1C1C1E),
+            title = {
+                Text(
+                    text = fileToManage!!.name,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    val descStr = if (fileToManage!!.isDirectory) "Pasta" else "Arquivo • ${formatTvFileSize(fileToManage!!.length)}"
+                    Text(text = descStr, color = Color.Gray, fontSize = 14.sp)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    val openText = if (fileToManage!!.isDirectory) "Entrar na Pasta" else "Abrir Arquivo App Externo"
+                    DpadTvButton(
+                        text = openText,
+                        icon = Icons.Default.PlayArrow,
+                        tint = AppConfig.ActiveGreen,
+                        onClick = {
+                            showContextMenu = false
+                            if (fileToManage!!.isDirectory) {
+                                onNavigateToFolder?.invoke(fileToManage!!.absolutePath)
+                            } else {
+                                FileUtils.openFile(context, fileToManage!!.absolutePath)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    
+                    if (!fileToManage!!.isDirectory) {
+                        DpadTvButton(
+                            text = "Mini Player",
+                            icon = Icons.Default.Star,
+                            tint = Color(0xFFE91E63),
+                            onClick = {
+                                fileToPlay = fileToManage
+                                showContextMenu = false
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    
+                    DpadTvButton(
+                        text = "Mover / Recortar",
+                        icon = Icons.Default.Share,
+                        tint = Color(0xFFFF9500),
+                        onClick = {
+                            AppState.tvClipboardFile.value = fileToManage
+                            showContextMenu = false
+                            Logger.log("Item copiado para a área de transferência: ${fileToManage!!.name}")
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    DpadTvButton(
+                        text = "Renomear",
+                        icon = Icons.Default.Info,
+                        tint = Color(0xFF0A84FF),
+                        onClick = {
+                            renameNameText = fileToManage!!.name
+                            fileToRename = fileToManage
+                            showContextMenu = false
+                            showRenameDialog = true
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    DpadTvButton(
+                        text = "Excluir",
+                        icon = Icons.Default.Close,
+                        tint = Color(0xFFFF3B30),
+                        onClick = {
+                            fileToDelete = fileToManage
+                            showContextMenu = false
+                            showDeleteConfirm = true
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                DpadTvButton(
+                    text = "Cancelar",
+                    icon = Icons.Default.Close,
+                    tint = Color.Gray,
+                    onClick = { showContextMenu = false }
+                )
+            }
+        )
+    }
+
+    if (showRenameDialog && fileToRename != null) {
+        AlertDialog(
+            onDismissRequest = { showRenameDialog = false },
+            containerColor = Color(0xFF1C1C1E),
+            title = { Text("Renomear Item", color = Color.White, fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text("Digite o novo nome para o item:", color = Color.Gray, fontSize = 14.sp)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    TextField(
+                        value = renameNameText,
+                        onValueChange = { renameNameText = it },
+                        textStyle = androidx.compose.ui.text.TextStyle(color = Color.White),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color(0xFF2C2C2E),
+                            unfocusedContainerColor = Color(0xFF2C2C2E),
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            cursorColor = Color.White
+                        ),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    DpadTvButton(
+                        text = "Cancelar",
+                        icon = Icons.Default.Close,
+                        tint = Color.Gray,
+                        onClick = { showRenameDialog = false }
+                    )
+                    DpadTvButton(
+                        text = "Confirmar",
+                        icon = Icons.Default.Check,
+                        tint = AppConfig.PrimaryBlue,
+                        onClick = {
+                            val target = fileToRename!!
+                            val newName = renameNameText.trim()
+                            if (newName.isNotEmpty() && newName != target.name) {
+                                handleAction("Renomear") {
+                                    FileUtils.renameUnifiedFile(context, target.absolutePath, newName)
+                                }
+                            }
+                            showRenameDialog = false
+                        }
+                    )
+                }
+            }
+        )
+    }
+
+    if (showDeleteConfirm && fileToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            containerColor = Color(0xFF1C1C1E),
+            title = { Text("Excluir Item", color = Color.White, fontWeight = FontWeight.Bold) },
+            text = {
+                Text("Tem certeza que deseja excluir '${fileToDelete!!.name}' permanentemente? Esta ação não pode ser desfeita.", color = Color.LightGray, fontSize = 14.sp)
+            },
+            confirmButton = {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    DpadTvButton(
+                        text = "Cancelar",
+                        icon = Icons.Default.Close,
+                        tint = Color.Gray,
+                        onClick = { showDeleteConfirm = false }
+                    )
+                    DpadTvButton(
+                        text = "Excluir",
+                        icon = Icons.Default.Close,
+                        tint = AppConfig.ErrorRed,
+                        onClick = {
+                            val target = fileToDelete!!
+                            handleAction("Excluir") {
+                                FileUtils.deleteUnifiedFile(context, target.absolutePath)
+                            }
+                            showDeleteConfirm = false
+                        }
+                    )
+                }
+            }
+        )
+    }
+
+    // Loading overlay
+    if (isProcessing) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.5f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1C1C1E)),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.padding(32.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    CircularProgressIndicator(color = AppConfig.PrimaryBlue)
+                    Text("$processingText...", color = Color.White, fontWeight = FontWeight.Medium)
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -1841,8 +2100,12 @@ fun TvFilesBrowser(
     context: Context,
     basePath: String = "/storage/emulated/0",
     onRequestAndroidDataPermission: () -> Unit,
-    onBackToDashboard: (() -> Unit)? = null
+    onBackToDashboard: (() -> Unit)? = null,
+    isSidebarVisible: Boolean = false,
+    onRequestSidebarFocus: (() -> Unit)? = null,
+    onPathChanged: ((String) -> Unit)? = null
 ) {
+    val backButtonFocusRequester = remember { FocusRequester() }
     var currentPath by remember { mutableStateOf(basePath) }
     
     // Reset path when base changes
@@ -1895,7 +2158,7 @@ fun TvFilesBrowser(
     var fileToDelete by remember { mutableStateOf<UnifiedFile?>(null) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
-    var clipboardFile by remember { mutableStateOf<UnifiedFile?>(null) }
+    val clipboardFile by AppState.tvClipboardFile.collectAsState()
 
     BackHandler(enabled = true) {
         if (showContextMenu) {
@@ -1950,10 +2213,13 @@ fun TvFilesBrowser(
                         }
                         if (parent.isNotEmpty()) {
                             currentPath = parent
+                            onPathChanged?.invoke(parent)
                         } else {
                             currentPath = "/storage/emulated/0"
+                            onPathChanged?.invoke("/storage/emulated/0")
                         }
-                    }
+                    },
+                    modifier = Modifier.focusRequester(backButtonFocusRequester)
                 )
                 Spacer(modifier = Modifier.width(16.dp))
             } else if (onBackToDashboard != null) {
@@ -1963,7 +2229,8 @@ fun TvFilesBrowser(
                     tint = AppConfig.PrimaryBlue,
                     onClick = {
                         onBackToDashboard()
-                    }
+                    },
+                    modifier = Modifier.focusRequester(backButtonFocusRequester)
                 )
                 Spacer(modifier = Modifier.width(16.dp))
             }
@@ -2004,7 +2271,7 @@ fun TvFilesBrowser(
                         handleAction("Mover para cá") {
                             FileUtils.moveUnifiedFile(context, src.absolutePath, currentPath, src.name)
                         }
-                        clipboardFile = null
+                        AppState.tvClipboardFile.value = null
                     }
                 )
                 Spacer(modifier = Modifier.width(8.dp))
@@ -2012,7 +2279,7 @@ fun TvFilesBrowser(
                     text = "Cancelar",
                     icon = Icons.Default.Close,
                     tint = AppConfig.ErrorRed,
-                    onClick = { clipboardFile = null }
+                    onClick = { AppState.tvClipboardFile.value = null }
                 )
             }
         }
@@ -2089,6 +2356,14 @@ fun TvFilesBrowser(
                                 onClick = {
                                     if (file.isDirectory) {
                                         currentPath = file.absolutePath
+                                        onPathChanged?.invoke(file.absolutePath)
+                                        if (isSidebarVisible) {
+                                            onRequestSidebarFocus?.invoke()
+                                        } else {
+                                            try {
+                                                backButtonFocusRequester.requestFocus()
+                                            } catch (e: Exception) {}
+                                        }
                                     } else {
                                         fileToManage = file
                                         showContextMenu = true
@@ -2112,6 +2387,14 @@ fun TvFilesBrowser(
                                 onClick = {
                                     if (file.isDirectory) {
                                         currentPath = file.absolutePath
+                                        onPathChanged?.invoke(file.absolutePath)
+                                        if (isSidebarVisible) {
+                                            onRequestSidebarFocus?.invoke()
+                                        } else {
+                                            try {
+                                                backButtonFocusRequester.requestFocus()
+                                            } catch (e: Exception) {}
+                                        }
                                     } else {
                                         fileToManage = file
                                         showContextMenu = true
@@ -2184,7 +2467,7 @@ fun TvFilesBrowser(
                         icon = Icons.Default.Share,
                         tint = Color(0xFFFF9500),
                         onClick = {
-                            clipboardFile = fileToManage
+                            AppState.tvClipboardFile.value = fileToManage
                             showContextMenu = false
                             Logger.log("Item copiado para a área de transferência: ${fileToManage!!.name}")
                         },
@@ -2524,7 +2807,7 @@ fun TvFileGridItem(file: UnifiedFile, onClick: () -> Unit, onLongClick: () -> Un
                 IosFolderIcon(modifier = Modifier.size(54.dp))
             } else {
                 val ext = file.extension
-                if (ext in listOf("jpg", "jpeg", "png", "webp", "gif")) {
+                if (ext in listOf("jpg", "jpeg", "png", "webp", "gif", "bmp")) {
                     val model = if (file.uriString != null) Uri.parse(file.uriString) else File(file.absolutePath)
                     coil.compose.AsyncImage(
                         model = model,
@@ -2613,7 +2896,7 @@ fun TvFileListItem(file: UnifiedFile, onClick: () -> Unit, onLongClick: () -> Un
                 IosFolderIcon(modifier = Modifier.size(40.dp))
             } else {
                 val ext = file.extension
-                if (ext in listOf("jpg", "jpeg", "png", "webp", "gif")) {
+                if (ext in listOf("jpg", "jpeg", "png", "webp", "gif", "bmp")) {
                     val model = if (file.uriString != null) Uri.parse(file.uriString) else File(file.absolutePath)
                     coil.compose.AsyncImage(
                         model = model,
