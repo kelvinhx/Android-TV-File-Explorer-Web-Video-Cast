@@ -1,12 +1,12 @@
 {
-  "versionCode": 7,
-  "versionName": "1.1.5",
+  "versionCode": 8,
+  "versionName": "1.1.6",
   "buildDate": "11/06/2026",
-  "buildTime": "16:35",
-  "buildDateTime": "2026-06-11T23:35:00Z",
+  "buildTime": "17:06",
+  "buildDateTime": "2026-06-12T00:06:00Z",
   "changelog": [
-    "Sistema de Atualizações Ultrarrobusto: Inclusão do botão 'Forçar Atualização (Bypass)' para permitir baixar e instalar a build mais recente diretamente do GitHub caso ocorram falhas de conexão ou checagem de versão.",
-    "Estabilização dos identificadores de build e de versão para evitar regressões nas atualizações da sua Android TV.",
-    "Melhorias no layout de retorno do foco inteligente para uma navegação TV d-pad perfeita."
+    "Refactoring de Integridade Técnica: Varredura completa no projeto com cruzamento de arquivos para identificar falhas estruturais, e validação rigorosa de sintaxe semântica e do fluxo entre telas.",
+    "Correção de pequenos alertas de compilação, ortografia técnica de mensagens e segurança do ciclo de vida dos processos secundários.",
+    "Padronização e automação obrigatória da atualização dos arquivos de release e notas de atualização a cada compilação de build na plataforma."
   ]
 }

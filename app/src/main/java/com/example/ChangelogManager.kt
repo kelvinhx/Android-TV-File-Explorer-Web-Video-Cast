@@ -20,6 +20,16 @@ object ChangelogManager {
 
     val changelogs = listOf(
         VersionChangelog(
+            versionName = "1.1.6",
+            versionCode = 8,
+            releaseDate = "11 de Junho de 2026 (17:06)",
+            highlights = listOf(
+                "Varredura de integridade de arquivos do projeto para evitar inconsistências semânticas e falhas estruturais.",
+                "Consolidação da automação de Notas de Atualização e sincronismo contínuo de metadados.",
+                "Compilação otimizada para melhor velocidade de execução na Android TV e uso seguro de fluxos de eventos."
+            )
+        ),
+        VersionChangelog(
             versionName = "1.1.5",
             versionCode = 7,
             releaseDate = "11 de Junho de 2026 (16:35)",

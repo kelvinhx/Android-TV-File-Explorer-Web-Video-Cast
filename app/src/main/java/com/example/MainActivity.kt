@@ -1089,7 +1089,7 @@ fun TvDashboardScreen(
     var showUpdateDialog by remember { mutableStateOf(false) }
     var autoUpdatingMessage by remember { mutableStateOf("") }
     var isAutoUpdating by remember { mutableStateOf(false) }
-    var remoteVersionName by remember { mutableStateOf("1.1.5") }
+    var remoteVersionName by remember { mutableStateOf("1.1.6") }
     var remoteChangelogLines by remember { mutableStateOf<List<String>>(emptyList()) }
     val scope = rememberCoroutineScope()
 
@@ -1098,7 +1098,7 @@ fun TvDashboardScreen(
             try {
                 val remote = Updater.getRemoteVersionInfo()
                 if (remote != null) {
-                    remoteVersionName = remote.optString("versionName", "1.1.5")
+                    remoteVersionName = remote.optString("versionName", "1.1.6")
                     val arr = remote.optJSONArray("changelog")
                     if (arr != null) {
                         val list = mutableListOf<String>()

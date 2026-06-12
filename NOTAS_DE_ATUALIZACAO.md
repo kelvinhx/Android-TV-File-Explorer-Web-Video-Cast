@@ -2,6 +2,10 @@
 
 Aqui você encontra o registro histórico de atualizações e aperfeiçoamentos do Nexus Explorer Pro.
 
+## [1.1.6] - 11/06/2026 17:06
+- **Refactoring de Integridade Técnica**: Cruzamento profundo e auditoria de arquivos de código para eliminar inconsistências. Validação semântica e correção de pequenos avisos do compilador Kotlin.
+- **Automação de Release**: Padronização estrita de controle de versão, incrementando sincronizadamente as configurações de Build, os metadados do `version-check.json`, o changelog dinâmico do app, os fallbacks do atualizador e os logs históricos de modificações.
+
 ## [1.1.5] - 11/06/2026 16:35
 - **Sistema de Atualizações Ultrarrobusto**: Adicionado o mecanismo de "Forçar Atualização (Bypass)" direto na janela de configurações e versão. Isso permite baixar o APK mais recente de forma direta no GitHub caso ocorra qualquer dificuldade técnica ou erro com checagem de metadados, garantindo atualizações garantidas para a Android TV.
 - **Sincronização de Assinatura e Build**: Sincronia aprimorada dos identificadores estáticos internos de compilação com os arquivos manifest do projeto.
