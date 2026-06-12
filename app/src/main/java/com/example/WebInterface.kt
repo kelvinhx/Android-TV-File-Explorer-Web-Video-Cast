@@ -13,17 +13,21 @@ object WebInterface {
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
-            --liquid-bg: #090a0f;
-            --liquid-card: rgba(26, 28, 36, 0.55);
-            --liquid-card-hover: rgba(50, 54, 70, 0.75);
+            --liquid-bg: #08090d;
+            --liquid-card: rgba(26, 30, 46, 0.5);
+            --liquid-card-hover: rgba(54, 63, 94, 0.75);
             --liquid-blue: #0A84FF;
+            --ios-blue: #0A84FF;
             --liquid-gray: #ABAFB8;
             --liquid-border: rgba(255, 255, 255, 0.08);
             --liquid-tint: rgba(255, 255, 255, 0.02);
             --liquid-red: #FF3B30;
+            --liquid-green: #34C759;
+            --liquid-purple: #AF52DE;
+            --liquid-amber: #FF9500;
         }
         body {
-            background: radial-gradient(circle at 50% 10%, #171d3a 0%, #030408 80%);
+            background: radial-gradient(circle at 50% -10%, #171d3a 0%, #030408 90%);
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
             color: #FFFFFF;
             user-select: none;
@@ -34,97 +38,123 @@ object WebInterface {
             display: flex;
             flex-direction: column;
             height: 100vh;
+            transition: background 0.3s ease;
         }
         .liquid-header {
             font-weight: 800;
-            font-size: 30px;
+            font-size: 26px;
             letter-spacing: -0.5px;
-            padding: 18px 24px 12px;
-            background: rgba(10, 10, 15, 0.5);
-            backdrop-filter: blur(30px);
-            -webkit-backdrop-filter: blur(30px);
-            border-bottom: 0.5px solid var(--liquid-border);
+            padding: 16px 20px 12px;
+            background: rgba(10, 11, 16, 0.65);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border-bottom: 1px solid var(--liquid-border);
             position: sticky;
             top: 0;
             z-index: 50;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            box-shadow: 0 4px 30px rgba(0,0,0,0.15);
         }
         .liquid-list {
             background: var(--liquid-card);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
             border: 1px solid var(--liquid-border);
-            border-radius: 18px;
+            border-radius: 20px;
             margin: 0 16px 16px;
             overflow: hidden;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .liquid-list-item {
             display: flex;
             align-items: center;
-            padding: 14px 20px;
-            border-bottom: 0.5px solid var(--liquid-border);
-            transition: background 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--liquid-border);
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
         }
         .liquid-list-item:last-child {
             border-bottom: none;
         }
-        .liquid-list-item:active {
+        .liquid-list-item:active, .liquid-list-item:hover {
             background: var(--liquid-card-hover);
+            transform: scale(0.992);
         }
         
         .liquid-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-            gap: 16px 12px;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 16px;
             padding: 16px;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
+        
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(16px) scale(0.97); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        
+        .file-card {
+            animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+        
         .liquid-grid-item {
             display: flex;
             flex-direction: column;
             align-items: center;
             text-align: center;
             background: var(--liquid-card);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border: 1px solid var(--liquid-border);
-            border-radius: 18px;
-            padding: 16px 10px;
-            transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background 0.15s, box-shadow 0.2s;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+            border-radius: 22px;
+            padding: 18px 12px;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.15), background 0.25s, box-shadow 0.3s, border-color 0.25s;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.22);
+            position: relative;
+            cursor: pointer;
+        }
+        .liquid-grid-item:hover {
+            transform: translateY(-4px) scale(1.03);
+            border-color: rgba(10, 132, 255, 0.3);
+            box-shadow: 0 10px 25px rgba(10,132,255,0.15), 0 6px 20px rgba(0,0,0,0.3);
         }
         .liquid-grid-item:active {
-            transform: scale(0.93) translateY(2px);
+            transform: scale(0.95) translateY(1px);
             background: var(--liquid-card-hover);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
         
         .liquid-icon-box {
-            width: 70px;
-            height: 70px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
+            width: 72px;
+            height: 72px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 22px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 10px;
-            box-shadow: inset 0 0 10px rgba(255,255,255,0.05), 0 8px 16px rgba(0,0,0,0.3);
-            font-size: 36px;
+            margin-bottom: 12px;
+            box-shadow: inset 0 0 12px rgba(255,255,255,0.03), 0 8px 16px rgba(0,0,0,0.25);
+            font-size: 34px;
             overflow: hidden;
-            transition: transform 0.2s;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .liquid-grid-item:active .liquid-icon-box {
-            transform: scale(0.92);
+        .liquid-grid-item:hover .liquid-icon-box {
+            transform: scale(1.05) rotate(1deg);
+            background: rgba(10, 132, 255, 0.08);
+            border-color: rgba(10, 132, 255, 0.25);
         }
         .liquid-folder { color: #54c1ff; text-shadow: 0 2px 10px rgba(84,193,255,0.3); }
         .liquid-file-title {
-            font-size: 13px;
+            font-size: 13.5px;
             font-weight: 600;
             color: #F5F5F7;
-            line-height: 1.35;
+            line-height: 1.4;
             word-break: break-all;
             display: -webkit-box;
             -webkit-line-clamp: 2;
@@ -132,16 +162,21 @@ object WebInterface {
             overflow: hidden;
             width: 100%;
             padding: 0 4px;
+            transition: color 0.2s;
+        }
+        .liquid-grid-item:hover .liquid-file-title {
+            color: #54c1ff;
         }
         .liquid-file-subtitle {
             font-size: 11px;
             color: var(--liquid-gray);
-            margin-top: 4px;
+            margin-top: 5px;
             font-weight: 500;
+            letter-spacing: 0.1px;
         }
 
         .tab-bar {
-            background: rgba(20, 20, 28, 0.45);
+            background: rgba(20, 20, 28, 0.55);
             backdrop-filter: blur(30px) saturate(210%);
             -webkit-backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -153,10 +188,11 @@ object WebInterface {
             left: 50%;
             transform: translateX(-50%);
             width: 90%;
-            max-width: 400px;
+            max-width: 420px;
             border-radius: 35px;
             z-index: 100;
             box-shadow: 0 16px 40px rgba(0,0,0,0.6);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .tab-item {
             display: flex;
@@ -173,10 +209,10 @@ object WebInterface {
         .tab-item i {
             font-size: 22px;
             margin-bottom: 2px;
-            transition: transform 0.2s;
+            transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-        .tab-item:active i {
-            transform: scale(0.85);
+        .tab-item:active i, .tab-item:hover i {
+            transform: scale(1.1);
         }
         .tab-item.active {
             color: #FFFFFF;
@@ -187,42 +223,49 @@ object WebInterface {
         .toolbar {
             display: flex;
             align-items: center;
-            padding: 10px 20px;
+            padding: 12px 20px;
             background: transparent;
         }
         .toolbar-btn {
             color: var(--liquid-blue);
             font-size: 22px;
-            padding: 6px 12px;
+            padding: 8px 14px;
             background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: 14px;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: background 0.15s, transform 0.15s;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .toolbar-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-1px);
+            border-color: rgba(255, 255, 255, 0.15);
         }
         .toolbar-btn:active {
             background: rgba(255, 255, 255, 0.12);
             transform: scale(0.95);
         }
 
-        /* Context Menu */
+        /* Context Menu & Backdrop blurring */
         .context-menu {
             display: none;
             position: fixed;
-            z-index: 1000;
-            background: rgba(30, 30, 30, 0.85);
-            backdrop-filter: blur(25px);
-            -webkit-backdrop-filter: blur(25px);
-            border: 0.5px solid rgba(255, 255, 255, 0.15);
-            border-radius: 14px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-            width: 250px;
-            animation: contextReveal 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 1001;
+            background: rgba(30, 30, 36, 0.82);
+            backdrop-filter: blur(35px) saturate(180%);
+            -webkit-backdrop-filter: blur(35px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 18px;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.6), 0 0 1px rgba(255,255,255,0.2) inset;
+            width: 260px;
+            transform-origin: top left;
+            animation: contextReveal 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+            overflow: hidden;
         }
         @keyframes contextReveal {
-            from { transform: scale(0.9) translateY(10px); opacity: 0; }
+            from { transform: scale(0.92) translateY(8px); opacity: 0; }
             to { transform: scale(1) translateY(0); opacity: 1; }
         }
         .context-item {
@@ -230,31 +273,45 @@ object WebInterface {
             justify-content: space-between;
             align-items: center;
             width: 100%;
-            padding: 14px 16px;
-            font-size: 16px;
+            padding: 14px 18px;
+            font-size: 15px;
+            font-weight: 500;
+            transition: all 0.15s;
         }
-        .context-item:active {
-            background: rgba(255, 255, 255, 0.1);
+        .context-item:hover, .context-item:active {
+            background: rgba(255, 255, 255, 0.08);
+            color: #FFFFFF !important;
         }
         .context-item.danger {
             color: var(--liquid-red);
+        }
+        .context-item.danger:hover {
+            background: var(--liquid-red);
+            color: white !important;
         }
 
         .main-content {
             flex: 1;
             overflow-y: auto;
-            padding-bottom: 80px;
+            padding-bottom: 90px;
         }
 
         .search-bar {
             background: var(--liquid-card);
-            border-radius: 10px;
+            border: 1px solid var(--liquid-border);
+            border-radius: 12px;
             margin: 0 16px 16px;
-            padding: 8px 12px;
+            padding: 10px 14px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
             color: var(--liquid-gray);
+            transition: all 0.25s;
+        }
+        .search-bar:focus-within {
+            border-color: var(--liquid-blue);
+            box-shadow: 0 0 15px rgba(10, 132, 255, 0.15);
+            background: rgba(26, 30, 46, 0.7);
         }
         .search-bar input {
             background: transparent;
@@ -269,20 +326,33 @@ object WebInterface {
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.4);
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
             z-index: 200;
             display: none;
             align-items: flex-end;
+            transition: opacity 0.3s ease;
+            opacity: 0;
+        }
+        .modal-overlay.active {
+            opacity: 1;
         }
         .modal-sheet {
-            background: var(--liquid-card);
-            border-top-left-radius: 20px;
-            border-top-right-radius: 20px;
+            background: rgba(28, 30, 40, 0.95);
+            backdrop-filter: blur(35px);
+            -webkit-backdrop-filter: blur(35px);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            border-top-left-radius: 24px;
+            border-top-right-radius: 24px;
             width: 100%;
-            padding: 20px;
-            padding-bottom: calc(20px + env(safe-area-inset-bottom));
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 24px;
+            padding-bottom: calc(24px + env(safe-area-inset-bottom));
             transform: translateY(100%);
-            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
         }
         .modal-overlay.active .modal-sheet {
             transform: translateY(0);
@@ -290,8 +360,8 @@ object WebInterface {
 
         /* Remote D-Pad */
         .dpad-container {
-            width: 260px;
-            height: 260px;
+            width: 250px;
+            height: 250px;
             background: var(--liquid-card);
             border-radius: 50%;
             position: relative;
@@ -307,10 +377,11 @@ object WebInterface {
             justify-content: center;
             font-size: 24px;
             color: var(--liquid-gray);
+            transition: all 0.15s;
         }
         .dpad-btn:active {
             color: white;
-            background: rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.08);
         }
         .dpad-up { top: 0; left: 33.3%; border-radius: 50% 50% 0 0; }
         .dpad-down { bottom: 0; left: 33.3%; border-radius: 0 0 50% 50%; }
@@ -320,10 +391,33 @@ object WebInterface {
             top: 33.3%; left: 33.3%;
             border-radius: 50%;
             background: var(--liquid-bg);
-            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1);
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1), 0 4px 10px rgba(0,0,0,0.3);
             color: white;
             font-weight: 600;
             font-size: 16px;
+        }
+        .dpad-ok:active {
+            transform: scale(0.93);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Responsive Grid & Center limitations */
+        @media (min-width: 768px) {
+            .liquid-grid {
+                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+                max-width: 900px;
+                margin: 0 auto;
+            }
+            .liquid-list {
+                max-width: 900px;
+                margin-left: auto;
+                margin-right: auto;
+            }
+            .search-bar, #tv-status-bar, .toolbar {
+                max-width: 900px;
+                margin-left: auto;
+                margin-right: auto;
+            }
         }
 
         ::-webkit-scrollbar { display: none; }
