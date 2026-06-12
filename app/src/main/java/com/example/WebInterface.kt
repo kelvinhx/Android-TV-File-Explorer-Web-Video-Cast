@@ -51,6 +51,7 @@ object WebInterface {
             font-size: 26px;
             letter-spacing: -0.5px;
             padding: 16px 20px 12px;
+            padding-top: calc(env(safe-area-inset-top, 0px) + 22px);
             background: rgba(10, 11, 16, 0.65);
             backdrop-filter: blur(40px);
             -webkit-backdrop-filter: blur(40px);
@@ -1279,6 +1280,7 @@ object WebInterface {
                     } else {
                         requestOpenFile(file.path || file.absolutePath);
                     }
+                });
                 let iconClass = "fa-solid fa-file";
                 let iconColor = "text-[#8E8E93]"; // Gray
                 let isImg = false;

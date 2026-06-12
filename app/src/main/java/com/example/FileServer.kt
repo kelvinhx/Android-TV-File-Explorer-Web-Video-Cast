@@ -170,7 +170,7 @@ class FileServer(private val context: Context) {
                                     val subItems = FileUtils.listUnifiedFiles(this@FileServer.context, f.absolutePath)
                                     obj.put("sizeFormatted", "${subItems.size} itens")
                                 } else {
-                                    val subfiles = File(f.absolutePath).listFiles()
+                                    val subfiles = FileUtils.getResolvedFile(this@FileServer.context, f.absolutePath).listFiles()
                                     val count = subfiles?.size ?: 0
                                     obj.put("sizeFormatted", "$count itens")
                                 }
@@ -253,7 +253,7 @@ class FileServer(private val context: Context) {
                             }
                         }
 
-                        val file = File(targetPath)
+                        val file = FileUtils.getResolvedFile(this@FileServer.context, targetPath)
                         if (!file.exists() || file.isDirectory) {
                             call.respond(HttpStatusCode.NotFound, "File not found.")
                             return@get

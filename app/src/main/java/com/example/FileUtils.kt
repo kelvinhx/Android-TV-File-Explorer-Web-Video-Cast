@@ -91,12 +91,27 @@ object FileUtils {
     fun getResolvedFile(context: Context, path: String): File {
         val targetPath = path.replace("//", "/")
         if (targetPath.startsWith("/storage/emulated/0")) {
-            val extFile = File(targetPath)
-            try {
-                if (extFile.exists() && extFile.canRead() && extFile.canWrite()) {
-                    return extFile
-                }
-            } catch(e: Exception) {}
+            val hasPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                android.os.Environment.isExternalStorageManager()
+            } else {
+                androidx.core.content.ContextCompat.checkSelfPermission(
+                    context,
+                    android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            }
+
+            if (hasPermission) {
+                val extFile = File(targetPath)
+                try {
+                    if (extFile.exists() && extFile.canRead()) {
+                        // On Android, check if listing is actually permitted
+                        val listCount = extFile.listFiles()?.size ?: -1
+                        if (listCount >= 0 || targetPath != "/storage/emulated/0") {
+                            return extFile
+                        }
+                    }
+                } catch(e: Exception) {}
+            }
             
             val relative = targetPath.substringAfter("/storage/emulated/0").trimStart('/')
             val virtualRoot = File(context.filesDir, "virtual_storage")
