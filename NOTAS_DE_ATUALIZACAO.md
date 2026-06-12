@@ -2,6 +2,13 @@
 
 Aqui você encontra o registro histórico de atualizações e aperfeiçoamentos do Nexus Explorer Pro.
 
+## [1.2.1] - 11/06/2026 19:15
+- **Sistema Procedural de Ícones e Imagens**: Criação de um motor de renderização de sprites e desenhos de interface altamente personalizáveis (AestheticSprites) desenvolvidos em Canvas do Jetpack Compose para suportar temas claro e escuro de maneira dinâmica.
+- **Cabeçalho Elaborado na TV (TvDashboardHeroBanner)**: Atualização do layout principal da TV com um luxuoso banner de boas-vindas com linhas de constelação fluidas, medidores de integridade de sinal e bordas de vidro (glassmorphism).
+- **Decorações Técnicas de Biblioteca**: Implementação de uma fina grade conceitual de padrão cibernética atrás do texto das categorias de mídias, aperfeiçoando o preenchimento de espaço negativo.
+- **Navegador & Mídias de Alta Fidelidade**: Base de dados de pastas e tipos de arquivos no navegador central atualizada para utilizar os novos sprites procedurais, e introdução de um ecrã de som ambiente com constelação ativa e visualizadores de áudio dedicados no reprodutor.
+- **Identificadores das Builds**: Incremento sequencial da Build para número 13 e versão do aplicativo de mídias da TV unificada para a versão 1.2.1 em todos os manifestos de código, atualizadores e registros.
+
 ## [1.2.0] - 11/06/2026 18:45
 - **Revisão Completa de Codificação**: Auditoria profunda em todos os arquivos de script e layouts Jetpack Compose, organizando formatações e polindo comentários redundantes ou typos em orientações de tela.
 - **Correção de Typos e Textos**: Consertadas palavras com erros ortográficos no manual de instalação rápida do assistente de PWA do Safari para iPhones.

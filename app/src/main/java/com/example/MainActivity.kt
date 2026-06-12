@@ -604,48 +604,55 @@ fun TvDashboardCategoryCard(
             .focusable()
             .clickable { onClick() }
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Box(
+        Box(modifier = Modifier.fillMaxWidth()) {
+            AestheticSprites.CyberCategoryDecoration(
+                modifier = Modifier.matchParentSize(),
+                tintColor = color,
+                isDarkTheme = isDarkTheme
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    .size(46.dp)
-                    .clip(CircleShape)
-                    .background(color.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .padding(16.dp)
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = color,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-            Spacer(modifier = Modifier.width(16.dp))
-            Column {
-                Text(
-                    text = title,
-                    color = if (isDarkTheme) Color.White else Color.Black,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                val desc = when (title) {
-                    "Vídeos" -> "Filmes, vídeos e gravações"
-                    "Músicas" -> "Faixas de áudio e músicas"
-                    "Fotos" -> "Imagens e capturas"
-                    "APKs" -> "Instaladores de aplicativos"
-                    "Documentos" -> "PDF, TXT e documentos"
-                    else -> "Pasta de downloads"
+                Box(
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clip(CircleShape)
+                        .background(color.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = color,
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
-                Text(
-                    text = desc,
-                    color = if (isDarkTheme) Color.Gray else Color.DarkGray,
-                    fontSize = 11.sp
-                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text(
+                        text = title,
+                        color = if (isDarkTheme) Color.White else Color.Black,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    val desc = when (title) {
+                        "Vídeos" -> "Filmes, vídeos e gravações"
+                        "Músicas" -> "Faixas de áudio e músicas"
+                        "Fotos" -> "Imagens e capturas"
+                        "APKs" -> "Instaladores de aplicativos"
+                        "Documentos" -> "PDF, TXT e documentos"
+                        else -> "Pasta de downloads"
+                    }
+                    Text(
+                        text = desc,
+                        color = if (isDarkTheme) Color.Gray else Color.DarkGray,
+                        fontSize = 11.sp
+                    )
+                }
             }
         }
     }
@@ -969,18 +976,16 @@ fun TvHomeDashboardScreen(
     ) {
         item {
             Column {
-                Text(
-                    text = "Arquivos da TV",
-                    color = if (isDarkTheme) Color.White else Color.Black,
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = (-0.5).sp
+                AestheticSprites.TvDashboardHeroBanner(
+                    isDarkTheme = isDarkTheme,
+                    modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(18.dp))
                 Text(
-                    text = "Gerenciador Nexus Glass • Conectado à sua TV local",
-                    color = if (isDarkTheme) Color.Gray else Color.DarkGray,
-                    fontSize = 14.sp
+                    text = "Navegador Central",
+                    color = if (isDarkTheme) Color.LightGray else Color.DarkGray,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold
                 )
             }
         }
@@ -2991,7 +2996,7 @@ fun TvFileGridItem(file: UnifiedFile, onClick: () -> Unit, onLongClick: () -> Un
             contentAlignment = Alignment.Center
         ) {
             if (file.isDirectory) {
-                IosFolderIcon(modifier = Modifier.size(54.dp))
+                AestheticSprites.ProceduralFolderIcon(modifier = Modifier.size(56.dp), isDarkTheme = isDarkTheme)
             } else {
                 val ext = file.extension
                 if (ext in listOf("jpg", "jpeg", "png", "webp", "gif", "bmp")) {
@@ -3005,7 +3010,7 @@ fun TvFileGridItem(file: UnifiedFile, onClick: () -> Unit, onLongClick: () -> Un
                         contentScale = androidx.compose.ui.layout.ContentScale.Crop
                     )
                 } else {
-                    IosFileIcon(modifier = Modifier.size(50.dp), extension = ext)
+                    AestheticSprites.ProceduralFileIcon(modifier = Modifier.size(52.dp), extension = ext, isDarkTheme = isDarkTheme)
                 }
             }
         }
@@ -3087,7 +3092,7 @@ fun TvFileListItem(file: UnifiedFile, onClick: () -> Unit, onLongClick: () -> Un
             contentAlignment = Alignment.Center
         ) {
             if (file.isDirectory) {
-                IosFolderIcon(modifier = Modifier.size(40.dp))
+                AestheticSprites.ProceduralFolderIcon(modifier = Modifier.size(42.dp), isDarkTheme = isDark)
             } else {
                 val ext = file.extension
                 if (ext in listOf("jpg", "jpeg", "png", "webp", "gif", "bmp")) {
@@ -3099,7 +3104,7 @@ fun TvFileListItem(file: UnifiedFile, onClick: () -> Unit, onLongClick: () -> Un
                         contentScale = androidx.compose.ui.layout.ContentScale.Crop
                     )
                 } else {
-                    IosFileIcon(modifier = Modifier.size(36.dp), extension = ext)
+                    AestheticSprites.ProceduralFileIcon(modifier = Modifier.size(38.dp), extension = ext, isDarkTheme = isDark)
                 }
             }
         }
@@ -3409,26 +3414,66 @@ fun InternalMediaViewer(file: UnifiedFile, onClose: () -> Unit) {
                 contentScale = androidx.compose.ui.layout.ContentScale.Fit
             )
         } else if (isVideo || isAudio) {
-            AndroidView(
-                factory = { ctx ->
-                    android.widget.VideoView(ctx).apply {
-                        val uri = if (file.absolutePath.startsWith("http://") || file.absolutePath.startsWith("https://")) {
-                            Uri.parse(file.absolutePath)
-                        } else if (file.uriString != null) {
-                            Uri.parse(file.uriString)
-                        } else {
-                            Uri.fromFile(File(file.absolutePath))
-                        }
-                        setVideoURI(uri)
-                        setOnPreparedListener { mp ->
-                            mp.isLooping = true
-                            start()
-                        }
-                        videoViewInstance = this
+            Box(modifier = Modifier.fillMaxSize()) {
+                if (isAudio) {
+                    // Show a beautiful glowing abstract canvas visualizer
+                    AestheticSprites.ConstellationMesh(
+                        modifier = Modifier.fillMaxSize(),
+                        isDarkTheme = true
+                    )
+                    
+                    // Display glowing playing disk in the center
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier.align(Alignment.Center)
+                    ) {
+                        AestheticSprites.ProceduralFileIcon(
+                            modifier = Modifier.size(112.dp),
+                            extension = file.extension,
+                            isDarkTheme = true
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Text(
+                            text = file.name,
+                            color = Color.White,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 48.dp)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "NEXUS AUDIOMATE ACTIVE DECODING...",
+                            color = AppConfig.PrimaryBlue,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp
+                        )
                     }
-                },
-                modifier = Modifier.fillMaxSize()
-            )
+                }
+                
+                AndroidView(
+                    factory = { ctx ->
+                        android.widget.VideoView(ctx).apply {
+                            val uri = if (file.absolutePath.startsWith("http://") || file.absolutePath.startsWith("https://")) {
+                                Uri.parse(file.absolutePath)
+                            } else if (file.uriString != null) {
+                                Uri.parse(file.uriString)
+                            } else {
+                                Uri.fromFile(File(file.absolutePath))
+                            }
+                            setVideoURI(uri)
+                            setOnPreparedListener { mp ->
+                                mp.isLooping = true
+                                start()
+                            }
+                            videoViewInstance = this
+                        }
+                    },
+                    modifier = if (isAudio) Modifier.size(1.dp) else Modifier.fillMaxSize()
+                )
+            }
         } else {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(Icons.Default.Info, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(64.dp))

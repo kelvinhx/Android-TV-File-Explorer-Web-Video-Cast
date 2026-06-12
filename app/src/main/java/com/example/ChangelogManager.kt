@@ -20,6 +20,16 @@ object ChangelogManager {
 
     val changelogs = listOf(
         VersionChangelog(
+            versionName = "1.2.1",
+            versionCode = 13,
+            releaseDate = "11 de Junho de 2026 (19:15)",
+            highlights = listOf(
+                "Sistema de Ícones e Imagens Dinâmico: Lançamento de um motor de renderização de sprites e ícones altamente detalhados desenhados de forma procedural com Canvas nativo.",
+                "Ecrã de TV Elaborado & Banners: Criação de um Hero Banner de cabeçalho na TV super refinado contendo linhas de constelação animadas, status em tempo real e polimento de bordas de vidro.",
+                "Visualizador de Áudio e Som Integrado: Embutimento de um visualizador responsivo baseado no fluxo de sinal no player de mídia interna que reage elegantemente a mídias de som ambiente."
+            )
+        ),
+        VersionChangelog(
             versionName = "1.2.0",
             versionCode = 12,
             releaseDate = "11 de Junho de 2026 (18:45)",

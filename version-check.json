@@ -1,12 +1,12 @@
 {
-  "versionCode": 12,
-  "versionName": "1.2.0",
+  "versionCode": 13,
+  "versionName": "1.2.1",
   "buildDate": "11/06/2026",
-  "buildTime": "18:45",
-  "buildDateTime": "2026-06-11T18:45:00Z",
+  "buildTime": "19:15",
+  "buildDateTime": "2026-06-11T19:15:00Z",
   "changelog": [
-    "Revisão profunda da integridade de codificação: Varredura de múltiplos componentes corrigindo espaçamentos, comentários e pequenas inconsistências textuais.",
-    "Correção de typos textuais: Ajustes em guias de instrução dinâmicos de interface para garantir excelente comunicação com o usuário.",
-    "Compilação de integridade global: Validação cruzada estática confirmada impecável e com zero alertas no console do compilador."
+    "Sistema de Arquivo de Ícones e Imagens: Integração de um gerador estético de sprites de interface (AestheticSprites) desenvolvidos em Canvas nativo no Jetpack Compose.",
+    "Banners e Elementos Estéticos TV: Implantação de um luxuoso cabeçalho de TV (Hero Banner) animado com linhas de constelações lógicas e fluxo de elétrons em tempo real.",
+    "Aprimoramento End-to-End: Atualização dos ícones do gerenciador de arquivos e embutimento de um visualizador interativo de som ambiente no reprodutor de mídias."
   ]
 }
