@@ -1,12 +1,12 @@
 {
-  "versionCode": 10,
-  "versionName": "1.1.8",
+  "versionCode": 12,
+  "versionName": "1.2.0",
   "buildDate": "11/06/2026",
-  "buildTime": "18:20",
-  "buildDateTime": "2026-06-11T18:20:00Z",
+  "buildTime": "18:45",
+  "buildDateTime": "2026-06-11T18:45:00Z",
   "changelog": [
-    "Interface de Conexão QR-code inteiramente reformulada com visual premium e moderno, exibindo bordas em gradientes dinâmicos de alta qualidade de acordo com o status do servidor.",
-    "QR Code estilizado inteligente, gerado com cores correspondentes ao tema para maximizar o apelo visual e legibilidade.",
-    "Adaptação e sincronização automática completa para Modo Claro e Modo Escuro em todos os diálogos de compartilhamento e servidor Host."
+    "Revisão profunda da integridade de codificação: Varredura de múltiplos componentes corrigindo espaçamentos, comentários e pequenas inconsistências textuais.",
+    "Correção de typos textuais: Ajustes em guias de instrução dinâmicos de interface para garantir excelente comunicação com o usuário.",
+    "Compilação de integridade global: Validação cruzada estática confirmada impecável e com zero alertas no console do compilador."
   ]
 }

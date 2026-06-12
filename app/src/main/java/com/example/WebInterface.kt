@@ -9,6 +9,12 @@ object WebInterface {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Nexus Explorer Pro</title>
+    <!-- Apple Mobile Web App Specific Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Nexus Pro">
+    <link rel="apple-touch-icon" href="https://img.icons8.com/nolan/256/folder-invoices.png">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -567,6 +573,38 @@ object WebInterface {
 
     </div>
 
+    <!-- PWA Add to Home Screen Suggestion Banner -->
+    <div id="pwa-install-banner" class="fixed bottom-24 left-1/2 transform -translate-x-1/2 w-[92%] max-w-md bg-[#161a2e]/90 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-2xl z-[150] hidden flex-col gap-3 transition-all duration-300 scale-95 opacity-0">
+        <div class="flex items-start gap-3">
+            <div class="w-11 h-11 bg-gradient-to-tr from-[#0575E6] to-[#00F260] rounded-xl flex items-center justify-center text-white shrink-0 shadow-lg">
+                <i class="fa-solid fa-square-plus text-xl"></i>
+            </div>
+            <div class="flex-1 min-w-0 font-sans">
+                <h4 class="text-xs font-bold text-white mb-0.5 uppercase tracking-wide">Adicionar à Tela de Início</h4>
+                <p class="text-[11.5px] text-gray-300 leading-relaxed" id="pwa-install-msg">Navegue em tela cheia de forma integrada, como um aplicativo nativo no seu iPhone ou celular Android.</p>
+            </div>
+            <button onclick="dismissPWAInstall()" class="text-gray-400 hover:text-white text-lg w-6 h-6 flex items-center justify-center rounded-full hover:bg-white/10 active:scale-90 transition-all shrink-0">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        
+        <!-- Action Button Panel -->
+        <div class="flex gap-2 justify-end mt-1">
+            <button onclick="dismissPWAInstall(true)" class="px-3 py-1.5 text-[11px] font-semibold text-gray-400 hover:text-white rounded-lg hover:bg-white/5 active:rose-soft transition-all">Agora não</button>
+            <button onclick="installPWA()" id="pwa-action-btn" class="px-4 py-1.5 text-[11px] font-bold bg-[#0A84FF] hover:bg-[#0070e0] rounded-lg text-white shadow-md shadow-[#0A84FF]/25 active:scale-95 transition-all flex items-center gap-1">Instalar</button>
+        </div>
+        
+        <!-- iOS Instruction Drawer (initially hidden) -->
+        <div id="ios-instruction-panel" class="hidden flex-col gap-2 mt-2 pt-2 border-t border-white/10 text-[11.5px] text-gray-300 leading-relaxed">
+            <p>Siga os passos rápidos abaixo no Safari do seu iPhone:</p>
+            <ol class="list-decimal list-inside pl-1 flex flex-col gap-1.5">
+                <li>Toque no botão de <strong>Compartilhar</strong> <i class="fa-solid fa-square-share-nodes text-blue-400 mx-1"></i> (na barra inferior do navegador).</li>
+                <li>Role a lista de ações para baixo e toque em <strong>"Adicionar à Tela de Início"</strong> <i class="fa-regular fa-square-plus text-green-400 mx-1"></i>.</li>
+                <li>Toque em <strong class="text-blue-400">Adicionar</strong> no canto superior direito para finalizar.</li>
+            </ol>
+        </div>
+    </div>
+
     <!-- Tab Bar -->
     <div class="tab-bar">
         <button id="tab-files" onclick="toggleView('files')" class="tab-item active" style="width: 50%;">
@@ -720,8 +758,114 @@ object WebInterface {
 
         let searchTimeout = null;
 
+        // PWA Installation & Promotion Manager
+        let deferredPrompt = null;
+
+        // Custom detection for standalone mode (PWA active)
+        function checkStandalone() {
+            const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+            return isStandalone;
+        }
+
+        // Capture Android/Chrome native prompt
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            // Delay slightly for natural and smooth display
+            setTimeout(showPWAInstallPrompt, 4000);
+        });
+
+        function showPWAInstallPrompt() {
+            if (checkStandalone()) return; 
+            if (localStorage.getItem('pwa_install_dismissed_v2')) return; 
+
+            const banner = document.getElementById('pwa-install-banner');
+            if (!banner) return;
+
+            banner.classList.remove('hidden');
+            banner.classList.add('flex');
+            
+            // Trigger smooth animation
+            setTimeout(() => {
+                banner.style.opacity = '1';
+                banner.classList.remove('scale-95');
+                banner.classList.add('scale-100');
+            }, 50);
+        }
+
+        function dismissPWAInstall(permanently = false) {
+            doVibrate(30);
+            const banner = document.getElementById('pwa-install-banner');
+            if (!banner) return;
+
+            banner.style.opacity = '0';
+            banner.classList.add('scale-95');
+            banner.classList.remove('scale-100');
+            
+            setTimeout(() => {
+                banner.classList.add('hidden');
+                banner.classList.remove('flex');
+            }, 300);
+
+            if (permanently) {
+                // Permanently remember choice so users aren\'t annoyed
+                localStorage.setItem('pwa_install_dismissed_v2', 'true');
+            }
+        }
+
+        function installPWA() {
+            doVibrate(50);
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            
+            if (isIOS) {
+                const iosDrawer = document.getElementById('ios-instruction-panel');
+                const actionBtn = document.getElementById('pwa-action-btn');
+                
+                if (iosDrawer.classList.contains('hidden')) {
+                    iosDrawer.classList.remove('hidden');
+                    iosDrawer.classList.add('flex');
+                    actionBtn.innerHTML = '<i class="fa-solid fa-check"></i> Entendi';
+                } else {
+                    dismissPWAInstall(true);
+                }
+            } else if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        dismissPWAInstall(true);
+                    }
+                    deferredPrompt = null;
+                });
+            } else {
+                // Manual fallback instructions
+                alert("Para instalar:\n1. Clique nas Opções do navegador (três pontos ⋮ ou Compartilhar).\n2. Selecione \"Adicionar à tela inicial\" ou \"Instalar aplicativo\".");
+                dismissPWAInstall(true);
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             fetchFiles();
+            
+            // Check for iOS Safari users or compatibility modes to gently suggest PWA install after 6 seconds
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            const isMobile = window.innerWidth <= 768; // Only trigger for mobile/tablet screen sizes
+            
+            if (!checkStandalone() && !localStorage.getItem('pwa_install_dismissed_v2')) {
+                if (isIOS && isMobile) {
+                    setTimeout(() => {
+                        const actionBtn = document.getElementById('pwa-action-btn');
+                        if (actionBtn) {
+                            actionBtn.innerHTML = '<i class="fa-solid fa-share-nodes"></i> Como adicionar';
+                        }
+                        showPWAInstallPrompt();
+                    }, 5000);
+                } else if (isMobile) {
+                    // Try to show Android general prompt if native event didn\'t fire yet after 8 seconds
+                    setTimeout(() => {
+                        showPWAInstallPrompt();
+                    }, 8000);
+                }
+            }
             
             // Server-side search filter
             document.getElementById('search-input').addEventListener('input', (e) => {

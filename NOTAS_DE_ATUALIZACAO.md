@@ -2,6 +2,18 @@
 
 Aqui você encontra o registro histórico de atualizações e aperfeiçoamentos do Nexus Explorer Pro.
 
+## [1.2.0] - 11/06/2026 18:45
+- **Revisão Completa de Codificação**: Auditoria profunda em todos os arquivos de script e layouts Jetpack Compose, organizando formatações e polindo comentários redundantes ou typos em orientações de tela.
+- **Correção de Typos e Textos**: Consertadas palavras com erros ortográficos no manual de instalação rápida do assistente de PWA do Safari para iPhones.
+- **Homologação Estática**: Testes de compilação repetidos e bem-sucedidos em ritmo acelerado, eliminando possíveis avisos de compilação ou redundâncias de importação no SDK do Kotlin.
+- **Identificadores das Builds**: Incremento sequencial da build para versão de número 12 e da compilação unificada do aplicativo de TV para a versão 1.2.0 em todos os manifestos de compilação, assets locais, checadores de atualização na nuvem e registros gerais de changelog.
+
+## [1.1.9] - 11/06/2026 18:35
+- **Suporte Avançado a Progressive Web App (PWA)**: Implementação de um banner de convite e sugestão de instalação elegante e não intrusivo para adicionar à tela inicial no iPhone (Safari) e Android (compatível com Chrome e Firefox).
+- **Manual de Instrução Dinâmico para iOS**: Integração de uma gaveta de orientação visual passo-a-passo detalhando as ações rápidas necessárias para adicionar a aplicação às telas de início do iPhone através do botão de Compartilhar do Safari.
+- **Modo Tela Cheia Autônomo**: Injeção estratégica de tags de controle específico para aparelhos Apple, habilitando a execução em tela cheia do "web app" autónomo, ocultando os controles tradicionais de navegação.
+- **Identificadores das Builds**: Incremento unificado e controlado da Build para a versão de número 11 e da compilação do aplicativo de TV para a versão 1.1.9 em todos os manifestos, assets, atualizadores e registros.
+
 ## [1.1.8] - 11/06/2026 18:20
 - **Conexão QR Code Premium**: Renovação total dos painéis de emparelhamento por QR Code, implementando bordas modernas com gradientes de alta fidelidade visual (azul e verde esmeralda para sinalizar o status ativo, ou laranja e vermelho para inativo).
 - **QR Code Adaptado ao Tema**: Ajuste sistemático da cor de geração do QR Code via API para combinar de modo fluido com as nuances do tema selecionado, assegurando o melhor contraste e um acabamento deslumbrante.

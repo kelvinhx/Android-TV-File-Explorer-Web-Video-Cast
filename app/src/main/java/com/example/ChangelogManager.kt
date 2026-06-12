@@ -20,6 +20,26 @@ object ChangelogManager {
 
     val changelogs = listOf(
         VersionChangelog(
+            versionName = "1.2.0",
+            versionCode = 12,
+            releaseDate = "11 de Junho de 2026 (18:45)",
+            highlights = listOf(
+                "Integridade do Código Reforçada: Verificação geral de encoding, indentação e padrões de construção do projeto para conformidade de alto nível.",
+                "Correção de Inconsistências de Texto: Ajustado o texto descritivo de instruções para iOS/Android no assistente de instalação de PWA.",
+                "Compilação estática homologada: Otimização de compilação sem riscos de estouro de memória ou avisos obsoletos no Kotlin SDK."
+            )
+        ),
+        VersionChangelog(
+            versionName = "1.1.9",
+            versionCode = 11,
+            releaseDate = "11 de Junho de 2026 (18:35)",
+            highlights = listOf(
+                "Suporte Avançado a Progressive Web App (PWA): Banner e notificações não invasivas para adicionar à tela inicial no iPhone (Safari) e dispositivos Android (Chrome, Firefox).",
+                "Instrução Passo-a-Passo para iOS: Integração de guias dinâmicos com símbolos nítidos para facilitar a ação de Compartilhar e Adicionar no Safari.",
+                "Tag de Configuração Apple Mobile: Suporte completo para execução nativa em tela cheia sem barras de controle do navegador uma vez instalado."
+            )
+        ),
+        VersionChangelog(
             versionName = "1.1.8",
             versionCode = 10,
             releaseDate = "11 de Junho de 2026 (18:20)",
