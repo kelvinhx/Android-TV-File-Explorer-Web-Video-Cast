@@ -476,6 +476,35 @@ object FileUtils {
             val mime = getMimeType(path)
             val uri = getUriForPath(context, path) ?: return false
 
+            if (mime == "application/vnd.android.package-archive" || path.endsWith(".apk", ignoreCase = true)) {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    if (!context.packageManager.canRequestPackageInstalls()) {
+                        val intent = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                            data = android.net.Uri.parse("package:${context.packageName}")
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        try {
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            val fallbackIntent = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            try {
+                                context.startActivity(fallbackIntent)
+                            } catch (e2: Exception) {
+                                // Ignore
+                            }
+                        }
+                        android.widget.Toast.makeText(
+                            context,
+                            "Por favor, ative a permissão de Fontes Desconhecidas para este aplicativo e tente abrir o APK novamente.",
+                            android.widget.Toast.LENGTH_LONG
+                        ).show()
+                        return false
+                    }
+                }
+            }
+
             val intent = Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(uri, mime)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)

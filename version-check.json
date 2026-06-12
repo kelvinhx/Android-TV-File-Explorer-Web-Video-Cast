@@ -1,12 +1,12 @@
 {
-  "versionCode": 16,
-  "versionName": "1.2.4",
+  "versionCode": 17,
+  "versionName": "1.2.5",
   "buildDate": "12/06/2026",
-  "buildTime": "20:15",
-  "buildDateTime": "2026-06-12T20:15:00Z",
+  "buildTime": "20:31",
+  "buildDateTime": "2026-06-12T20:31:00Z",
   "changelog": [
-    "Correção Crítica no Carregamento de Arquivos via Web: Correção de um erro de sintaxe JavaScript (parênteses e chaves de encerramento ausentes no ouvinte de clique) na renderização da lista de mídias, que impedia a inicialização correta do script e bloqueava o carregamento de qualquer pasta e métrica da TV.",
-    "Adaptação para iPhone e Notch (Safe Areas): Atualização de layout CSS no cabeçalho principal (.liquid-header) com inclusão do cálculo 'env(safe-area-inset-top)' para impedir a sobreposição e compressão sob a barra de status de aparelhos modernos (como notch do iPhone e Dynamic Island).",
-    "Estabilização e Suporte Completo à Transferência Virtual: Correção na leitura física de subpastas e streams de download sob caminhos não-privativos na ausência de permissões profundas, mapeando tudo estavelmente para armazenamento de fallback."
+    "Suporte Avançado e Instalação de Updates sem Reinstalação: Migração inteligente do download de atualizações APK para o diretório privado do aplicativo (context.cacheDir/updates), liberando a instalação rápida via FileProvider em televisores modernos com Scoped Storage sem necessidade de apagar o app.",
+    "Solicitação Não-Invasiva de Fontes Desconhecidas: Exibição inteligente de um banner discreto de aviso no Painel da TV e atalho de ativação direta nas Configurações nas ocasiões onde a permissão de segurança para instalar mídias / APKs estiver indisponível.",
+    "Ajuste Fino de Layout no iPhone: Ampliação das margens de segurança no cabeçalho móvel .liquid-header, rebaixando os títulos de navegação para fora do notch da câmera e barra de status do iPhone de forma polida."
   ]
 }

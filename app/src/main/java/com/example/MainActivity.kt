@@ -132,7 +132,7 @@ class MainActivity : ComponentActivity() {
             nsdHelper = NsdHelper(this)
             nsdHelper?.registerService(AppConfig.PORT)
             lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                Updater.cleanUpOldUpdates()
+                Updater.cleanUpOldUpdates(this@MainActivity)
             }
         } else {
             nsdHelper = NsdHelper(this)
@@ -746,6 +746,7 @@ fun TvHomeDashboardScreen(
     var storageStats by remember { mutableStateOf(getDetailedStorageStats("Armazenamento Interno", "/storage/emulated/0")) }
     val externalStorages = remember { FileUtils.getExternalStorageRoots(context) }
     var usbStatsList by remember { mutableStateOf<List<DetailedStorageStats>>(emptyList()) }
+    var hasInstallPermission by remember { mutableStateOf(true) }
 
     var showWifiShareDialog by remember { mutableStateOf(false) }
     var isCleaningMemory by remember { mutableStateOf(false) }
@@ -764,12 +765,17 @@ fun TvHomeDashboardScreen(
 
     LaunchedEffect(Unit) {
         while(true) {
+            hasInstallPermission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                context.packageManager.canRequestPackageInstalls()
+            } else {
+                true
+            }
             ramStats = getDetailedRamStats(context)
             storageStats = getDetailedStorageStats("Armazenamento Interno", "/storage/emulated/0")
             usbStatsList = externalStorages.filter { it != "/storage/emulated/0" }.mapIndexed { index, path ->
                 getDetailedStorageStats("USB $index", path)
             }
-            delay(5000)
+            delay(3000)
         }
     }
 
@@ -967,6 +973,9 @@ fun TvHomeDashboardScreen(
         )
     }
 
+    val textColor = if (isDarkTheme) Color.White else Color.Black
+    val textMutedColor = if (isDarkTheme) Color.LightGray else Color.DarkGray
+
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
@@ -974,6 +983,86 @@ fun TvHomeDashboardScreen(
         verticalArrangement = Arrangement.spacedBy(30.dp),
         contentPadding = PaddingValues(bottom = 64.dp)
     ) {
+        if (!hasInstallPermission) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = if (isDarkTheme) Color(0xFF1C1C1E) else Color(0xFFE5E5EA)),
+                    border = BorderStroke(1.dp, Color(0xFFFF9500).copy(alpha = 0.4f))
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(Color(0xFFFF9500).copy(alpha = 0.15f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = null,
+                                    tint = Color(0xFFFF9500),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column {
+                                Text(
+                                    text = "Permissão de Fontes Desconhecidas Recomendada",
+                                    color = textColor,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Para permitir que o app atualize diretamente no futuro de forma compatível e sem precisar desinstalar e reinstalar do zero, habilite a permissão de Fontes Desconhecidas.",
+                                    color = textMutedColor,
+                                    fontSize = 13.sp
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        DpadTvButton(
+                            text = "Habilitar",
+                            icon = Icons.Default.Settings,
+                            tint = Color(0xFFFF9500),
+                            onClick = {
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                                    val intent = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                                        data = android.net.Uri.parse("package:${context.packageName}")
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
+                                    try {
+                                        context.startActivity(intent)
+                                    } catch (e: Exception) {
+                                        val fallbackIntent = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        }
+                                        try {
+                                            context.startActivity(fallbackIntent)
+                                        } catch (ex: Exception) {
+                                            android.widget.Toast.makeText(context, "Por favor, ative Fontes Desconhecidas nas configurações de segurança da TV.", android.widget.Toast.LENGTH_LONG).show()
+                                        }
+                                    }
+                                } else {
+                                    android.widget.Toast.makeText(context, "O Android " + android.os.Build.VERSION.RELEASE + " não requer esta configuração.", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
         item {
             Column {
                 AestheticSprites.TvDashboardHeroBanner(
@@ -1318,6 +1407,7 @@ fun TvDashboardScreen(
 
     var hasStandardPermissionState by remember { mutableStateOf(false) }
     var hasAndroidDataPermissionState by remember { mutableStateOf(false) }
+    var hasInstallPermissionState by remember { mutableStateOf(true) }
     
     LaunchedEffect(Unit) {
         while (true) {
@@ -1327,6 +1417,11 @@ fun TvDashboardScreen(
                 androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == android.content.pm.PackageManager.PERMISSION_GRANTED
             }
             hasAndroidDataPermissionState = FileUtils.hasAndroidDataPermission(context)
+            hasInstallPermissionState = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                context.packageManager.canRequestPackageInstalls()
+            } else {
+                true
+            }
             delay(2000)
         }
     }
@@ -1623,6 +1718,36 @@ fun TvDashboardScreen(
                                     icon = Icons.Default.Info,
                                     tint = AppConfig.ActiveGreen,
                                     onClick = onRequestAndroidDataPermission
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                            }
+
+                            // Unknown app installation permission button: hidden once permission is granted
+                            if (!hasInstallPermissionState) {
+                                DpadTvButton(
+                                    text = "Habilitar Fontes Desconhecidas (Updates)",
+                                    icon = Icons.Default.Settings,
+                                    tint = Color(0xFFFF9500),
+                                    onClick = {
+                                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                                            val intent = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                                                data = android.net.Uri.parse("package:${context.packageName}")
+                                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                            }
+                                            try {
+                                                context.startActivity(intent)
+                                            } catch (e: Exception) {
+                                                val fallbackIntent = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                                }
+                                                try {
+                                                    context.startActivity(fallbackIntent)
+                                                } catch (ex: Exception) {
+                                                    android.widget.Toast.makeText(context, "Por favor, ative Fontes Desconhecidas nas configurações da TV.", android.widget.Toast.LENGTH_LONG).show()
+                                                }
+                                            }
+                                        }
+                                    }
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
                             }

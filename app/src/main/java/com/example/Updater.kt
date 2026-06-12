@@ -89,12 +89,20 @@ object Updater {
         }
     }
 
-    fun cleanUpOldUpdates() {
+    fun cleanUpOldUpdates(context: Context? = null) {
         try {
-            val nexusDir = File(Environment.getExternalStorageDirectory(), "Nexus Explorer")
-            if (nexusDir.exists() && nexusDir.isDirectory) {
-                nexusDir.listFiles()?.forEach { file ->
-                    if (file.name.endsWith(".zip")) {
+            val legacyDir = File(Environment.getExternalStorageDirectory(), "Nexus Explorer")
+            if (legacyDir.exists() && legacyDir.isDirectory) {
+                legacyDir.listFiles()?.forEach { file ->
+                    if (file.name.endsWith(".zip") || file.name.endsWith(".apk")) {
+                        file.delete()
+                    }
+                }
+            }
+            context?.let { ctx ->
+                val cacheUpdatesDir = File(ctx.cacheDir, "updates")
+                if (cacheUpdatesDir.exists() && cacheUpdatesDir.isDirectory) {
+                    cacheUpdatesDir.listFiles()?.forEach { file ->
                         file.delete()
                     }
                 }
@@ -114,7 +122,7 @@ object Updater {
         withContext(Dispatchers.IO) {
             try {
                 onProgress("Verificando repositório GitHub...")
-                val nexusDir = File(Environment.getExternalStorageDirectory(), "Nexus Explorer")
+                val nexusDir = File(context.cacheDir, "updates")
                 if (!nexusDir.exists()) nexusDir.mkdirs()
                 
                 val zipFile = File(nexusDir, "update.zip")
