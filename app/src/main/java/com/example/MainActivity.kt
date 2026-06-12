@@ -1409,6 +1409,11 @@ fun TvDashboardScreen(
     var hasAndroidDataPermissionState by remember { mutableStateOf(false) }
     var hasInstallPermissionState by remember { mutableStateOf(true) }
     
+    val sharedPrefs = remember { context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE) }
+    var isInstallPermissionNotificationDismissed by remember {
+        mutableStateOf(sharedPrefs.getBoolean("dismissed_install_perm_notif", false))
+    }
+    
     LaunchedEffect(Unit) {
         while (true) {
             hasStandardPermissionState = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
@@ -1857,6 +1862,103 @@ fun TvDashboardScreen(
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold
                                 )
+                            }
+                        }
+                    }
+                }
+            }
+
+            androidx.compose.animation.AnimatedVisibility(
+                visible = !hasInstallPermissionState && !isInstallPermissionNotificationDismissed,
+                enter = fadeIn() + slideInVertically(initialOffsetY = { -it }),
+                exit = fadeOut() + slideOutVertically(targetOffsetY = { -it }),
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 24.dp, end = 24.dp)
+                    .width(360.dp)
+            ) {
+                Card(
+                    modifier = Modifier.shadow(16.dp, RoundedCornerShape(16.dp)),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = if (isDarkTheme) Color(0xFF1C1C1E) else Color(0xFFF2F2F7)),
+                    border = BorderStroke(1.5.dp, Color(0xFFFF9500).copy(alpha = 0.8f))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = Color(0xFFFF9500),
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                "Configurar Permissão",
+                                color = textColor,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "O aplicativo precisa de permissão para instalar fontes desconhecidas para atualizar de forma rápida e 100% compatível sem desinstalar a versão atual.",
+                            color = textMutedColor,
+                            fontSize = 13.sp
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            var isEnableFocused by remember { mutableStateOf(false) }
+                            var isDismissFocused by remember { mutableStateOf(false) }
+                            
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .border(2.dp, if (isEnableFocused) Color.White else Color.Transparent, RoundedCornerShape(8.dp))
+                                    .background(Color(0xFFFF9500))
+                                    .onFocusChanged { isEnableFocused = it.isFocused }
+                                    .focusable()
+                                    .clickable {
+                                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                                            val intent = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                                                data = android.net.Uri.parse("package:${context.packageName}")
+                                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                            }
+                                            try {
+                                                context.startActivity(intent)
+                                            } catch (e: Exception) {
+                                                val fallbackIntent = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                                }
+                                                try { context.startActivity(fallbackIntent) } catch (ex: Exception) {}
+                                            }
+                                        }
+                                    }
+                                    .padding(vertical = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("Ativar", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            }
+                            
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .border(2.dp, if (isDismissFocused) Color.White else Color.Transparent, RoundedCornerShape(8.dp))
+                                    .background(if (isDarkTheme) Color(0xFF2C2C2E) else Color(0xFFE5E5EA))
+                                    .onFocusChanged { isDismissFocused = it.isFocused }
+                                    .focusable()
+                                    .clickable {
+                                        isInstallPermissionNotificationDismissed = true
+                                        sharedPrefs.edit().putBoolean("dismissed_install_perm_notif", true).apply()
+                                    }
+                                    .padding(vertical = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("Dispensar", color = textColor, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                             }
                         }
                     }

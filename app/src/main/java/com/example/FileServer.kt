@@ -36,6 +36,15 @@ class FileServer(private val context: Context) {
         
         try {
             server = embeddedServer(Netty, port = AppConfig.PORT) {
+                intercept(io.ktor.server.application.ApplicationCallPipeline.Plugins) {
+                    call.response.headers.append(io.ktor.http.HttpHeaders.AccessControlAllowOrigin, "*")
+                    call.response.headers.append(io.ktor.http.HttpHeaders.AccessControlAllowMethods, "GET, POST, OPTIONS, PUT, DELETE")
+                    call.response.headers.append(io.ktor.http.HttpHeaders.AccessControlAllowHeaders, "*")
+                    if (call.request.httpMethod.value == "OPTIONS") {
+                        call.respond(io.ktor.http.HttpStatusCode.OK)
+                        finish()
+                    }
+                }
                 routing {
                     // Serve Web PWA dashboard
                     get("/") {
@@ -66,25 +75,45 @@ class FileServer(private val context: Context) {
                         var latestVersion = localVersion
                         
                         try {
-                            val url = java.net.URL("https://raw.githubusercontent.com/$repoOwner/$repoName/main/app/build.gradle.kts?t=${System.currentTimeMillis()}")
+                            val url = java.net.URL("https://raw.githubusercontent.com/$repoOwner/$repoName/main/version-check.json?t=${System.currentTimeMillis()}")
                             val conn = url.openConnection() as java.net.HttpURLConnection
                             conn.connect()
                             
                             if (conn.responseCode in 200..299) {
-                                val gradleContent = conn.inputStream.bufferedReader().readText()
+                                val jsonContent = conn.inputStream.bufferedReader().readText()
+                                val remote = JSONObject(jsonContent)
+                                remoteVersionCode = remote.optLong("versionCode", 0L)
+                                latestVersion = remote.optString("versionName", localVersion)
+                                val remoteDateTime = remote.optString("buildDateTime", "")
                                 
-                                val versionCodeMatch = Regex("versionCode\\s*=\\s*(\\d+)").find(gradleContent)
-                                remoteVersionCode = versionCodeMatch?.groupValues?.get(1)?.toLongOrNull()
+                                val localJson = Updater.getLocalVersionInfo(this@FileServer.context)
+                                val localDateTime = localJson.optString("buildDateTime", "")
                                 
-                                val versionNameMatch = Regex("versionName\\s*=\\s*\"([^\"]+)\"").find(gradleContent)
-                                latestVersion = versionNameMatch?.groupValues?.get(1) ?: localVersion
-                                
-                                if (remoteVersionCode != null && remoteVersionCode >= localVersionCode) {
+                                if (remoteVersionCode > localVersionCode) {
                                     updateAvailable = true
+                                } else if (remoteVersionCode == localVersionCode && remoteDateTime.isNotEmpty() && localDateTime.isNotEmpty()) {
+                                    updateAvailable = remoteDateTime > localDateTime
                                 }
                             }
                         } catch(e: Exception) {
                             e.printStackTrace()
+                            // Fallback to build.gradle.kts
+                            try {
+                                val url = java.net.URL("https://raw.githubusercontent.com/$repoOwner/$repoName/main/app/build.gradle.kts?t=${System.currentTimeMillis()}")
+                                val conn = url.openConnection() as java.net.HttpURLConnection
+                                conn.connect()
+                                if (conn.responseCode in 200..299) {
+                                    val gradleContent = conn.inputStream.bufferedReader().readText()
+                                    val versionCodeMatch = Regex("versionCode\\s*=\\s*(\\d+)").find(gradleContent)
+                                    val rCode = versionCodeMatch?.groupValues?.get(1)?.toLongOrNull()
+                                    remoteVersionCode = rCode
+                                    val versionNameMatch = Regex("versionName\\s*=\\s*\"([^\"]+)\"").find(gradleContent)
+                                    latestVersion = versionNameMatch?.groupValues?.get(1) ?: localVersion
+                                    if (rCode != null && rCode > localVersionCode) {
+                                        updateAvailable = true
+                                    }
+                                }
+                            } catch(ex: Exception) {}
                         }
                         
                         val response = JSONObject()
@@ -292,14 +321,30 @@ class FileServer(private val context: Context) {
                         }
                     }
 
-                    // Open Browser to cast video or webpage
+                    // Open Browser or Native Media Viewer to cast video or webpage
                     post("/api/cast") {
                         val requestBody = call.receiveText()
-                        val json = JSONObject(requestBody)
+                        val json = try { JSONObject(requestBody) } catch(e: Exception) { JSONObject() }
                         val url = json.optString("url")
+                        val title = json.optString("title", "").trim()
                         if (url.isNotEmpty()) {
-                            Logger.log("Casting URL to TV browser: $url")
-                            AppState.browserUrl.value = url
+                            val lower = url.lowercase()
+                            val isVideo = lower.endsWith(".mp4") || lower.endsWith(".m3u8") || lower.endsWith(".mpd") || 
+                                          lower.endsWith(".webm") || lower.endsWith(".mkv") || lower.endsWith(".avi") || 
+                                          lower.contains(".m3u8?") || lower.contains(".mp4?") || lower.contains("googlevideo.com") || 
+                                          lower.contains("/playlist.m3u8") || lower.contains("/manifest.mpd") || lower.contains("/get_video")
+                            
+                            if (isVideo) {
+                                val cleanTitle = if (title.isNotEmpty()) title else {
+                                    val filename = url.substringAfterLast("/").substringBefore("?")
+                                    if (filename.isNotEmpty() && filename.contains(".")) filename else "Vídeo Compartilhado"
+                                }
+                                Logger.log("Casting video natively to TV: $cleanTitle -> $url")
+                                AppState.castVideoUrl.value = "$cleanTitle|$url"
+                            } else {
+                                Logger.log("Casting webpage to TV browser: $url")
+                                AppState.browserUrl.value = url
+                            }
                             call.respondText(JSONObject().put("status", "success").toString(), ContentType.Application.Json)
                         } else {
                             call.respondText(JSONObject().put("status", "error").put("message", "URL missing").toString(), ContentType.Application.Json)
@@ -418,6 +463,12 @@ class FileServer(private val context: Context) {
                                 
                                 val inject = """
                                     <style>
+                                    /* Force document visibility & anti-iframe frame-busting protection */
+                                    html, body {
+                                        display: block !important;
+                                        visibility: visible !important;
+                                        opacity: 1 !important;
+                                    }
                                     /* Premium Liquid Glass Inspired Style Injection to force hide ads and banners */
                                     .ad, .ads, .ad-box, .advertisement, #ad-container, [id^=google_ads_],
                                     iframe[src*="doubleclick.net"], iframe[src*="adservice"], iframe[src*="popads"], iframe[src*="propeller"],
@@ -433,7 +484,17 @@ class FileServer(private val context: Context) {
                                     }
                                     </style>
                                     <script>
+                                    // Redefine top & parent to circumvent anti-iframe scripts trying to turn pages black
+                                    try {
+                                        Object.defineProperty(window, 'top', { get: function() { return window; } });
+                                        Object.defineProperty(window, 'parent', { get: function() { return window; } });
+                                        window.top = window;
+                                        window.parent = window;
+                                    } catch(e) {}
+
                                     window.open = function() { console.log("Popup blocked"); return null; };
+                                    window.onbeforeunload = null;
+
                                     const isVideoUrl = (url) => {
                                         if (!url || typeof url !== 'string') return false;
                                         const lower = url.toLowerCase();

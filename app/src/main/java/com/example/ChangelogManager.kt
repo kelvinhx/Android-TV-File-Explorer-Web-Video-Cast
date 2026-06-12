@@ -20,6 +20,44 @@ object ChangelogManager {
 
     val changelogs = listOf(
         VersionChangelog(
+            versionName = "1.2.6",
+            versionCode = 18,
+            releaseDate = "12 de Junho de 2026 (21:10)",
+            highlights = listOf(
+                "Nova Engine de Navegação e Web Casting: Reformulação completa do navegador web caster interno, com renderização otimizada de páginas complexas para evitar telas pretas, garantindo uma navegação 100% fluida e estável.",
+                "Sincronização Avançada de Compartilhamento Wi-Fi: Ajuste na sinalização e correspondência do identificador de vídeo transmitido pelo celular, sincronizando perfeitamente as ações de play/pause/seek com a TV.",
+                "Ecrã de Recepção da TV Inteligente: Aprimoramento do layout e lógica de recepção na TV para detectar gatilhos e metadados dinamicamente, iniciando streams de mídia sem atrasos.",
+                "Sistema de Atualização de Software de Alta Precisão: Refinamento na detecção de versão que impede ofertas fantasmas ou redundantes caso a TV já esteja rodando a build mais recente."
+            )
+        ),
+        VersionChangelog(
+            versionName = "1.2.5",
+            versionCode = 17,
+            releaseDate = "12 de Junho de 2026 (20:31)",
+            highlights = listOf(
+                "Instalação de Updates sem Reinstalação: Migração inteligente do download de atualizações APK para o diretório privado do aplicativo (context.cacheDir/updates), liberando a instalação rápida via FileProvider sem necessidade de apagar o app.",
+                "Solicitação Não-Invasiva de Fontes Desconhecidas: Exibição inteligente de um banner discreto de aviso no Painel da TV e atalho de ativação direta nas Configurações quando a permissão estiver em falta."
+            )
+        ),
+        VersionChangelog(
+            versionName = "1.2.4",
+            versionCode = 16,
+            releaseDate = "12 de Junho de 2026 (20:15)",
+            highlights = listOf(
+                "Correção Crítica no Carregamento Web: Correção de um erro de sintaxe JavaScript essencial na visualização de pastas na web, liberando a navegação de mídias e relatórios de integridade.",
+                "Adaptação para iPhone e Notch (Safe Areas): Inclusão das variáveis de safe area 'env(safe-area-inset-top)' no cabeçalho, evitando colisão visual com o notch e a barra de status."
+            )
+        ),
+        VersionChangelog(
+            versionName = "1.2.3",
+            versionCode = 15,
+            releaseDate = "12 de Junho de 2026 (19:55)",
+            highlights = listOf(
+                "Acesso Total aos Arquivos da TV via Web: Unificação de caminhos virtuais e mapeabilidade estável de volta ao prefixo lógico unificado '/storage/emulated/0' para evitar quebras de navegação ou diretórios vazios.",
+                "Correção Física de Cliques no Browser Cast: Esconder dinâmico da menu-bar do app quando o modo navegador 'Browser Cast' estivesse habilitado para reestabelecer o toque livre de elementos da base."
+            )
+        ),
+        VersionChangelog(
             versionName = "1.2.2",
             versionCode = 14,
             releaseDate = "12 de Junho de 2026 (18:45)",
