@@ -4,4 +4,6 @@
     <external-path name="external_files" path="." />
     <!-- Map cache directory for app updates -->
     <cache-path name="cache" path="." />
+    <!-- Map internal files directory for fallback storage mapping -->
+    <files-path name="internal_files" path="." />
 </paths>

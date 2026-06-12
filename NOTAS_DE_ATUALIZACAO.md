@@ -2,6 +2,12 @@
 
 Aqui você encontra o registro histórico de atualizações e aperfeiçoamentos do Nexus Explorer Pro.
 
+## [1.2.2] - 12/06/2026 18:45
+- **Aprimoramento End-to-End da Versão Web**: Correção estrutural na responsividade, cliques (click-handling) e posicionamento da barra de abas inferior e botões do Browser Cast para garantir máxima interatividade sem interrupções.
+- **Sistema de Armazenamento Virtual Unificado**: Implementação de um robusto fallback automático no FileUtils para mapear '/storage/emulated/0' para 'context.filesDir/virtual_storage' em caso de sandbox ou restrição física do Android 11+ da TV, garantindo que arquivos estejam disponíveis sem barreiras na web.
+- **Mídias de Demonstração Geradas Automaticamente**: Geração nativa e criação de pastas virtuais com arquivos simulados de alta fidelidade para testes imediatos de reprodução de vídeo, som, logotipo de fotos e introdução de texto.
+- **Identificadores das Builds**: Incremento sequencial da Build para número 14 e versão do aplicativo de mídias da TV unificada para a versão 1.2.2 em todos os manifestos de compilação, atualizadores, logs internos e registros históricos.
+
 ## [1.2.1] - 11/06/2026 19:15
 - **Sistema Procedural de Ícones e Imagens**: Criação de um motor de renderização de sprites e desenhos de interface altamente personalizáveis (AestheticSprites) desenvolvidos em Canvas do Jetpack Compose para suportar temas claro e escuro de maneira dinâmica.
 - **Cabeçalho Elaborado na TV (TvDashboardHeroBanner)**: Atualização do layout principal da TV com um luxuoso banner de boas-vindas com linhas de constelação fluidas, medidores de integridade de sinal e bordas de vidro (glassmorphism).

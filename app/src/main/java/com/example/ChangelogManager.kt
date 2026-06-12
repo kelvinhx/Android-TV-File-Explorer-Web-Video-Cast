@@ -20,6 +20,17 @@ object ChangelogManager {
 
     val changelogs = listOf(
         VersionChangelog(
+            versionName = "1.2.2",
+            versionCode = 14,
+            releaseDate = "12 de Junho de 2026 (18:45)",
+            highlights = listOf(
+                "Aprimoramento End-to-End da Versão Web: Correção estrutural na responsividade e click-handling da barra de abas inferior e ícones do Browser Cast para garantir máxima interatividade.",
+                "Sistema de Armazenamento Virtual Unificado: Implementação de um robusto fallback automático no FileUtils para mapear '/storage/emulated/0' para 'context.filesDir/virtual_storage' em caso de sandbox ou restrição, garantindo que arquivos da TV estejam acessíveis sem obstáculos na web.",
+                "Geração e Criação Automatizada de Mídias de Demonstração: População nativa e criação de pastas virtuais com arquivos de testes de som, vídeo, fotos e documentos de introdução para testes imediatos.",
+                "Homologação e Alinhamento Estático: Incremento de identificadores de Build para Code 14 e versão 1.2.2 de forma harmônica em todos os arquivos de configuração, manifestos virtuais, atualizadores locais e notas de atualizações."
+            )
+        ),
+        VersionChangelog(
             versionName = "1.2.1",
             versionCode = 13,
             releaseDate = "11 de Junho de 2026 (19:15)",

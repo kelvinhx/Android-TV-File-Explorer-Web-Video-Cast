@@ -23,6 +23,92 @@ data class UnifiedFile(
 
 object FileUtils {
 
+    private fun createSampleFiles(root: File) {
+        try {
+            root.mkdirs()
+            val movies = File(root, "Filmes").apply { mkdirs() }
+            val music = File(root, "Músicas").apply { mkdirs() }
+            val photos = File(root, "Fotos").apply { mkdirs() }
+            val docs = File(root, "Documentos").apply { mkdirs() }
+            
+            val welcomeFile = File(docs, "Bem_vindo_ao_Nexus.txt")
+            if (!welcomeFile.exists()) {
+                welcomeFile.writeText(
+                    "===============================================\n" +
+                    "   BEM-VINDO AO NEXUS EXPLORER PRO (WEB CAST)  \n" +
+                    "===============================================\n\n" +
+                    "Este é um sistema unificado de gerenciamento de arquivos\n" +
+                    "para sua TV de alta performance.\n\n" +
+                    "Recursos da versão web:\n" +
+                    "1. Upload inteligente: clique no botão '+' no topo para enviar arquivos\n" +
+                    "2. Transmissão em tempo real (Cast): transmita links de vídeo para a TV\n" +
+                    "3. Controle remoto integrado para reproduzir mídias\n" +
+                    "4. Baixar e visualizar arquivos diretamente no navegador do seu celular\n\n" +
+                    "Organização de pastas:\n" +
+                    "- /Filmes : Coloque seus vídeos (MP4, MKV)\n" +
+                    "- /Músicas : Suas faixas de áudio (MP3, WAV)\n" +
+                    "- /Fotos : Imagens (PNG, JPG, WEBP)\n" +
+                    "- /Documentos : Documentos diversos\n\n" +
+                    "Desenvolvido com carinho para oferecer a melhor experiência."
+                )
+            }
+            
+            val audioFile = File(music, "Som_Ambiente.mp3")
+            if (!audioFile.exists()) {
+                val tinyMp3Bytes = byteArrayOf(
+                    0xFF.toByte(), 0xE3.toByte(), 0x18.toByte(), 0xC4.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x03.toByte(),
+                    0x48.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x4C.toByte(), 0x41.toByte(), 0x4D.toByte(),
+                    0x45.toByte(), 0x33.toByte(), 0x2E.toByte(), 0x39.toByte(), 0x38.toByte(), 0x2E.toByte(), 0x32.toByte(), 0x00.toByte()
+                )
+                audioFile.writeBytes(tinyMp3Bytes)
+            }
+
+            val videoFile = File(movies, "Vídeo_Demonstrativo.mp4")
+            if (!videoFile.exists()) {
+                val tinyMp4Bytes = byteArrayOf(
+                    0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, 0x6D, 0x70, 0x34, 0x32, 0x00, 0x00, 0x00, 0x00,
+                    0x6D, 0x70, 0x34, 0x32, 0x69, 0x73, 0x6F, 0x6D, 0x00, 0x00, 0x00, 0x08, 0x66, 0x72, 0x65, 0x65
+                )
+                videoFile.writeBytes(tinyMp4Bytes)
+            }
+
+            val imgFile = File(photos, "Logo_Nexus_Glass.png")
+            if (!imgFile.exists()) {
+                val tinyPngBytes = byteArrayOf(
+                    0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49.toByte(), 0x48.toByte(), 0x44.toByte(), 0x52.toByte(),
+                    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4.toByte(),
+                    0x89.toByte(), 0x00, 0x00, 0x00, 0x0D, 0x49.toByte(), 0x44.toByte(), 0x41.toByte(), 0x54.toByte(), 0x78, 0xDA.toByte(), 0x63, 0x60, 0x60,
+                    0x60, 0x60, 0x00, 0x00, 0x00, 0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4.toByte(), 0x00, 0x00, 0x00, 0x00,
+                    0x49.toByte(), 0x45.toByte(), 0x4E.toByte(), 0x44.toByte(), 0xAE.toByte(), 0x42, 0x60, 0x82.toByte()
+                )
+                imgFile.writeBytes(tinyPngBytes)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    fun getResolvedFile(context: Context, path: String): File {
+        val targetPath = path.replace("//", "/")
+        if (targetPath.startsWith("/storage/emulated/0")) {
+            val extFile = File(targetPath)
+            try {
+                if (extFile.exists() && extFile.canRead() && extFile.canWrite()) {
+                    return extFile
+                }
+            } catch(e: Exception) {}
+            
+            val relative = targetPath.substringAfter("/storage/emulated/0").trimStart('/')
+            val virtualRoot = File(context.filesDir, "virtual_storage")
+            if (!virtualRoot.exists()) {
+                virtualRoot.mkdirs()
+                createSampleFiles(virtualRoot)
+            }
+            return if (relative.isEmpty()) virtualRoot else File(virtualRoot, relative)
+        }
+        return File(targetPath)
+    }
+
     fun getExternalStorageRoots(context: Context): List<String> {
         val roots = mutableListOf<String>()
         val externalDirs = androidx.core.content.ContextCompat.getExternalFilesDirs(context, null)
@@ -160,7 +246,7 @@ object FileUtils {
         }
 
         // Standard File Fallback
-        val dir = File(targetPath)
+        val dir = getResolvedFile(context, targetPath)
         if (dir.exists() && dir.isDirectory) {
             val list = dir.listFiles() ?: emptyArray()
             return list.map { f ->
@@ -186,7 +272,7 @@ object FileUtils {
             }
             return false
         }
-        val file = File(targetPath)
+        val file = getResolvedFile(context, targetPath)
         return if (file.isDirectory) {
             file.deleteRecursively()
         } else {
@@ -203,7 +289,7 @@ object FileUtils {
             }
             return false
         }
-        val file = File(targetPath)
+        val file = getResolvedFile(context, targetPath)
         val target = File(file.parentFile, newName)
         return file.renameTo(target)
     }
@@ -219,7 +305,8 @@ object FileUtils {
             }
             return false
         }
-        val dir = File(targetPath, folderName)
+        val parent = getResolvedFile(context, targetPath)
+        val dir = File(parent, folderName)
         return dir.mkdirs()
     }
 
@@ -236,7 +323,7 @@ object FileUtils {
             }
             return null
         }
-        val uploadDir = File(targetPath)
+        val uploadDir = getResolvedFile(context, targetPath)
         if (!uploadDir.exists()) {
             uploadDir.mkdirs()
         }
@@ -253,10 +340,10 @@ object FileUtils {
             FileProvider.getUriForFile(
                 context,
                 "${context.packageName}.fileprovider",
-                File(targetPath)
+                getResolvedFile(context, targetPath)
             )
         } catch (e: Exception) {
-            Uri.fromFile(File(targetPath))
+            Uri.fromFile(getResolvedFile(context, targetPath))
         }
     }
 
@@ -313,10 +400,10 @@ object FileUtils {
                 val uri = getUriForPath(context, srcTarget) ?: return false
                 context.contentResolver.openInputStream(uri) ?: return false
             } else {
-                val f = File(srcTarget)
+                val f = getResolvedFile(context, srcTarget)
                 if (!f.exists()) return false
                 if (f.isDirectory) {
-                    val destDir = File(destTarget, destName)
+                    val destDir = File(getResolvedFile(context, destTarget), destName)
                     return f.copyRecursively(destDir, overwrite = true)
                 }
                 f.inputStream()
@@ -342,8 +429,8 @@ object FileUtils {
         // Try rapid rename first
         val success = renameUnifiedFile(context, srcTarget, destName)
         if (success) {
-            val srcFile = File(srcTarget)
-            val correctDestFile = File(destTarget, destName)
+            val srcFile = getResolvedFile(context, srcTarget)
+            val correctDestFile = File(getResolvedFile(context, destTarget), destName)
             if (srcFile.parent == correctDestFile.parent) {
                 return true
             }

@@ -182,10 +182,10 @@ object WebInterface {
         }
 
         .tab-bar {
-            background: rgba(20, 20, 28, 0.55);
+            background: rgba(20, 20, 28, 0.85);
             backdrop-filter: blur(30px) saturate(210%);
             -webkit-backdrop-filter: blur(30px) saturate(210%);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
             display: flex;
             justify-content: space-around;
             padding: 6px;
@@ -196,9 +196,10 @@ object WebInterface {
             width: 90%;
             max-width: 420px;
             border-radius: 35px;
-            z-index: 100;
+            z-index: 999;
             box-shadow: 0 16px 40px rgba(0,0,0,0.6);
             transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            pointer-events: auto !important;
         }
         .tab-item {
             display: flex;
@@ -211,6 +212,8 @@ object WebInterface {
             border-radius: 25px;
             transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
             flex: 1;
+            cursor: pointer !important;
+            pointer-events: auto !important;
         }
         .tab-item i {
             font-size: 22px;

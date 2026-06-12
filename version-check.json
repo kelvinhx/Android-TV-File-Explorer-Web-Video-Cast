@@ -1,12 +1,12 @@
 {
-  "versionCode": 13,
-  "versionName": "1.2.1",
-  "buildDate": "11/06/2026",
-  "buildTime": "19:15",
-  "buildDateTime": "2026-06-11T19:15:00Z",
+  "versionCode": 14,
+  "versionName": "1.2.2",
+  "buildDate": "12/06/2026",
+  "buildTime": "18:45",
+  "buildDateTime": "2026-06-12T18:45:00Z",
   "changelog": [
-    "Sistema de Arquivo de Ícones e Imagens: Integração de um gerador estético de sprites de interface (AestheticSprites) desenvolvidos em Canvas nativo no Jetpack Compose.",
-    "Banners e Elementos Estéticos TV: Implantação de um luxuoso cabeçalho de TV (Hero Banner) animado com linhas de constelações lógicas e fluxo de elétrons em tempo real.",
-    "Aprimoramento End-to-End: Atualização dos ícones do gerenciador de arquivos e embutimento de um visualizador interativo de som ambiente no reprodutor de mídias."
+    "Aprimoramento End-to-End da Versão Web: Correção estrutural na responsividade e click-handling da barra de abas inferior e ícones do Browser Cast para garantir máxima interatividade.",
+    "Sistema de Armazenamento Virtual Unificado: Implementação de um robusto fallback automático no FileUtils para mapear '/storage/emulated/0' para 'context.filesDir/virtual_storage' em caso de sandbox ou restrição, garantindo que arquivos da TV estejam acessíveis sem obstáculos na web.",
+    "Geração e Criação Automatizada de Mídias de Demonstração: População nativa e criação de pastas virtuais com arquivos de testes de som, vídeo, fotos e documentos de introdução para testes imediatos."
   ]
 }

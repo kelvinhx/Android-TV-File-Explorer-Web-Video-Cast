@@ -241,7 +241,7 @@ object AestheticSprites {
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
-                            text = "NEXUS GLASS ENGINE v1.2.0",
+                            text = "NEXUS GLASS ENGINE v1.2.2",
                             color = Color(0xFF0A84FF),
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
