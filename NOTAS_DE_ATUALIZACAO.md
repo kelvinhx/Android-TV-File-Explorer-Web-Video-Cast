@@ -2,6 +2,11 @@
 
 Aqui você encontra o registro histórico de atualizações e aperfeiçoamentos do Nexus Explorer Pro.
 
+## [1.1.7] - 12/06/2026 00:45
+- **Aperfeiçoamento de Navegação por Foco**: Ajuste no foco dinâmico da D-pad para todos os cartões e itens do gerenciador de arquivos da TV, configurando efeitos de animações com molas elásticas (spring dynamic transitions) de zoom 1.08x e bordas destacadas com alta visibilidade.
+- **Modo Claro Independente**: Separação completa da paleta cromática do modo claro (Light Mode) para total legibilidade de textos, fundos, cabeçalhos, categorias ("Ações Rápidas", "Biblioteca" e "Armazenamento") e diálogos, sem herança indesejada de backgrounds escuros hardcoded.
+- **Sincronização Integrada**: Automação sistemática da versão de build (9) e de versão do aplicativo de TV (1.1.7) ao longo de todas as dependências locais e serviços do atualizador (`version-check.json`, `build.gradle.kts` e assets).
+
 ## [1.1.6] - 11/06/2026 17:06
 - **Refactoring de Integridade Técnica**: Cruzamento profundo e auditoria de arquivos de código para eliminar inconsistências. Validação semântica e correção de pequenos avisos do compilador Kotlin.
 - **Automação de Release**: Padronização estrita de controle de versão, incrementando sincronizadamente as configurações de Build, os metadados do `version-check.json`, o changelog dinâmico do app, os fallbacks do atualizador e os logs históricos de modificações.

@@ -20,6 +20,16 @@ object ChangelogManager {
 
     val changelogs = listOf(
         VersionChangelog(
+            versionName = "1.1.7",
+            versionCode = 9,
+            releaseDate = "12 de Junho de 2026 (00:45)",
+            highlights = listOf(
+                "Aprimoramento completo do foco por D-pad em TVs: transições com amortecimento físico (spring animation) de 1.08x e bordas de destaque de alto contraste.",
+                "Visual Premium Multi-Tema: Total independência cromática para o Modo Claro, garantindo alto contraste de legibilidade sem sobreposição de backgrounds escuros.",
+                "Ajuste estrutural de backgrounds raiz e cards informativos no painel inicial para adaptação contínua."
+            )
+        ),
+        VersionChangelog(
             versionName = "1.1.6",
             versionCode = 8,
             releaseDate = "11 de Junho de 2026 (17:06)",

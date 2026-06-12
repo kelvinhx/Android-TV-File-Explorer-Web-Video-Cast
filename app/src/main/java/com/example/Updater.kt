@@ -32,12 +32,12 @@ object Updater {
                     pInfo.versionCode.toLong()
                 }
                 fallback.put("versionCode", code)
-                fallback.put("versionName", pInfo.versionName ?: "1.1.6")
-                fallback.put("buildDateTime", "2026-06-12T00:06:00Z")
+                fallback.put("versionName", pInfo.versionName ?: "1.1.7")
+                fallback.put("buildDateTime", "2026-06-12T00:45:00Z")
             } catch (ex: Exception) {
-                fallback.put("versionCode", 8L)
-                fallback.put("versionName", "1.1.6")
-                fallback.put("buildDateTime", "2026-06-12T00:06:00Z")
+                fallback.put("versionCode", 9L)
+                fallback.put("versionName", "1.1.7")
+                fallback.put("buildDateTime", "2026-06-12T00:45:00Z")
             }
             fallback
         }

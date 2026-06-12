@@ -152,10 +152,11 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            val isThemeDark by AppState.isDarkTheme.collectAsState()
             MyApplicationTheme {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
-                    containerColor = AppConfig.BackgroundDark
+                    containerColor = if (isThemeDark) AppConfig.BackgroundDark else Color(0xFFF2F2F7)
                 ) { innerPadding ->
                     if (isTv) {
                         if (showSplash) {
@@ -434,17 +435,33 @@ fun TvDashboardStorageCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isDarkTheme by AppState.isDarkTheme.collectAsState()
     var isFocused by remember { mutableStateOf(false) }
-    val scale = animateFloatAsState(targetValue = if (isFocused) 1.04f else 1.0f).value
-    val outlineColor = if (isFocused) Color(0xFF007AFF) else Color.Transparent
+    
+    val scale by animateFloatAsState(
+        targetValue = if (isFocused) 1.08f else 1.0f,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessLow
+        ),
+        label = "StorageScale"
+    )
+    
+    val outlineColor = if (isFocused) AppConfig.PrimaryBlue else Color.Transparent
     val isSystemOnly = stats.title == "Memória RAM"
+
+    val containerColor = if (isFocused) {
+        if (isDarkTheme) Color(0xFF2C2C2E) else Color(0xFFE5E5EA)
+    } else {
+        if (isDarkTheme) Color(0xFF1C1C1E) else Color(0xFFFFFFFF)
+    }
 
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = if (isFocused) Color(0xFF2C2C2E) else Color(0xFF1C1C1E)
+            containerColor = containerColor
         ),
         shape = RoundedCornerShape(16.dp),
-        border = if (isFocused) BorderStroke(2.dp, outlineColor) else null,
+        border = if (isFocused) BorderStroke(2.5.dp, outlineColor) else null,
         modifier = modifier
             .graphicsLayer {
                 scaleX = scale
@@ -467,14 +484,14 @@ fun TvDashboardStorageCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = stats.title,
-                        color = Color.White,
+                        color = if (isDarkTheme) Color.White else Color.Black,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = if (isSystemOnly) "Memória Volátil" else stats.path,
-                        color = Color.Gray,
+                        color = if (isDarkTheme) Color.Gray else Color.Gray,
                         fontSize = 11.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -500,7 +517,7 @@ fun TvDashboardStorageCard(
 
             Text(
                 text = "${stats.usedFormatted} usados de ${stats.totalFormatted}",
-                color = Color.LightGray,
+                color = if (isDarkTheme) Color.LightGray else Color.DarkGray,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium
             )
@@ -512,7 +529,7 @@ fun TvDashboardStorageCard(
                     .fillMaxWidth()
                     .height(6.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFF2C2C2E))
+                    .background(if (isDarkTheme) Color(0xFF2C2C2E) else Color(0xFFE5E5EA))
             ) {
                 Box(
                     modifier = Modifier
@@ -543,9 +560,19 @@ fun TvDashboardCategoryCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isDarkTheme by AppState.isDarkTheme.collectAsState()
     var isFocused by remember { mutableStateOf(false) }
-    val scale = animateFloatAsState(targetValue = if (isFocused) 1.04f else 1.0f).value
-    val outlineColor = if (isFocused) Color(0xFF007AFF) else Color.Transparent
+    
+    val scale by animateFloatAsState(
+        targetValue = if (isFocused) 1.08f else 1.0f,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessLow
+        ),
+        label = "CategoryScale"
+    )
+    
+    val outlineColor = if (isFocused) AppConfig.PrimaryBlue else Color.Transparent
 
     val icon = when (title) {
         "Vídeos" -> Icons.Default.PlayArrow
@@ -556,12 +583,18 @@ fun TvDashboardCategoryCard(
         else -> Icons.Default.Share
     }
 
+    val cardBg = if (isFocused) {
+        if (isDarkTheme) Color(0xFF2C2C2E) else Color(0xFFE5E5EA)
+    } else {
+        if (isDarkTheme) Color(0xFF1C1C1E) else Color(0xFFFFFFFF)
+    }
+
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = if (isFocused) Color(0xFF2C2C2E) else Color(0xFF1C1C1E)
+            containerColor = cardBg
         ),
         shape = RoundedCornerShape(14.dp),
-        border = if (isFocused) BorderStroke(2.dp, outlineColor) else null,
+        border = if (isFocused) BorderStroke(2.5.dp, outlineColor) else null,
         modifier = modifier
             .graphicsLayer {
                 scaleX = scale
@@ -595,7 +628,7 @@ fun TvDashboardCategoryCard(
             Column {
                 Text(
                     text = title,
-                    color = Color.White,
+                    color = if (isDarkTheme) Color.White else Color.Black,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -610,7 +643,7 @@ fun TvDashboardCategoryCard(
                 }
                 Text(
                     text = desc,
-                    color = Color.Gray,
+                    color = if (isDarkTheme) Color.Gray else Color.DarkGray,
                     fontSize = 11.sp
                 )
             }
@@ -626,16 +659,30 @@ fun TvDashboardToolCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isDarkTheme by AppState.isDarkTheme.collectAsState()
     var isFocused by remember { mutableStateOf(false) }
-    val scale = animateFloatAsState(targetValue = if (isFocused) 1.05f else 1.0f, label = "ToolScale").value
+    val scale by animateFloatAsState(
+        targetValue = if (isFocused) 1.08f else 1.0f,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessLow
+        ),
+        label = "ToolScale"
+    )
     val outlineColor = if (isFocused) color else Color.Transparent
+
+    val cardBg = if (isFocused) {
+        if (isDarkTheme) Color(0xFF2C2C2E) else Color(0xFFE5E5EA)
+    } else {
+        if (isDarkTheme) Color(0xFF1C1C1E) else Color(0xFFFFFFFF)
+    }
 
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = if (isFocused) Color(0xFF2C2C2E) else Color(0xFF1C1C1E)
+            containerColor = cardBg
         ),
         shape = RoundedCornerShape(16.dp),
-        border = if (isFocused) BorderStroke(2.dp, outlineColor) else null,
+        border = if (isFocused) BorderStroke(2.5.dp, outlineColor) else null,
         modifier = modifier
             .graphicsLayer {
                 scaleX = scale
@@ -669,7 +716,7 @@ fun TvDashboardToolCard(
             Spacer(modifier = Modifier.height(10.dp))
             Text(
                 text = title,
-                color = Color.White,
+                color = if (isDarkTheme) Color.White else Color.Black,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
@@ -687,6 +734,7 @@ fun TvHomeDashboardScreen(
     onToggleServer: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isDarkTheme by AppState.isDarkTheme.collectAsState()
     var ramStats by remember { mutableStateOf(getDetailedRamStats(context)) }
     var storageStats by remember { mutableStateOf(getDetailedStorageStats("Armazenamento Interno", "/storage/emulated/0")) }
     val externalStorages = remember { FileUtils.getExternalStorageRoots(context) }
@@ -881,7 +929,7 @@ fun TvHomeDashboardScreen(
             Column {
                 Text(
                     text = "Arquivos da TV",
-                    color = Color.White,
+                    color = if (isDarkTheme) Color.White else Color.Black,
                     fontSize = 32.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = (-0.5).sp
@@ -889,7 +937,7 @@ fun TvHomeDashboardScreen(
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "Gerenciador Nexus Glass • Conectado à sua TV local",
-                    color = Color.Gray,
+                    color = if (isDarkTheme) Color.Gray else Color.DarkGray,
                     fontSize = 14.sp
                 )
             }
@@ -899,7 +947,7 @@ fun TvHomeDashboardScreen(
             Column {
                 Text(
                     text = "Armazenamento",
-                    color = Color.LightGray,
+                    color = if (isDarkTheme) Color.LightGray else Color.DarkGray,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(bottom = 12.dp)
@@ -1012,7 +1060,7 @@ fun TvHomeDashboardScreen(
             Column {
                 Text(
                     text = "Biblioteca",
-                    color = Color.LightGray,
+                    color = if (isDarkTheme) Color.LightGray else Color.DarkGray,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(bottom = 12.dp)
@@ -1654,23 +1702,37 @@ fun TvSidebarItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isDarkTheme by AppState.isDarkTheme.collectAsState()
     var isFocused by remember { mutableStateOf(false) }
+    
+    val scale by animateFloatAsState(
+        targetValue = if (isFocused) 1.05f else 1.0f,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessLow
+        ),
+        label = "SidebarItemScale"
+    )
     
     val backgroundColor = when {
         isFocused -> AppConfig.PrimaryBlue
-        isSelected -> Color(0xFF2C2C2E)
+        isSelected -> if (isDarkTheme) Color(0xFF2C2C2E) else Color(0xFFE5E5EA)
         else -> Color.Transparent
     }
     
     val contentColor = when {
         isFocused -> Color.White
         isSelected -> AppConfig.PrimaryBlue
-        else -> Color.Gray
+        else -> if (isDarkTheme) Color.Gray else Color.DarkGray
     }
 
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
             .clip(RoundedCornerShape(10.dp))
             .background(backgroundColor)
             .onFocusChanged { isFocused = it.isFocused }
@@ -2818,10 +2880,24 @@ fun TvFilesBrowser(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TvFileGridItem(file: UnifiedFile, onClick: () -> Unit, onLongClick: () -> Unit, modifier: Modifier = Modifier) {
+    val isDarkTheme by AppState.isDarkTheme.collectAsState()
     var isFocused by remember { mutableStateOf(false) }
     
-    val scale = animateFloatAsState(targetValue = if (isFocused) 1.05f else 1.0f).value
+    val scale by animateFloatAsState(
+        targetValue = if (isFocused) 1.08f else 1.0f,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessLow
+        ),
+        label = "GridItemScale"
+    )
     
+    val itemBgColor = if (isFocused) {
+        if (isDarkTheme) Color(0xFF2C2C2E) else Color(0xFFE5E5EA)
+    } else {
+        Color.Transparent
+    }
+
     Column(
         modifier = modifier
             .width(110.dp)
@@ -2830,7 +2906,7 @@ fun TvFileGridItem(file: UnifiedFile, onClick: () -> Unit, onLongClick: () -> Un
                 scaleY = scale
             }
             .clip(RoundedCornerShape(12.dp))
-            .background(if (isFocused) Color(0xFF2C2C2E) else Color.Transparent)
+            .background(itemBgColor)
             .onFocusChanged { isFocused = it.isFocused }
             .focusable()
             .onKeyEvent { keyEvent ->
@@ -2862,7 +2938,7 @@ fun TvFileGridItem(file: UnifiedFile, onClick: () -> Unit, onLongClick: () -> Un
                 } else false
             }
             .clickable(onClick = onClick)
-            .border(if (isFocused) BorderStroke(2.dp, Color.White) else BorderStroke(0.dp, Color.Transparent), RoundedCornerShape(12.dp))
+            .border(if (isFocused) BorderStroke(2.5.dp, if (isDarkTheme) Color.White else AppConfig.PrimaryBlue) else BorderStroke(0.dp, Color.Transparent), RoundedCornerShape(12.dp))
             .padding(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -2896,7 +2972,7 @@ fun TvFileGridItem(file: UnifiedFile, onClick: () -> Unit, onLongClick: () -> Un
         
         Text(
             text = file.name,
-            color = Color.White,
+            color = if (isDarkTheme) Color.White else Color.Black,
             fontSize = 12.sp,
             maxLines = 2,
             lineHeight = 14.sp,
@@ -2911,8 +2987,15 @@ fun TvFileGridItem(file: UnifiedFile, onClick: () -> Unit, onLongClick: () -> Un
 @Composable
 fun TvFileListItem(file: UnifiedFile, onClick: () -> Unit, onLongClick: () -> Unit, modifier: Modifier = Modifier) {
     var isFocused by remember { mutableStateOf(false) }
-    val isDark = AppState.isDarkTheme.collectAsState().value
-    val scale = animateFloatAsState(targetValue = if (isFocused) 1.02f else 1.0f).value
+    val isDark by AppState.isDarkTheme.collectAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isFocused) 1.04f else 1.0f,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessLow
+        ),
+        label = "ListItemScale"
+    )
     val bgColor = if (isFocused) AppConfig.PrimaryBlue else if (isDark) Color(0xFF1C1C1E) else Color(0xFFFFFFFF)
     val textColor = if (isFocused) Color.White else if (isDark) Color.White else Color.Black
     val textMutedColor = if (isFocused) Color.LightGray else if (isDark) Color.Gray else Color.DarkGray
@@ -2953,7 +3036,7 @@ fun TvFileListItem(file: UnifiedFile, onClick: () -> Unit, onLongClick: () -> Un
                 } else false
             }
             .clickable(onClick = onClick)
-            .border(if (isFocused) BorderStroke(2.dp, Color.White) else BorderStroke(0.dp, Color.Transparent), RoundedCornerShape(12.dp))
+            .border(if (isFocused) BorderStroke(2.5.dp, if (isDark) Color.White else AppConfig.PrimaryBlue) else BorderStroke(0.dp, Color.Transparent), RoundedCornerShape(12.dp))
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
