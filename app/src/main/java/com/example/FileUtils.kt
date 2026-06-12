@@ -109,6 +109,16 @@ object FileUtils {
         return File(targetPath)
     }
 
+    fun toVirtualPath(context: Context, physicalPath: String): String {
+        val virtualRootPath = File(context.filesDir, "virtual_storage").absolutePath
+        val normalized = physicalPath.replace("//", "/")
+        if (normalized.startsWith(virtualRootPath)) {
+            val relative = normalized.substringAfter(virtualRootPath).trimStart('/')
+            return if (relative.isEmpty()) "/storage/emulated/0" else "/storage/emulated/0/$relative"
+        }
+        return normalized
+    }
+
     fun getExternalStorageRoots(context: Context): List<String> {
         val roots = mutableListOf<String>()
         val externalDirs = androidx.core.content.ContextCompat.getExternalFilesDirs(context, null)
@@ -157,7 +167,7 @@ object FileUtils {
         val roots = getExternalStorageRoots(context)
         
         for (root in roots) {
-            val rootFile = File(root)
+            val rootFile = getResolvedFile(context, root)
             if (!rootFile.exists() || !rootFile.canRead()) continue
             
             try {
@@ -178,7 +188,7 @@ object FileUtils {
                             }
                             
                             if (matches) {
-                                results.add(UnifiedFile(f.name, f.absolutePath, f.isDirectory, f.length(), f.extension))
+                                results.add(UnifiedFile(f.name, toVirtualPath(context, f.absolutePath), f.isDirectory, f.length(), f.extension))
                             }
                             if (results.size >= 150) return@withContext results
                         }
@@ -252,7 +262,7 @@ object FileUtils {
             return list.map { f ->
                 UnifiedFile(
                     name = f.name,
-                    absolutePath = f.absolutePath,
+                    absolutePath = toVirtualPath(context, f.absolutePath),
                     isDirectory = f.isDirectory,
                     length = if (f.isDirectory) 0L else f.length(),
                     extension = f.extension.lowercase(),

@@ -1,12 +1,12 @@
 {
-  "versionCode": 14,
-  "versionName": "1.2.2",
+  "versionCode": 15,
+  "versionName": "1.2.3",
   "buildDate": "12/06/2026",
-  "buildTime": "18:45",
-  "buildDateTime": "2026-06-12T18:45:00Z",
+  "buildTime": "19:55",
+  "buildDateTime": "2026-06-12T19:55:00Z",
   "changelog": [
-    "Aprimoramento End-to-End da Versão Web: Correção estrutural na responsividade e click-handling da barra de abas inferior e ícones do Browser Cast para garantir máxima interatividade.",
-    "Sistema de Armazenamento Virtual Unificado: Implementação de um robusto fallback automático no FileUtils para mapear '/storage/emulated/0' para 'context.filesDir/virtual_storage' em caso de sandbox ou restrição, garantindo que arquivos da TV estejam acessíveis sem obstáculos na web.",
-    "Geração e Criação Automatizada de Mídias de Demonstração: População nativa e criação de pastas virtuais com arquivos de testes de som, vídeo, fotos e documentos de introdução para testes imediatos."
+    "Acesso Total aos Arquivos da TV via Web: Unificação de rotas e mapeamento transparente de caminhos virtuais (/data/user/0/.../virtual_storage) de volta ao prefixo lógico unificado de armazenamento de arquivos '/storage/emulated/0'. Isso garante navegação fluida de pastas, correção nos botões de retorno (back-button) e acesso completo de leitura/escrita.",
+    "Correção de Clique e Exibição do Browser Cast: Ocultação dinâmica e inteligente da barra de abas principal (Navegação/Browser) quando o modo Navegador está ativo para evitar sobreposição física e travamento de cliques, permitindo acesso fluido a todas as funções de back/forward/cast.",
+    "Atualização de Identidade e Metadados: Sincronização de todos os manifestos de build, nota de changelog dinâmica no applet, e arquivos históricos de acompanhamento de envio para o GitHub."
   ]
 }

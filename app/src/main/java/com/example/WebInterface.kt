@@ -609,7 +609,7 @@ object WebInterface {
     </div>
 
     <!-- Tab Bar -->
-    <div class="tab-bar">
+    <div class="tab-bar" id="main-tab-bar">
         <button id="tab-files" onclick="toggleView('files')" class="tab-item active" style="width: 50%;">
             <i class="fa-solid fa-folder"></i>
             <span>Navegar</span>
@@ -1005,9 +1005,13 @@ object WebInterface {
             if (view === 'files') {
                 document.getElementById('view-files').classList.remove('hidden');
                 document.getElementById('tab-files').classList.add('active');
-                document.getElementById('main-header').firstElementChild.textContent = "Navegar";
+                
+                const headingSpan = document.getElementById('main-header').querySelector('span');
+                if (headingSpan) headingSpan.textContent = "Navegar";
+                
                 document.getElementById('main-header').style.display = "flex";
                 document.getElementById('files-toolbar').style.display = "flex";
+                document.getElementById('main-tab-bar').style.display = "flex";
                 fetchFiles();
             } else if (view === 'browser') {
                 document.getElementById('view-browser').classList.remove('hidden');
@@ -1015,6 +1019,7 @@ object WebInterface {
                 document.getElementById('tab-browser').classList.add('active');
                 document.getElementById('main-header').style.display = "none";
                 document.getElementById('files-toolbar').style.display = "none";
+                document.getElementById('main-tab-bar').style.display = "none";
                 
                 const iframe = document.getElementById('internal-browser');
                 if (!iframe.src || iframe.src === window.location.href) {

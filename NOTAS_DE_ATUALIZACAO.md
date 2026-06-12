@@ -2,6 +2,11 @@
 
 Aqui você encontra o registro histórico de atualizações e aperfeiçoamentos do Nexus Explorer Pro.
 
+## [1.2.3] - 12/06/2026 19:55
+- **Acesso Total aos Arquivos da TV via Web**: Unificação avançada de rotas que mapeia de forma transparente caminhos físicos internos de armazenamento (/data/user/0/.../virtual_storage) de volta para o prefixo lógico '/storage/emulated/0'. Isso corrige o botão de retorno da navegação web (evitando que retorne até a raiz do Linux ou pastas restritas), resolve listagens vazias em celulares e permite download, upload, renomeação e criação de pastas com consistência absoluta de segurança.
+- **Correção Completa no Clique do Browser Cast**: Ocultação inteligente e dinâmica do menu e da barra principal de abas (main tab-bar) quando o modo navegador 'Browser Cast' é selecionado. Isso elimina a sobreposição de elementos visuais no rodapé da página que impedia o clique do usuário e travava os controles do navegador (back/forward/bookmark/cast), restabelecendo o fluxo funcional total.
+- **Identificadores das Builds**: Incremento sequencial da Build para número 15 e versão do aplicativo de mídias da TV unificada para a versão 1.2.3 em todos os manifestos de compilação, atualizadores, sincronizadores do GitHub, notas de lançamento e registros históricos.
+
 ## [1.2.2] - 12/06/2026 18:45
 - **Aprimoramento End-to-End da Versão Web**: Correção estrutural na responsividade, cliques (click-handling) e posicionamento da barra de abas inferior e botões do Browser Cast para garantir máxima interatividade sem interrupções.
 - **Sistema de Armazenamento Virtual Unificado**: Implementação de um robusto fallback automático no FileUtils para mapear '/storage/emulated/0' para 'context.filesDir/virtual_storage' em caso de sandbox ou restrição física do Android 11+ da TV, garantindo que arquivos estejam disponíveis sem barreiras na web.
