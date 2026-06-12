@@ -1,12 +1,12 @@
 {
-  "versionCode": 9,
-  "versionName": "1.1.7",
-  "buildDate": "12/06/2026",
-  "buildTime": "00:45",
-  "buildDateTime": "2026-06-12T00:45:00Z",
+  "versionCode": 10,
+  "versionName": "1.1.8",
+  "buildDate": "11/06/2026",
+  "buildTime": "18:20",
+  "buildDateTime": "2026-06-11T18:20:00Z",
   "changelog": [
-    "Aprimoramento completo do sistema de foco dinâmico por D-pad em TVs, refinando as transições de cursor with feedback de escala suave por molas físicas e destaques de alta visibilidade.",
-    "Visual Premium Multi-Tema: Independência total para o modo claro, assegurando ótimo contraste e legibilidade perfeita em todos os menus, grids e descrições rápidas.",
-    "Correção estrutural das cores de fundo do Scaffold principal e de cartões de informações da dashboard para resposta de tema contínua automática."
+    "Interface de Conexão QR-code inteiramente reformulada com visual premium e moderno, exibindo bordas em gradientes dinâmicos de alta qualidade de acordo com o status do servidor.",
+    "QR Code estilizado inteligente, gerado com cores correspondentes ao tema para maximizar o apelo visual e legibilidade.",
+    "Adaptação e sincronização automática completa para Modo Claro e Modo Escuro em todos os diálogos de compartilhamento e servidor Host."
   ]
 }

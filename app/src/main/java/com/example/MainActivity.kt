@@ -810,29 +810,51 @@ fun TvHomeDashboardScreen(
         val isServerRunning by ServerState.isServerRunning.collectAsState()
         val serverIp by ServerState.serverIp.collectAsState()
         val serverUrl = "http://$serverIp:${AppConfig.PORT}"
+        val isDarkTheme by AppState.isDarkTheme.collectAsState()
         
         AlertDialog(
             onDismissRequest = { showWifiShareDialog = false },
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Share, contentDescription = null, tint = Color(0xFFFF9500), modifier = Modifier.size(28.dp))
+                    Icon(
+                        Icons.Default.Share, 
+                        contentDescription = null, 
+                        tint = if (isServerRunning) Color(0xFF30D158) else Color(0xFFFF9500), 
+                        modifier = Modifier.size(28.dp)
+                    )
                     Spacer(modifier = Modifier.width(16.dp))
-                    Text("Compartilhar via Wi-Fi", color = Color.White)
+                    Text(
+                        text = "Compartilhar via Wi-Fi", 
+                        color = if (isDarkTheme) Color.White else Color.Black,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             },
             text = {
+                val borderBrush = remember(isServerRunning) {
+                    androidx.compose.ui.graphics.Brush.linearGradient(
+                        colors = if (isServerRunning) {
+                            listOf(AppConfig.PrimaryBlue, Color(0xFF30D158))
+                        } else {
+                            listOf(Color(0xFFFF9500), Color(0xFFFF453A))
+                        }
+                    )
+                }
+
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(24.dp)
+                    horizontalArrangement = Arrangement.spacedBy(24.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.width(180.dp)
                     ) {
-                        val qrCodeUrl = remember(serverUrl) {
+                        val qrCodeUrl = remember(serverUrl, isServerRunning) {
                             try {
                                 val encodedUrl = java.net.URLEncoder.encode(serverUrl, "UTF-8")
-                                "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=$encodedUrl&color=2c2c2e&bgcolor=ffffff"
+                                val qrColorHex = if (isServerRunning) "0a84ff" else "ff9500"
+                                "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=$encodedUrl&color=$qrColorHex&bgcolor=ffffff"
                             } catch (e: Exception) {
                                 ""
                             }
@@ -841,23 +863,38 @@ fun TvHomeDashboardScreen(
                         Box(
                             modifier = Modifier
                                 .size(160.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Color.White)
-                                .padding(8.dp),
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(borderBrush)
+                                .padding(3.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            if (qrCodeUrl.isNotEmpty()) {
-                                coil.compose.AsyncImage(
-                                    model = qrCodeUrl,
-                                    contentDescription = "QR Code",
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            } else {
-                                Text("QR Code indisponível", color = Color.Black, fontSize = 11.sp, textAlign = TextAlign.Center)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(RoundedCornerShape(13.dp))
+                                    .background(Color.White)
+                                    .padding(8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (qrCodeUrl.isNotEmpty()) {
+                                    coil.compose.AsyncImage(
+                                        model = qrCodeUrl,
+                                        contentDescription = "QR Code",
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                } else {
+                                    Text("QR Code indisponível", color = Color.Black, fontSize = 11.sp, textAlign = TextAlign.Center)
+                                }
                             }
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("Escaneie com o celular", color = Color.Gray, fontSize = 11.sp, textAlign = TextAlign.Center)
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = "Escaneie com o celular", 
+                            color = if (isDarkTheme) Color.Gray else Color.DarkGray, 
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            textAlign = TextAlign.Center
+                        )
                     }
 
                     Column(
@@ -866,8 +903,9 @@ fun TvHomeDashboardScreen(
                     ) {
                         Text(
                             text = "Transfira arquivos facilmente de seu celular ou computador digitando este endereço local no navegador.",
-                            color = Color.LightGray,
-                            fontSize = 13.sp
+                            color = if (isDarkTheme) Color.LightGray else Color.DarkGray,
+                            fontSize = 13.sp,
+                            lineHeight = 18.sp
                         )
                         Spacer(modifier = Modifier.height(14.dp))
                         Text(
@@ -895,7 +933,7 @@ fun TvHomeDashboardScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = if (isServerRunning) "Status: Servidor Ativo" else "Status: Servidor Inativo",
-                                color = Color.White,
+                                color = if (isDarkTheme) Color.White else Color.Black,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -906,15 +944,19 @@ fun TvHomeDashboardScreen(
             confirmButton = {
                 Row {
                     TextButton(onClick = { onToggleServer() }) {
-                        Text(if (isServerRunning) "Desligar Servidor" else "Ligar Servidor", color = if (isServerRunning) Color(0xFFFF453A) else Color(0xFF30D158))
+                        Text(
+                            text = if (isServerRunning) "Desligar Servidor" else "Ligar Servidor", 
+                            color = if (isServerRunning) Color(0xFFFF453A) else Color(0xFF30D158),
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     TextButton(onClick = { showWifiShareDialog = false }) {
-                        Text("Fechar", color = Color.Gray)
+                        Text("Fechar", color = Color.Gray, fontWeight = FontWeight.Medium)
                     }
                 }
             },
-            containerColor = Color(0xFF1C1C1E)
+            containerColor = if (isDarkTheme) Color(0xFF1C1C1E) else Color(0xFFFFFFFF)
         )
     }
 
@@ -3109,9 +3151,15 @@ fun TvServerDashboard(onToggleServer: () -> Unit) {
     val clientIp by ServerState.clientIp.collectAsState()
     val serverIp by ServerState.serverIp.collectAsState()
     val logs by Logger.logs.collectAsState()
+    val isDarkTheme by AppState.isDarkTheme.collectAsState()
+
+    val textColor = if (isDarkTheme) Color.White else Color.Black
+    val textMutedColor = if (isDarkTheme) Color.Gray else Color.DarkGray
+    val panelBg = if (isDarkTheme) Color(0xFF1C1C1E) else Color(0xFFFFFFFF)
+    val panelBorder = if (isDarkTheme) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.08f)
 
     Column(modifier = Modifier.fillMaxSize().padding(32.dp)) {
-        Text("Servidor Host", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+        Text("Servidor Host", color = textColor, fontSize = 28.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(24.dp))
         
         Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
@@ -3121,7 +3169,8 @@ fun TvServerDashboard(onToggleServer: () -> Unit) {
                     .weight(0.4f)
                     .fillMaxHeight()
                     .clip(RoundedCornerShape(20.dp))
-                    .background(Color(0xFF1C1C1E))
+                    .background(panelBg)
+                    .border(BorderStroke(1.dp, panelBorder), RoundedCornerShape(20.dp))
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -3129,30 +3178,57 @@ fun TvServerDashboard(onToggleServer: () -> Unit) {
                 Spacer(modifier = Modifier.height(24.dp))
                 
                 if (!isConnected) {
-                    Text("ESCANEE PARA CONECTAR", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "ESCANEE PARA CONECTAR", 
+                        color = textMutedColor, 
+                        fontSize = 11.sp, 
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
+                    )
                     Spacer(modifier = Modifier.height(16.dp))
                     
                     val serverUrl = "http://$serverIp:${AppConfig.PORT}"
+                    val borderBrush = remember(isRunning) {
+                        androidx.compose.ui.graphics.Brush.linearGradient(
+                            colors = if (isRunning) {
+                                listOf(AppConfig.PrimaryBlue, Color(0xFF30D158))
+                            } else {
+                                listOf(Color(0xFFFF9500), Color(0xFFFF453A))
+                            }
+                        )
+                    }
+
                     Box(
                         modifier = Modifier
                             .size(160.dp)
-                            .background(Color.White)
-                            .padding(8.dp),
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(borderBrush)
+                            .padding(3.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        val encodedUrl = java.net.URLEncoder.encode(serverUrl, "UTF-8")
-                        val qrCodeUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=$encodedUrl&color=000000&bgcolor=ffffff"
-                        coil.compose.AsyncImage(
-                            model = qrCodeUrl,
-                            contentDescription = "Código QR",
-                            modifier = Modifier.size(144.dp)
-                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(13.dp))
+                                .background(Color.White)
+                                .padding(8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            val encodedUrl = java.net.URLEncoder.encode(serverUrl, "UTF-8")
+                            val qrColorHex = if (isRunning) "0a84ff" else "ff9500"
+                            val qrCodeUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=$encodedUrl&color=$qrColorHex&bgcolor=ffffff"
+                            coil.compose.AsyncImage(
+                                model = qrCodeUrl,
+                                contentDescription = "Código QR",
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
                     }
                 } else {
                     Icon(Icons.Default.CheckCircle, contentDescription = null, tint = AppConfig.ActiveGreen, modifier = Modifier.size(80.dp))
                     Spacer(modifier = Modifier.height(16.dp))
                     Text("CLIENTE CONECTADO", color = AppConfig.ActiveGreen, fontWeight = FontWeight.Bold)
-                    Text("IP: $clientIp", color = Color.White)
+                    Text("IP: $clientIp", color = textColor)
                 }
 
                 Spacer(modifier = Modifier.weight(1f))
@@ -3171,17 +3247,18 @@ fun TvServerDashboard(onToggleServer: () -> Unit) {
                     .weight(0.6f)
                     .fillMaxHeight()
                     .clip(RoundedCornerShape(20.dp))
-                    .background(Color(0xFF1C1C1E))
+                    .background(panelBg)
+                    .border(BorderStroke(1.dp, panelBorder), RoundedCornerShape(20.dp))
                     .padding(24.dp)
             ) {
-                Text("LOGS DE TELEMETRIA", color = Color.Gray, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text("LOGS DE TELEMETRIA", color = textMutedColor, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     items(logs) { logLine ->
                         Text(
                             text = logLine,
-                            color = if (logLine.contains("Error", ignoreCase = true)) AppConfig.ErrorRed else Color.White,
+                            color = if (logLine.contains("Error", ignoreCase = true)) AppConfig.ErrorRed else textColor,
                             fontFamily = FontFamily.Monospace,
                             fontSize = 12.sp
                         )

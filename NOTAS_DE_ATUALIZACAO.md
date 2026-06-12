@@ -2,6 +2,12 @@
 
 Aqui você encontra o registro histórico de atualizações e aperfeiçoamentos do Nexus Explorer Pro.
 
+## [1.1.8] - 11/06/2026 18:20
+- **Conexão QR Code Premium**: Renovação total dos painéis de emparelhamento por QR Code, implementando bordas modernas com gradientes de alta fidelidade visual (azul e verde esmeralda para sinalizar o status ativo, ou laranja e vermelho para inativo).
+- **QR Code Adaptado ao Tema**: Ajuste sistemático da cor de geração do QR Code via API para combinar de modo fluido com as nuances do tema selecionado, assegurando o melhor contraste e um acabamento deslumbrante.
+- **Suporte a Light Mode no Host**: Adequacação visual completa do diálogo e painel Host Server ao Modo Claro e Modo Escuro, mantendo integridade da visualização em qualquer tema de uso na Android TV.
+- **Identificadores das Builds**: Incremento coordenado da versão da Build (10) e versão do aplicativo (1.1.8) em todos os manifestos de compilação, assets e checadores estáticos locais e na nuvem.
+
 ## [1.1.7] - 12/06/2026 00:45
 - **Aperfeiçoamento de Navegação por Foco**: Ajuste no foco dinâmico da D-pad para todos os cartões e itens do gerenciador de arquivos da TV, configurando efeitos de animações com molas elásticas (spring dynamic transitions) de zoom 1.08x e bordas destacadas com alta visibilidade.
 - **Modo Claro Independente**: Separação completa da paleta cromática do modo claro (Light Mode) para total legibilidade de textos, fundos, cabeçalhos, categorias ("Ações Rápidas", "Biblioteca" e "Armazenamento") e diálogos, sem herança indesejada de backgrounds escuros hardcoded.

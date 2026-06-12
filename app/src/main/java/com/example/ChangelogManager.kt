@@ -20,6 +20,16 @@ object ChangelogManager {
 
     val changelogs = listOf(
         VersionChangelog(
+            versionName = "1.1.8",
+            versionCode = 10,
+            releaseDate = "11 de Junho de 2026 (18:20)",
+            highlights = listOf(
+                "Interface de Conexão QR-code Reformulada: Visual premium deslumbrante com bordas em gradientes dinâmicos indicando instantaneamente o status do servidor (azul/verde para ativo, laranja/vermelho para inativo).",
+                "QR Code Colorido Personalizado: Geração inteligente de QR Codes que combinam com as nuances azul-esmeralda e nuances quentes da identidade do projeto, otimizando o contraste e a escaneabilidade.",
+                "Modo Claro no Servidor Host: Adaptação perfeita de ambos os diálogos de compartilhamento e da dashboard principal do Host para o tema ativo (Modo Claro/Escuro)."
+            )
+        ),
+        VersionChangelog(
             versionName = "1.1.7",
             versionCode = 9,
             releaseDate = "12 de Junho de 2026 (00:45)",
