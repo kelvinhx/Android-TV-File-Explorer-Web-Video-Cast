@@ -2,6 +2,13 @@
 
 Aqui você encontra o registro histórico de atualizações e aperfeiçoamentos do Nexus Explorer Pro.
 
+## [1.2.7] - 12/06/2026 21:25
+* **Versão do Aplicativo**: 1.2.7
+* **Versão da Build**: 19
+* **Data e Hora do Envio**: 12/06/2026 às 21:25 (Horário de Sincronização)
+- **Backup de Segurança Automático do APK**: Implementação de um robusto pipeline de cópia de segurança para o instalador APK atualizado. Toda vez que uma atualização for baixada e descompactada com sucesso no diretório de cache isolado da aplicação, um backup de segurança (`nexus-update-backup.apk`) é automaticamente gerado e armazenado de forma permanente tanto na pasta principal do aplicativo (`/storage/emulated/0/Nexus Explorer`) quanto na pasta padrão de downloads do sistema (`/storage/emulated/0/Download`). Isso confere autonomia total ao usuário para instalar o aplicativo de forma 100% manual em caso de quaisquer instabilidades do sistema operacional ou falha de rede do instalador nativo.
+- **Prevenção contra Exclusão Involuntária de Backups**: Atualização na lógica do método `cleanUpOldUpdates` do `Updater`. Ao realizar a higienização de compilações antigas ou arquivos corrompidos acumulados, o motor agora detecta, por meio de correspondência de strings, se o arquivo consiste em um APK de backup ativo. Esses arquivos são categoricamente mantidos fora do círculo de expurgação, garantindo sua visibilidade e fácil acesso a qualquer momento.
+
 ## [1.2.6] - 12/06/2026 21:15
 - **Motor do Navegador Web Caster Interno Totalmente Reformulado na Web**: Evasão de segurança inteligente de bloqueadores de iframe (anti-frame-busting) adicionada por meio da redefinição estrutural das propriedades de referenciamento global (`window.top` e `window.parent` mockados para apontar diretamente para `window.self` via `Object.defineProperty`). Isso impede que scripts maliciosos de páginas web de terceiros ocultem o documento, limpem a tela ou deixem a tela preta ao detectarem sua execução interna no navegador do Caster. Adicionada injeção de estilo forçado mantendo visíveis elementos vitais do corpo da página (`display: block` e `opacity: 1`).
 - **Intercepção Inteligente de Cabeçalhos e CORS Sem Limites**: Implementado no servidor Netty do Ktor um pipeline de interceptação de requisições de rede para anexar cabeçalhos de permissão de compartilhamento de recursos entre origens distintas (CORS - Cross-Origin Resource Sharing) em todas as rotas de ativos rápidos do servidor, anulando qualquer restrição do navegador de dispositivos emissores na carga de folhas de estilo, scripts JavaScript ou requisições AJAX.

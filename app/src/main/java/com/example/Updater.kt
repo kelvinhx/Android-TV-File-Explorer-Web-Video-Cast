@@ -94,7 +94,7 @@ object Updater {
             val legacyDir = File(Environment.getExternalStorageDirectory(), "Nexus Explorer")
             if (legacyDir.exists() && legacyDir.isDirectory) {
                 legacyDir.listFiles()?.forEach { file ->
-                    if (file.name.endsWith(".zip") || file.name.endsWith(".apk")) {
+                    if ((file.name.endsWith(".zip") || file.name.endsWith(".apk")) && !file.name.contains("backup")) {
                         file.delete()
                     }
                 }
@@ -103,7 +103,9 @@ object Updater {
                 val cacheUpdatesDir = File(ctx.cacheDir, "updates")
                 if (cacheUpdatesDir.exists() && cacheUpdatesDir.isDirectory) {
                     cacheUpdatesDir.listFiles()?.forEach { file ->
-                        file.delete()
+                        if (!file.name.contains("backup")) {
+                            file.delete()
+                        }
                     }
                 }
             }
@@ -207,6 +209,35 @@ object Updater {
                 zipFile.delete()
                 
                 if (apkFile != null) {
+                    onProgress("Salvando backup de segurança do instalador APK na pasta do aplicativo...")
+                    try {
+                        val backupDir = File(Environment.getExternalStorageDirectory(), "Nexus Explorer")
+                        if (!backupDir.exists()) backupDir.mkdirs()
+                        val backupFile = File(backupDir, "nexus-update-backup.apk")
+                        if (backupFile.exists()) backupFile.delete()
+                        apkFile.inputStream().use { input ->
+                            backupFile.outputStream().use { output ->
+                                input.copyTo(output)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+
+                    try {
+                        val dlDir = File(Environment.getExternalStorageDirectory(), "Download")
+                        if (!dlDir.exists()) dlDir.mkdirs()
+                        val backupFileDl = File(dlDir, "nexus-update-backup.apk")
+                        if (backupFileDl.exists()) backupFileDl.delete()
+                        apkFile.inputStream().use { input ->
+                            backupFileDl.outputStream().use { output ->
+                                input.copyTo(output)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+
                     onProgress("Iniciando instalação...")
                     
                 val prefs = context.getSharedPreferences("updater_prefs", Context.MODE_PRIVATE)

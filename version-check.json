@@ -1,13 +1,11 @@
 {
-  "versionCode": 18,
-  "versionName": "1.2.6",
+  "versionCode": 19,
+  "versionName": "1.2.7",
   "buildDate": "12/06/2026",
-  "buildTime": "21:15",
-  "buildDateTime": "2026-06-12T21:15:00Z",
+  "buildTime": "21:25",
+  "buildDateTime": "2026-06-12T21:25:00Z",
   "changelog": [
-    "Motor do Navegador Web Caster Interno Totalmente Reformulado na Web: Evasão de segurança inteligente contra anti-frame-busting e bloqueadores de iframes, além de um sistema de visibilidade de corpos web.",
-    "Conversão de Vídeo Wi-Fi em Transmissão Direta para a TV: O endpoint /api/cast agora identifica parâmetros de fluxo direto de vídeo e ativa o viewer nativo com aceleração física.",
-    "Notificação Não Invasiva de Fontes Desconhecidas no Primeiro Uso: Card inteligente flutuante e focável via DPAD com salvamento local no SharedPrefs.",
-    "Intercepção Inteligente de Cabeçalhos e CORS Sem Limites: Pipeline de servidor Netty do Ktor configurado para apoiar com CORS total downloads e uploads de celulares remotos."
+    "Criação Automática de Backup APK: salvamento estrutural do instalador APK atualizado diretamente na pasta da aplicação (Nexus Explorer) e no diretório de Downloads, permitindo auditoria visual ou instalação/recuperação física manual caso necessário.",
+    "Blindagem de Segurança com Exclusão Inteligente: Proteção do módulo limpador 'cleanUpOldUpdates' para não remover os arquivos de segurança com nomenclatura de backup."
   ]
 }

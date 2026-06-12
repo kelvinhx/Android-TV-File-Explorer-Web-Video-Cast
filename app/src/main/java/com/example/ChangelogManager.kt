@@ -20,6 +20,15 @@ object ChangelogManager {
 
     val changelogs = listOf(
         VersionChangelog(
+            versionName = "1.2.7",
+            versionCode = 19,
+            releaseDate = "12 de Junho de 2026 (21:25)",
+            highlights = listOf(
+                "Backup Avançado do Instalador APK: Criação automática de arquivos de backup APK de novas atualizações diretamente na pasta do aplicativo (Nexus Explorer) e no diretório de Downloads, permitindo recuperação e reinstalação manual imediata e simplificada na TV.",
+                "Robustez do Módulo de Download e Segurança: Aumento de resiliência e tratamento contra falhas em downloads de compilações do GitHub, blindando o fluxo contra quedas inesperadas ou problemas de privilégio de armazenamento."
+            )
+        ),
+        VersionChangelog(
             versionName = "1.2.6",
             versionCode = 18,
             releaseDate = "12 de Junho de 2026 (21:10)",
