@@ -20,6 +20,15 @@ object ChangelogManager {
 
     val changelogs = listOf(
         VersionChangelog(
+            versionName = "1.2.8",
+            versionCode = 20,
+            releaseDate = "12 de Junho de 2026 (21:30)",
+            highlights = listOf(
+                "Otimização Inteligente de Armazenamento: Exclusão de duplicatas do arquivo APK de backup da pasta universal de Downloads, centralizando-o única e exclusivamente na pasta principal instalada do app (Nexus Explorer) para anular consumo duplo de memória física.",
+                "Manutenção Consistente de Backups: Configuração do higienizador de arquivos temporários antigos para excluir apenas arquivos obsoletos, estendendo blindagem protetora permanente para o instalador de segurança de backup."
+            )
+        ),
+        VersionChangelog(
             versionName = "1.2.7",
             versionCode = 19,
             releaseDate = "12 de Junho de 2026 (21:25)",

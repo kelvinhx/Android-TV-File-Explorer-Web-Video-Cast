@@ -2,6 +2,13 @@
 
 Aqui você encontra o registro histórico de atualizações e aperfeiçoamentos do Nexus Explorer Pro.
 
+## [1.2.8] - 12/06/2026 21:30
+* **Versão do Aplicativo**: 1.2.8
+* **Versão da Build**: 20
+* **Data e Hora do Envio**: 12/06/2026 às 21:30 (Horário de Sincronização)
+- **Otimização Essencial de Armazenamento e Backups**: Aperfeiçoamento da inteligência de geração do instalador APK de segurança (`nexus-update-backup.apk`). Removida a cópia redundante sobressalente criada no diretório padrão `/Download` do sistema operacional para eliminar o consumo duplicado desnecessário de memória física e armazenamento em televisores e TV boxes de alta ressonância, mantendo-a disponível única e exclusivamente na pasta oficial de trabalho instalada do aplicativo (`/storage/emulated/0/Nexus Explorer`) para as mais estritas instalações manuais em caso de queda de rede ou instabilidade do Android.
+- **Blindagem e Fidelidade do Higienizador de Cache**: Integração na rotina `cleanUpOldUpdates` do `Updater` de um detector de assinaturas que ignora todo e qualquer instalador remanescente que contenha a palavra de segurança `backup` em sua nomenclatura lógica. Isso assegura que futuras limpezas automáticas de buffers ou atualizações temporárias acumuladas pós-instalação preservem permanentemente intacto o arquivo de segurança manual para o usuário consultar ou reinstalar offline quando necessário.
+
 ## [1.2.7] - 12/06/2026 21:25
 * **Versão do Aplicativo**: 1.2.7
 * **Versão da Build**: 19

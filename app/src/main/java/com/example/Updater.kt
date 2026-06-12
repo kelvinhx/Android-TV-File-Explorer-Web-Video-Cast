@@ -224,20 +224,6 @@ object Updater {
                         e.printStackTrace()
                     }
 
-                    try {
-                        val dlDir = File(Environment.getExternalStorageDirectory(), "Download")
-                        if (!dlDir.exists()) dlDir.mkdirs()
-                        val backupFileDl = File(dlDir, "nexus-update-backup.apk")
-                        if (backupFileDl.exists()) backupFileDl.delete()
-                        apkFile.inputStream().use { input ->
-                            backupFileDl.outputStream().use { output ->
-                                input.copyTo(output)
-                            }
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-
                     onProgress("Iniciando instalação...")
                     
                 val prefs = context.getSharedPreferences("updater_prefs", Context.MODE_PRIVATE)

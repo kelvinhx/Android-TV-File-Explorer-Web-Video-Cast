@@ -1,11 +1,11 @@
 {
-  "versionCode": 19,
-  "versionName": "1.2.7",
+  "versionCode": 20,
+  "versionName": "1.2.8",
   "buildDate": "12/06/2026",
-  "buildTime": "21:25",
-  "buildDateTime": "2026-06-12T21:25:00Z",
+  "buildTime": "21:30",
+  "buildDateTime": "2026-06-12T21:30:00Z",
   "changelog": [
-    "Criação Automática de Backup APK: salvamento estrutural do instalador APK atualizado diretamente na pasta da aplicação (Nexus Explorer) e no diretório de Downloads, permitindo auditoria visual ou instalação/recuperação física manual caso necessário.",
-    "Blindagem de Segurança com Exclusão Inteligente: Proteção do módulo limpador 'cleanUpOldUpdates' para não remover os arquivos de segurança com nomenclatura de backup."
+    "Otimização do Backup do Instalador APK: Redução de consumo de memória física ao manter o instalador de segurança de forma exclusiva na pasta principal do aplicativo (Nexus Explorer), removendo a duplicata desnecessária no diretório geral de Downloads.",
+    "Preservação do Histórico de Manutenção de Backups: Ajuste de detecção do motor de limpeza profunda de logs e arquivos temporários antigos mantendo preservados os backups manuais na pasta do app."
   ]
 }
