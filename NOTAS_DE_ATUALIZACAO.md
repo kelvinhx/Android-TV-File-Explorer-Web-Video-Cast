@@ -2,6 +2,15 @@
 
 Aqui você encontra o registro histórico de atualizações e aperfeiçoamentos do Nexus Explorer Pro.
 
+## [1.4.1] - 12/06/2026 20:56
+* **Versão do Aplicativo**: 1.4.1
+* **Versão da Build**: 25
+* **Data e Hora do Envio**: 12/06/2026 às 20:56 (Horário de Sincronização)
+- **Centralização da Navegação com TvNavigationManager**: Criação de um gerenciador de navegação e foco dedicado (`TvNavigationManager.kt`) para desacoplar as movimentações em árvore de arquivos do layout principal em Jetpack Compose.
+- **Correção e Rastreabilidade Absoluta de Foco (D-pad)**: Reformulação total do sistema de entrada e saída de subpastas. O gerenciador agora mapeia e guarda em memória o nome exato e índice do item de diretório que disparou a navegação; ao voltar de uma pasta, o foco é restaurado cirurgicamente nela no ecrã da TV, eliminando qualquer salto indesejado de foco para os botões do cabeçalho ou menu flutuante.
+- **Unificação do Mapeamento Dinâmico de Focus Requesters**: Substituição do hook de foco do primeiro elemento por uma matriz dinâmica adaptada ao tamanho exato da lista de arquivos renderizada, garantindo que o D-pad permaneça estável durante todo o processo de carregamento assíncrono.
+- **Simplificação e Consolidação de Botões de Voltar**: Redução da redundância no cabeçalho através de um controle unificado de retorno acionado pelas operações da pilha de históricos do `TvNavigationManager`.
+
 ## [1.4.0] - 13/06/2026 02:30
 * **Versão do Aplicativo**: 1.4.0
 * **Versão da Build**: 24

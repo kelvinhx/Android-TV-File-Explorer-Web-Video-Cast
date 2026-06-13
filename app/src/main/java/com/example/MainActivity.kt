@@ -2738,31 +2738,57 @@ fun TvFilesBrowser(
     onPathChanged: ((String) -> Unit)? = null
 ) {
     val backButtonFocusRequester = remember { FocusRequester() }
-    val listFirstItemFocusRequester = remember { FocusRequester() }
-    var currentPath by remember { mutableStateOf(basePath) }
-    var shouldFocusFirstItem by remember { mutableStateOf(false) }
-    
+    val currentPath by TvNavigationManager.currentPath.collectAsState()
+    val targetFocusIdentifier by TvNavigationManager.targetFocusIdentifier.collectAsState()
+
     // Reset path when base changes
     LaunchedEffect(basePath) {
-        currentPath = basePath
+        TvNavigationManager.resetToPath(basePath)
     }
 
     LaunchedEffect(currentPath) {
-        shouldFocusFirstItem = true
+        onPathChanged?.invoke(currentPath)
     }
 
     var files by remember { mutableStateOf<List<UnifiedFile>>(emptyList()) }
+    val focusRequesters = remember(files) { List(files.size) { FocusRequester() } }
 
-    LaunchedEffect(files) {
-        if (shouldFocusFirstItem && files.isNotEmpty()) {
-            shouldFocusFirstItem = false
-            // Robust focus retry loop to handle layout composition on slow TV processors
-            for (i in 1..6) {
-                kotlinx.coroutines.delay(100)
-                try {
-                    listFirstItemFocusRequester.requestFocus()
-                    break
-                } catch (e: Exception) {}
+    LaunchedEffect(files, targetFocusIdentifier) {
+        if (files.isNotEmpty()) {
+            val target = targetFocusIdentifier
+            var focusIndex = 0
+            if (target != null) {
+                when (target.type) {
+                    TvNavigationManager.TargetType.FIRST_ITEM -> {
+                        focusIndex = 0
+                    }
+                    TvNavigationManager.TargetType.SPECIFIC_ITEM -> {
+                        val matchingIndex = files.indexOfFirst { it.name == target.itemName }
+                        focusIndex = if (matchingIndex != -1) {
+                            matchingIndex
+                        } else if (target.index in files.indices) {
+                            target.index
+                        } else {
+                            0
+                        }
+                    }
+                    TvNavigationManager.TargetType.BACK_BUTTON -> {
+                        try {
+                            backButtonFocusRequester.requestFocus()
+                        } catch (e: Exception) {}
+                        return@LaunchedEffect
+                    }
+                }
+            }
+            if (focusIndex in focusRequesters.indices) {
+                val req = focusRequesters[focusIndex]
+                for (i in 1..8) {
+                    kotlinx.coroutines.delay(80)
+                    try {
+                        req.requestFocus()
+                        break
+                    } catch (e: Exception) {}
+                }
             }
         }
     }
@@ -2824,19 +2850,10 @@ fun TvFilesBrowser(
             showDeleteConfirm = false
         } else if (showOpenAsDialog) {
             showOpenAsDialog = false
-        } else if (currentPath != "/storage/emulated/0" && currentPath != "/storage") {
-            val parent = if (currentPath.endsWith("/")) {
-                currentPath.substringBeforeLast('/').substringBeforeLast('/')
-            } else {
-                currentPath.substringBeforeLast('/')
-            }
-            if (parent.isNotEmpty()) {
-                currentPath = parent
-            } else {
-                currentPath = "/storage/emulated/0"
-            }
         } else {
-            onBackToDashboard?.invoke()
+            TvNavigationManager.navigateBack(context) {
+                onBackToDashboard?.invoke()
+            }
         }
     }
 
@@ -2853,40 +2870,18 @@ fun TvFilesBrowser(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
-            if (currentPath != "/storage/emulated/0" && currentPath != "/storage") {
-                DpadTvButton(
-                    text = "Voltar",
-                    icon = Icons.Default.ArrowBack,
-                    tint = AppConfig.PrimaryBlue,
-                    onClick = {
-                        val parent = if (currentPath.endsWith("/")) {
-                            currentPath.substringBeforeLast('/').substringBeforeLast('/')
-                        } else {
-                            currentPath.substringBeforeLast('/')
-                        }
-                        if (parent.isNotEmpty()) {
-                            currentPath = parent
-                            onPathChanged?.invoke(parent)
-                        } else {
-                            currentPath = "/storage/emulated/0"
-                            onPathChanged?.invoke("/storage/emulated/0")
-                        }
-                    },
-                    modifier = Modifier.focusRequester(backButtonFocusRequester)
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-            } else if (onBackToDashboard != null) {
-                DpadTvButton(
-                    text = "Voltar",
-                    icon = Icons.Default.ArrowBack,
-                    tint = AppConfig.PrimaryBlue,
-                    onClick = {
-                        onBackToDashboard()
-                    },
-                    modifier = Modifier.focusRequester(backButtonFocusRequester)
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-            }
+            DpadTvButton(
+                text = "Voltar",
+                icon = Icons.Default.ArrowBack,
+                tint = AppConfig.PrimaryBlue,
+                onClick = {
+                    TvNavigationManager.navigateBack(context) {
+                        onBackToDashboard?.invoke()
+                    }
+                },
+                modifier = Modifier.focusRequester(backButtonFocusRequester)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
 
             val curName = if (currentPath == "/storage/emulated/0") "Na minha TV" else currentPath.substringAfterLast('/')
             Text(
@@ -3004,8 +2999,14 @@ fun TvFilesBrowser(
                         verticalArrangement = Arrangement.spacedBy(24.dp)
                     ) {
                         itemsIndexed(files) { index, file ->
-                            val itemModifier = if (index == 0) {
-                                Modifier.focusRequester(listFirstItemFocusRequester)
+                            val itemModifier = if (index in focusRequesters.indices) {
+                                Modifier
+                                    .focusRequester(focusRequesters[index])
+                                    .onFocusChanged { state ->
+                                        if (state.isFocused) {
+                                            TvNavigationManager.updateActiveFocus(currentPath, file.name, index)
+                                        }
+                                    }
                             } else {
                                 Modifier
                             }
@@ -3014,8 +3015,7 @@ fun TvFilesBrowser(
                                 modifier = itemModifier,
                                 onClick = {
                                     if (file.isDirectory) {
-                                        currentPath = file.absolutePath
-                                        onPathChanged?.invoke(file.absolutePath)
+                                        TvNavigationManager.enterDirectory(currentPath, file.name, index, file.absolutePath)
                                     } else {
                                         fileToManage = file
                                         showContextMenu = true
@@ -3034,8 +3034,14 @@ fun TvFilesBrowser(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         itemsIndexed(files) { index, file ->
-                            val itemModifier = if (index == 0) {
-                                Modifier.focusRequester(listFirstItemFocusRequester)
+                            val itemModifier = if (index in focusRequesters.indices) {
+                                Modifier
+                                    .focusRequester(focusRequesters[index])
+                                    .onFocusChanged { state ->
+                                        if (state.isFocused) {
+                                            TvNavigationManager.updateActiveFocus(currentPath, file.name, index)
+                                        }
+                                    }
                             } else {
                                 Modifier
                             }
@@ -3044,8 +3050,7 @@ fun TvFilesBrowser(
                                 modifier = itemModifier,
                                 onClick = {
                                     if (file.isDirectory) {
-                                        currentPath = file.absolutePath
-                                        onPathChanged?.invoke(file.absolutePath)
+                                        TvNavigationManager.enterDirectory(currentPath, file.name, index, file.absolutePath)
                                     } else {
                                         fileToManage = file
                                         showContextMenu = true
@@ -3092,7 +3097,9 @@ fun TvFilesBrowser(
                         onClick = {
                             showContextMenu = false
                             if (fileToManage!!.isDirectory) {
-                                currentPath = fileToManage!!.absolutePath
+                                val matchIdx = files.indexOfFirst { it.absolutePath == fileToManage!!.absolutePath }
+                                val idx = if (matchIdx != -1) matchIdx else 0
+                                TvNavigationManager.enterDirectory(currentPath, fileToManage!!.name, idx, fileToManage!!.absolutePath)
                             } else {
                                 FileUtils.openFile(context, fileToManage!!.absolutePath)
                             }
