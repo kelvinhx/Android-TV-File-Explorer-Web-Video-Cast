@@ -2,6 +2,14 @@
 
 Aqui você encontra o registro histórico de atualizações e aperfeiçoamentos do Nexus Explorer Pro.
 
+## [1.3.0] - 13/06/2026 00:40
+* **Versão do Aplicativo**: 1.3.0
+* **Versão da Build**: 22
+* **Data e Hora do Envio**: 13/06/2026 às 00:40 (Horário de Sincronização)
+- **Gerenciador de Arquivos Web Ultra Aprimorado**: Implementação profissional para desktops e celulares de ações via clique longo ou clique com botão direito do mouse (`contextmenu` / `mousedown` / `touchstart`). Agora, qualquer arquivo ou pasta concede opções completas para Mover, Copiar, Renomear, Excluir com segurança e consultar dados avançados.
+- **Visualizador de Informações do Item**: Integração de um elegante modal de metadados (`info-modal`) que detalha dinamicamente o nome, caminho fisico do sistema, tamanho formatado e data de modificação de arquivos e diretórios na TV.
+- **Alternador Dinâmico Dinâmico de Layout na Web**: Adição de um botão de troca entre os modos Grade (Grid) e Lista (List) no cabeçalho da interface web do Caster, fornecendo responsividade adaptativa para qualquer tamanho de tela com retenção offline inteligente do estilo preferido do usuário (`localStorage`).
+
 ## [1.2.9] - 13/06/2026 00:10
 * **Versão do Aplicativo**: 1.2.9
 * **Versão da Build**: 21

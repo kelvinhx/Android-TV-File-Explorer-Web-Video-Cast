@@ -182,6 +182,64 @@ object WebInterface {
             letter-spacing: 0.1px;
         }
 
+        /* List View & Info Modal Design Extensions */
+        .item-info-col {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            min-width: 0;
+        }
+        #files-list.list-view {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 16px;
+        }
+        #files-list.list-view .liquid-grid-item {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            text-align: left;
+            padding: 12px 18px;
+            border-radius: 16px;
+            justify-content: flex-start;
+            gap: 16px;
+        }
+        #files-list.list-view .liquid-grid-item .liquid-icon-box {
+            width: 48px !important;
+            height: 48px !important;
+            margin-bottom: 0 !important;
+            border-radius: 12px !important;
+            font-size: 22px !important;
+            flex-shrink: 0 !important;
+        }
+        #files-list.list-view .liquid-grid-item div.w-\[65px\] {
+            width: 48px !important;
+            height: 48px !important;
+            margin-bottom: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            flex-shrink: 0 !important;
+        }
+        #files-list.list-view .liquid-grid-item .item-info-col {
+            align-items: flex-start;
+            flex: 1;
+        }
+        #files-list.list-view .liquid-grid-item .liquid-file-title {
+            font-size: 14.5px;
+            -webkit-line-clamp: 1;
+            padding: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #files-list.list-view .liquid-grid-item .liquid-file-subtitle {
+            margin-top: 2px;
+            font-size: 11.5px;
+        }
+
         .tab-bar {
             background: rgba(20, 20, 28, 0.85);
             backdrop-filter: blur(30px) saturate(210%);
@@ -449,6 +507,7 @@ object WebInterface {
         <button class="toolbar-btn" onclick="navigateBack()" id="back-btn"><i class="fa-solid fa-chevron-left"></i></button>
         <div class="flex-1 text-center font-semibold text-[15px] truncate px-4" id="path-title">Na minha TV</div>
         <input type="file" id="file-uploader" class="hidden" multiple onchange="handleUpload(this.files)">
+        <button class="toolbar-btn text-sm" id="layout-toggle-btn" onclick="toggleLayoutStyle()" title="Mudar Layout"><i class="fa-solid fa-list text-[15px]"></i></button>
         <button class="toolbar-btn text-sm" onclick="document.getElementById('file-uploader').click()"><i class="fa-solid fa-plus text-xl"></i></button>
         <button class="toolbar-btn text-sm" onclick="createNewFolder()"><i class="fa-solid fa-folder-plus text-xl"></i></button>
     </div>
@@ -573,10 +632,57 @@ object WebInterface {
             <i class="fa-solid fa-pen"></i>
         </button>
         <div class="h-[1px] bg-[rgba(255,255,255,0.1)] w-full ml-4"></div>
+        <button onclick="execContextAction('INFO')" class="context-item !text-white">
+            <span>Informações</span>
+            <i class="fa-solid fa-circle-info"></i>
+        </button>
+        <div class="h-[1px] bg-[rgba(255,255,255,0.1)] w-full ml-4"></div>
         <button onclick="execContextAction('DELETE')" class="context-item danger">
             <span>Apagar</span>
             <i class="fa-solid fa-trash-can"></i>
         </button>
+    </div>
+
+    <!-- Beautiful File Info Modal Sheet -->
+    <div id="info-modal" class="modal-overlay" onclick="closeInfoModal(event)">
+        <div class="modal-sheet" onclick="event.stopPropagation()">
+            <div class="w-10 h-1.5 bg-[var(--liquid-gray)] rounded-full mx-auto mb-4"></div>
+            <h3 class="text-lg font-extrabold mb-5 text-center text-white flex items-center justify-center gap-2">
+                <i class="fa-solid fa-circle-info text-[var(--liquid-blue)]"></i>
+                <span>Informações do Item</span>
+            </h3>
+            
+            <div class="space-y-4 max-h-[300px] overflow-y-auto pr-1">
+                <div class="flex flex-col gap-1 border-b border-[rgba(255,255,255,0.06)] pb-3">
+                    <span class="text-[10px] text-[var(--liquid-gray)] uppercase font-semibold tracking-wider">Nome do Arquivo</span>
+                    <span class="text-sm text-white font-medium break-all" id="info-name">-</span>
+                </div>
+                <div class="flex flex-col gap-1 border-b border-[rgba(255,255,255,0.06)] pb-3">
+                    <span class="text-[10px] text-[var(--liquid-gray)] uppercase font-semibold tracking-wider">Caminho do Sistema</span>
+                    <span class="text-xs text-stone-300 font-mono break-all" id="info-path">-</span>
+                </div>
+                <div class="flex flex-col gap-1 border-b border-[rgba(255,255,255,0.06)] pb-3">
+                    <span class="text-[10px] text-[var(--liquid-gray)] uppercase font-semibold tracking-wider">Tipo</span>
+                    <span class="text-sm text-white font-medium" id="info-type">-</span>
+                </div>
+                <div class="flex flex-col gap-2">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="flex flex-col gap-1 border-b border-[rgba(255,255,255,0.06)] pb-3">
+                            <span class="text-[10px] text-[var(--liquid-gray)] uppercase font-semibold tracking-wider">Tamanho</span>
+                            <span class="text-sm text-white font-medium" id="info-size">-</span>
+                        </div>
+                        <div class="flex flex-col gap-1 border-b border-[rgba(255,255,255,0.06)] pb-3">
+                            <span class="text-[10px] text-[var(--liquid-gray)] uppercase font-semibold tracking-wider">Modificado</span>
+                            <span class="text-sm text-white font-medium" id="info-date">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex justify-end gap-3 mt-6">
+                <button onclick="closeInfoModal('close')" class="bg-stone-800 text-stone-200 font-semibold px-5 py-2.5 rounded-xl text-sm transition-all hover:bg-stone-700 active:scale-95">Ok, fechar</button>
+            </div>
+        </div>
     </div>
 
     <!-- Floating Clipboard Bar -->
@@ -671,8 +777,74 @@ object WebInterface {
         let longPressTimer = null;
         let isLongPressActive = false;
         let clipboard = null; // Stores { action: 'COPY'|'MOVE', path: '..', name: '..' }
+        let currentLayout = localStorage.getItem('nexus_layout_style') || 'grid';
+        let activeContextFile = null;
 
         let searchTimeout = null;
+
+        function toggleLayoutStyle() {
+            doVibrate(30);
+            const list = document.getElementById('files-list');
+            const btn = document.getElementById('layout-toggle-btn');
+            if (currentLayout === 'grid') {
+                currentLayout = 'list';
+                if (list) list.classList.add('list-view');
+                if (btn) btn.innerHTML = '<i class="fa-solid fa-grip text-[15px]"></i>';
+            } else {
+                currentLayout = 'grid';
+                if (list) list.classList.remove('list-view');
+                if (btn) btn.innerHTML = '<i class="fa-solid fa-list text-[15px]"></i>';
+            }
+            localStorage.setItem('nexus_layout_style', currentLayout);
+        }
+
+        function applyLayoutStyle() {
+            const list = document.getElementById('files-list');
+            const btn = document.getElementById('layout-toggle-btn');
+            if (currentLayout === 'list') {
+                if (list) list.classList.add('list-view');
+                if (btn) btn.innerHTML = '<i class="fa-solid fa-grip text-[15px]"></i>';
+            } else {
+                if (list) list.classList.remove('list-view');
+                if (btn) btn.innerHTML = '<i class="fa-solid fa-list text-[15px]"></i>';
+            }
+        }
+
+        function showFileInfo(file) {
+            if (!file) return;
+            doVibrate(30);
+            
+            const nameLower = file.name.toLowerCase();
+            let typeLabel = "Arquivo de dados";
+            if (file.isDirectory) typeLabel = "Pasta / Diretório";
+            else if (nameLower.endsWith('.apk')) typeLabel = "Instalador Android (APK)";
+            else if (['.mp4', '.mkv', '.webm', '.mov', '.avi', '.ts', '.m3u8'].some(el => nameLower.endsWith(el))) typeLabel = "Vídeo Digital";
+            else if (['.mp3', '.wav', '.aac', '.flac', '.ogg', '.m4a'].some(el => nameLower.endsWith(el))) typeLabel = "Áudio Comprimido";
+            else if (['.zip', '.rar', '.7z', '.tar', '.gz'].some(el => nameLower.endsWith(el))) typeLabel = "Arquivo Compactado (ZIP)";
+            else if (nameLower.endsWith('.pdf')) typeLabel = "Documento PDF";
+            else if (['.txt', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.json', '.xml', '.html', '.css', '.js', '.kt'].some(el => nameLower.endsWith(el))) typeLabel = "Documento/Script";
+            else if (['.jpg', '.jpeg', '.png', '.webp', '.gif'].some(el => nameLower.endsWith(el))) typeLabel = "Imagem Digital";
+
+            document.getElementById('info-name').textContent = file.name;
+            document.getElementById('info-path').textContent = file.path || file.absolutePath || "/";
+            document.getElementById('info-type').textContent = typeLabel;
+            document.getElementById('info-size').textContent = file.isDirectory ? "Variável" : (file.sizeFormatted || file.lengthFormatted || "0 KB");
+            document.getElementById('info-date').textContent = file.dateFormatted || "Data desconhecida";
+
+            document.getElementById('info-modal').style.display = 'flex';
+            setTimeout(() => {
+                document.getElementById('info-modal').classList.add('active');
+            }, 10);
+        }
+
+        function closeInfoModal(e) {
+            if (e === 'close' || e.target.id === 'info-modal') {
+                document.getElementById('info-modal').classList.remove('active');
+                setTimeout(() => {
+                    document.getElementById('info-modal').style.display = 'none';
+                }, 300);
+            }
+        }
 
         // PWA Installation & Promotion Manager
         let deferredPrompt = null;
@@ -760,6 +932,7 @@ object WebInterface {
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            applyLayoutStyle();
             fetchFiles();
             
             // Check for iOS Safari users or compatibility modes to gently suggest PWA install after 6 seconds
@@ -972,6 +1145,26 @@ object WebInterface {
                 const card = document.createElement('div');
                 card.className = "liquid-grid-item";
                 
+                // Set up right-click context menu
+                card.addEventListener('contextmenu', (e) => {
+                    doVibrate(65);
+                    showContextMenu(e, file);
+                });
+
+                // Set up desktop mouse hold event (long-click trigger)
+                let mousePressTimer;
+                card.addEventListener('mousedown', (e) => {
+                    if (e.button !== 0) return; // Only left click
+                    isLongPressActive = false;
+                    mousePressTimer = setTimeout(() => {
+                        isLongPressActive = true;
+                        doVibrate(65);
+                        showContextMenu(e, file);
+                    }, 650);
+                });
+                card.addEventListener('mouseup', () => clearTimeout(mousePressTimer));
+                card.addEventListener('mouseleave', () => clearTimeout(mousePressTimer));
+
                 // Set up haptic touch event logic for Long Press menu
                 card.addEventListener('touchstart', (e) => {
                     isLongPressActive = false;
@@ -1045,21 +1238,24 @@ object WebInterface {
                 }
 
                 const dateString = file.dateFormatted ? file.dateFormatted.split(" ")[0] : "";
-                const dateSizeDisplay = dateString ? (dateString + "<br>" + (file.sizeFormatted || file.lengthFormatted)) : (file.sizeFormatted || file.lengthFormatted);
+                const dateSizeDisplay = dateString ? (dateString + " | " + (file.sizeFormatted || file.lengthFormatted)) : (file.sizeFormatted || file.lengthFormatted);
                 const subtitleLine = file.isDirectory ? "Pasta" : dateSizeDisplay;
 
                 card.innerHTML = '\n' +
-'                            <div class="' + iconWrapperClass + '">\n' +
-'                                ' + iconHtml + '\n' +
-'                            </div>\n' +
-'                            <div class="liquid-file-title text-[#E5E5E5] font-semibold tracking-wide">' + file.name + '</div>\n' +
-'                            <div class="liquid-file-subtitle leading-tight text-[#989899]">' + subtitleLine + '</div>\n' +
-'                        ';
+'                    <div class="' + iconWrapperClass + '">\n' +
+'                        ' + iconHtml + '\n' +
+'                    </div>\n' +
+'                    <div class="item-info-col">\n' +
+'                        <div class="liquid-file-title text-[#E5E5E5] font-semibold tracking-wide">' + file.name + '</div>\n' +
+'                        <div class="liquid-file-subtitle leading-tight text-[#989899]">' + subtitleLine + '</div>\n' +
+'                    </div>\n' +
+'                ';
                 list.appendChild(card);
             });
         }
 
         function showContextMenu(e, file) {
+            activeContextFile = file;
             const menu = document.getElementById('context-menu');
             document.getElementById('context-file-path').value = file.absolutePath || file.path;
             document.getElementById('context-file-type').value = file.isDirectory ? 'dir' : 'file';
@@ -1113,6 +1309,8 @@ object WebInterface {
             } else if (action === 'RENAME') {
                 const newName = prompt("Renomear para:");
                 if (newName) processFileAction('RENAME', absolutePath, newName.trim());
+            } else if (action === 'INFO') {
+                showFileInfo(activeContextFile);
             } else if (action === 'DELETE') {
                 if (confirm("Deseja realmente excluir este item?")) processFileAction('DELETE', absolutePath);
             }

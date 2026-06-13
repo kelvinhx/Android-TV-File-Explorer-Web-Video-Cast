@@ -1,11 +1,11 @@
 {
-  "versionCode": 21,
-  "versionName": "1.2.9",
+  "versionCode": 22,
+  "versionName": "1.3.0",
   "buildDate": "13/06/2026",
-  "buildTime": "00:10",
-  "buildDateTime": "2026-06-13T00:10:00Z",
+  "buildTime": "00:40",
+  "buildDateTime": "2026-06-13T00:40:00Z",
   "changelog": [
-    "Remoção Total do Navegador Web Cast: Conclusão da desativação e remoção integral de toda infraestrutura do navegador web no cliente e servidor, deixando a versão móvel focada única e exclusivamente como um explorador de arquivos de alta fidelidade e complexidade técnica intocada.",
-    "Aperfeiçoamento Crítico das Verificações de Atualização: Correção definitiva do loop de instalação redundante ao comparar estritamente códigos de compilação maiores (remoteCode > localCode), garantindo que se o aplicativo estiver na versão mais atualizada, as caixas de avisos sejam silenciadas."
+    "Novo Gerenciador de Arquivos Web Ultra Aprimorado: Implementado long-press e mousedown hold para desktops e mobile, incluindo novas funções completas como Informações (dados, tamanho, modificação), Copiar, Mover, Renomear e Exclusão Segura.",
+    "Controle de Visualização Dinâmico na Web: Adicionado botão de troca instantânea entre os layouts de Grade (Grid) e Lista (List) com reatividade e retenção de estado offline no navegador do usuário."
   ]
 }
