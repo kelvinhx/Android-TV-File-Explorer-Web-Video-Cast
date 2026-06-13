@@ -11,6 +11,10 @@ import android.os.Environment
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateFloatAsState
@@ -85,12 +89,12 @@ class MainActivity : ComponentActivity() {
                         Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                 contentResolver.takePersistableUriPermission(uri, takeFlags)
                 Logger.log("Android/data folder permission granted successfully!")
-                android.widget.Toast.makeText(this, "Permissão concedida!", android.widget.Toast.LENGTH_SHORT).show()
+                NexusNotificationManager.notify(this, "Permissão Android/data concedida!", NotificationType.SUCCESS)
             } catch (e: Exception) {
                 Logger.log("Failed to persist Android/data folder permission: ${e.message}")
             }
         } else {
-            android.widget.Toast.makeText(this, "Permissão negada ou bloqueada pelo Android 13+", android.widget.Toast.LENGTH_LONG).show()
+            NexusNotificationManager.notify(this, "Permissão negada ou bloqueada pelo Android 13+", NotificationType.ERROR)
         }
     }
 
@@ -246,8 +250,19 @@ class MainActivity : ComponentActivity() {
                 startService(intent)
             }
             Logger.log("Background Nexus service requested to start.")
+            NexusNotificationManager.notify(
+                this, 
+                "Servidor WiFi Nexus Pro iniciado. Pronto para compartilhar!", 
+                NotificationType.SUCCESS, 
+                showSystem = false
+            )
         } catch (e: Exception) {
             Logger.log("Failed to launch background service: ${e.message}")
+            NexusNotificationManager.notify(
+                this, 
+                "Falha ao iniciar o servidor: ${e.message}", 
+                NotificationType.ERROR
+            )
         }
     }
 
@@ -256,8 +271,19 @@ class MainActivity : ComponentActivity() {
             val intent = Intent(this, NexusService::class.java)
             stopService(intent)
             Logger.log("Background Nexus service stopped.")
+            NexusNotificationManager.notify(
+                this, 
+                "Servidor WiFi desativado com sucesso.", 
+                NotificationType.INFO, 
+                showSystem = true
+            )
         } catch (e: Exception) {
             Logger.log("Failed to stop background service: ${e.message}")
+            NexusNotificationManager.notify(
+                this, 
+                "Erro ao desativar o servidor: ${e.message}", 
+                NotificationType.ERROR
+            )
         }
     }
 
@@ -1642,6 +1668,31 @@ fun TvDashboardScreen(
     var isInstallPermissionNotificationDismissed by remember {
         mutableStateOf(sharedPrefs.getBoolean("dismissed_install_perm_notif", false))
     }
+
+    val activeNotification by NexusNotificationManager.activeNotification.collectAsState()
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            NexusNotificationManager.notify(context, "Notificações do Nexus Explorer ativadas!", NotificationType.SUCCESS)
+        } else {
+            Logger.log("Permissão de notificações de sistema recusada pelo usuário.")
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        NexusNotificationManager.initChannels(context)
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            if (androidx.core.content.ContextCompat.checkSelfPermission(
+                    context,
+                    android.Manifest.permission.POST_NOTIFICATIONS
+                ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+            ) {
+                notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
     
     LaunchedEffect(Unit) {
         while (true) {
@@ -1957,40 +2008,107 @@ fun TvDashboardScreen(
             }
 
             androidx.compose.animation.AnimatedVisibility(
-                visible = !uploadNotification.isNullOrEmpty(),
-                enter = fadeIn() + slideInVertically(initialOffsetY = { -it }),
-                exit = fadeOut() + slideOutVertically(targetOffsetY = { -it }),
-                modifier = Modifier.align(Alignment.TopCenter)
+                visible = activeNotification != null,
+                enter = fadeIn(tween(300)) + slideInVertically(
+                    initialOffsetY = { -150 },
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
+                ) + scaleIn(initialScale = 0.85f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)),
+                exit = fadeOut(tween(250)) + slideOutVertically(targetOffsetY = { -150 }) + scaleOut(targetScale = 0.85f),
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 24.dp)
             ) {
-                uploadNotification?.let { msg ->
-                    if (msg.isNotEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .padding(top = 24.dp)
-                                .clip(RoundedCornerShape(32.dp))
-                                .background(Color(0xFF1C1C1E).copy(alpha = 0.95f))
-                                .border(BorderStroke(1.5.dp, Color(0xFF007AFF)), RoundedCornerShape(32.dp))
-                                .shadow(12.dp, RoundedCornerShape(32.dp))
-                                .padding(vertical = 12.dp, horizontal = 24.dp)
+                activeNotification?.let { notification ->
+                    val colorAccent = when (notification.type) {
+                        NotificationType.SUCCESS -> AppConfig.ActiveGreen
+                        NotificationType.ERROR -> AppConfig.ErrorRed
+                        NotificationType.WARNING -> AppConfig.AccentGold
+                        NotificationType.INFO -> AppConfig.PrimaryBlue
+                    }
+                    val iconVector = when (notification.type) {
+                        NotificationType.SUCCESS -> Icons.Default.CheckCircle
+                        NotificationType.ERROR -> Icons.Default.Warning
+                        NotificationType.WARNING -> Icons.Default.Warning
+                        NotificationType.INFO -> Icons.Default.Info
+                    }
+                    val categoryLabel = when (notification.type) {
+                        NotificationType.SUCCESS -> "SUCESSO"
+                        NotificationType.ERROR -> "OCORREU UM ERRO"
+                        NotificationType.WARNING -> "AVISO IMPORTANTE"
+                        NotificationType.INFO -> "NOTIFICAÇÃO"
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .widthIn(max = 480.dp)
+                            .padding(horizontal = 16.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color(0xFF1E1E24).copy(alpha = 0.95f),
+                                        Color(0xFF121216).copy(alpha = 0.98f)
+                                    )
+                                )
+                            )
+                            .border(
+                                BorderStroke(1.5.dp, Brush.horizontalGradient(
+                                    colors = listOf(colorAccent, colorAccent.copy(alpha = 0.3f))
+                                )),
+                                RoundedCornerShape(16.dp)
+                            )
+                            .shadow(16.dp, RoundedCornerShape(16.dp))
+                            .clickable { NexusNotificationManager.dismissCurrent() }
+                            .padding(16.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(CircleShape)
+                                    .background(colorAccent.copy(alpha = 0.15f))
+                                    .border(1.dp, colorAccent.copy(alpha = 0.4f), CircleShape),
+                                contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.CheckCircle,
+                                    imageVector = iconVector,
                                     contentDescription = null,
-                                    tint = Color(0xFF34C759),
+                                    tint = colorAccent,
                                     modifier = Modifier.size(24.dp)
                                 )
-                                Spacer(modifier = Modifier.width(12.dp))
+                            }
+
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = msg,
+                                    text = categoryLabel,
+                                    color = colorAccent,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 1.2.sp
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = notification.message,
                                     color = Color.White,
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
+                            
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Fechar Notificação",
+                                tint = Color.Gray,
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .clip(CircleShape)
+                                    .clickable { NexusNotificationManager.dismissCurrent() }
+                            )
                         }
                     }
                 }

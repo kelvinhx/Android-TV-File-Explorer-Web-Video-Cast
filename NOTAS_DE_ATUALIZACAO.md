@@ -2,6 +2,16 @@
 
 Aqui você encontra o registro histórico de atualizações e aperfeiçoamentos do Nexus Explorer Pro.
 
+## [1.4.0] - 13/06/2026 02:30
+* **Versão do Aplicativo**: 1.4.0
+* **Versão da Build**: 24
+* **Data e Hora do Envio**: 13/06/2026 às 02:30 (Horário de Sincronização)
+- **Aprimoramento do Sistema de Notificações com Permissão Total**: Adicionado suporte automático para solicitar a nova permissão dinâmica `POST_NOTIFICATIONS` requerida a partir do Android 13 (API 33) no lançamento do app para garantir permissão total de entrega.
+- **Notificações em Segundo Plano e Externas**: Modulação do sistema de entrega nativa fora do app, dividida por canais prioritários regulamentados (vibrar, som, canal de anúncios/transferências e canais de alertas do sistema), assegurando notificações atrativas no Android.
+- **Arquetipação de Notificações Permanentes (Ongoing)**: Notificação integrada de serviço foreground permanente no Android de status do servidor Nexus Pro, facilitando monitoramento resiliente do endereço IP e status do compartilhamento WiFi na tela inicial.
+- **Reformulação Total de Layout e Animações de Toasts In-App**: Criação de um Hub Centralizador `NexusNotificationManager.kt` para orquestrar toasts elegantes do sistema em Jetpack Compose com visual de vidro líquido (Liquid Glass), gradientes, tipografia limpa, ícone de status e animações de mola amortecida de alta performance física (`spring` bouncy physics).
+- **Substituição de Popups Toasts Legados**: Substituição de Toasts nativos de permissões de sistema para garantir visual unificado e premium.
+
 ## [1.3.1] - 13/06/2026 00:51
 * **Versão do Aplicativo**: 1.3.1
 * **Versão da Build**: 23

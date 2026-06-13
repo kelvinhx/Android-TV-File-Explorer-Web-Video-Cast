@@ -852,7 +852,8 @@ class FileServer(private val context: Context) {
                                             }
                                         }
                                         Logger.log("Stored file uploaded successfully: $originalName")
-                                        ServerState.postUploadNotification("Received file '$originalName' from your iPhone successfully!")
+                                        NexusNotificationManager.notify(this@FileServer.context, "Recebido o arquivo '$originalName' no Nexus!", NotificationType.SUCCESS)
+                                         ServerState.postUploadNotification("Recebido o arquivo '$originalName' no Nexus!")
                                         count++
                                     } else {
                                         Logger.log("Failed to create output stream for file: $originalName")

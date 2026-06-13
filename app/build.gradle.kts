@@ -13,8 +13,8 @@ android {
     applicationId = "com.aistudio.nexusexplorer.pnqvsc"
     minSdk = 24
     targetSdk = 36
-    versionCode = 23
-    versionName = "1.3.1"
+    versionCode = 24
+    versionName = "1.4.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }

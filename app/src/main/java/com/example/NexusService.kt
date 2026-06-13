@@ -26,8 +26,9 @@ class NexusService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Logger.log("Serviço em segundo plano iniciando threads do servidor...")
         
-        createNotificationChannel()
-        val notification = createNotification()
+        val localIp = NetworkManager.getLocalIpAddress()
+        val serverUrl = "http://$localIp:${AppConfig.PORT}"
+        val notification = NexusNotificationManager.createOngoingServerNotification(this, serverUrl)
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
@@ -72,51 +73,7 @@ class NexusService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Serviços Nexus Explorer Pro",
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = "Canal de notificações para host em segundo plano do servidor Nexus"
-            }
-            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            manager.createNotificationChannel(channel)
-        }
-    }
-
-    private fun createNotification(): Notification {
-        val localIp = NetworkManager.getLocalIpAddress()
-        val serverUrl = "http://$localIp:${AppConfig.PORT}"
-        
-        val notificationIntent = Intent(this, MainActivity::class.java)
-        
-        val pendingIntentFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        } else {
-            PendingIntent.FLAG_UPDATE_CURRENT
-        }
-
-        val pendingIntent = PendingIntent.getActivity(
-            this,
-            0,
-            notificationIntent,
-            pendingIntentFlags
-        )
-
-        return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Nexus Explorer Pro Core Ativo")
-            .setContentText("Abra no seu celular: $serverUrl")
-            .setSmallIcon(android.R.drawable.ic_dialog_info) // Safe built-in asset icon
-            .setContentIntent(pendingIntent)
-            .setOngoing(true)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .build()
-    }
-
     companion object {
-        private const val CHANNEL_ID = "nexus_service_channel_id"
         private const val NOTIFICATION_ID = 5309
     }
 }
