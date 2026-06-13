@@ -1,11 +1,12 @@
 {
-  "versionCode": 22,
-  "versionName": "1.3.0",
+  "versionCode": 23,
+  "versionName": "1.3.1",
   "buildDate": "13/06/2026",
-  "buildTime": "00:40",
-  "buildDateTime": "2026-06-13T00:40:00Z",
+  "buildTime": "00:51",
+  "buildDateTime": "2026-06-13T00:51:00Z",
   "changelog": [
-    "Novo Gerenciador de Arquivos Web Ultra Aprimorado: Implementado long-press e mousedown hold para desktops e mobile, incluindo novas funções completas como Informações (dados, tamanho, modificação), Copiar, Mover, Renomear e Exclusão Segura.",
-    "Controle de Visualização Dinâmico na Web: Adicionado botão de troca instantânea entre os layouts de Grade (Grid) e Lista (List) com reatividade e retenção de estado offline no navegador do usuário."
+    "Remoção Completa da Barra Lateral da TV: Otimizado o layout da versão Android TV eliminando a barra lateral redundante para melhor visualização em telas horizontais.",
+    "Menu 'Navegação & Extras' Centralizado: Substituída a antiga barra lateral por um botão flutuante com ícone representativo elegante que abre um hub unificado.",
+    "Console Unificado: O novo hub centraliza o acesso a partições locais, mídias USB, ferramenta de busca global, monitoramento de desempenho (RAM e armazenamento) e painel de configurações."
   ]
 }

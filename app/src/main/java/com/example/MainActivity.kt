@@ -1234,6 +1234,252 @@ fun TvHomeDashboardScreen(
 }
 
 @Composable
+fun TvNavigationHubDialog(
+    context: Context,
+    selectedItem: String,
+    externalDirs: List<String>,
+    onSelect: (String, String?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val isDarkTheme by AppState.isDarkTheme.collectAsState()
+    val bgColor = if (isDarkTheme) Color(0xFF151517) else Color(0xFFFFFFFF)
+    val textColor = if (isDarkTheme) Color.White else Color.Black
+    val textMutedColor = if (isDarkTheme) Color.Gray else Color.DarkGray
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Menu,
+                    contentDescription = null,
+                    tint = AppConfig.PrimaryBlue,
+                    modifier = Modifier.size(28.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "Navegação & Extras",
+                    color = textColor,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "Selecione uma partição, realize buscas ou configure o Nexus Explorer.",
+                    color = textMutedColor,
+                    fontSize = 13.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    TvNavHubCard(
+                        title = "Na Minha TV",
+                        icon = Icons.Default.Home,
+                        isSelected = selectedItem == "On My TV",
+                        description = "Painel Inicial",
+                        color = AppConfig.PrimaryBlue,
+                        onClick = { onSelect("On My TV", null) },
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    TvNavHubCard(
+                        title = "Buscar",
+                        icon = Icons.Default.Search,
+                        isSelected = selectedItem == "Search",
+                        description = "Pesquisar arquivos",
+                        color = Color(0xFF30D158),
+                        onClick = { onSelect("Search", null) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    TvNavHubCard(
+                        title = "Servidor Host",
+                        icon = Icons.Default.Share,
+                        isSelected = selectedItem == "Host Server",
+                        description = "Transferência WiFi",
+                        color = Color(0xFFBF5AF2),
+                        onClick = { onSelect("Host Server", null) },
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    TvNavHubCard(
+                        title = "Configurações",
+                        icon = Icons.Default.Settings,
+                        isSelected = selectedItem == "Settings",
+                        description = "Ajustes do App",
+                        color = Color(0xFFFF9500),
+                        onClick = { onSelect("Settings", null) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                val usbPaths = externalDirs.filter { it != "/storage/emulated/0" }
+                if (usbPaths.isNotEmpty()) {
+                    Text(
+                        text = "Dispositivos USB Detectados",
+                        color = textColor,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.align(Alignment.Start).padding(top = 4.dp)
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        usbPaths.forEachIndexed { index, path ->
+                            TvNavHubCard(
+                                title = "USB $index",
+                                icon = Icons.Default.List,
+                                isSelected = selectedItem == "USB_$index",
+                                description = "Armazenamento Externo",
+                                color = Color(0xFF5AC8FA),
+                                onClick = { onSelect("USB_$index", path) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                Divider(color = if (isDarkTheme) Color.DarkGray else Color.LightGray)
+
+                var metrics by remember { mutableStateOf(getSystemMetrics(context)) }
+                LaunchedEffect(Unit) {
+                    while (true) {
+                        delay(4000)
+                        metrics = getSystemMetrics(context)
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = metrics.ramUsed,
+                        color = textMutedColor,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = metrics.storageUsed,
+                        color = textMutedColor,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Fechar", color = Color.Gray, fontWeight = FontWeight.Bold)
+            }
+        },
+        containerColor = bgColor,
+        titleContentColor = textColor
+    )
+}
+
+@Composable
+fun TvNavHubCard(
+    title: String,
+    icon: ImageVector,
+    isSelected: Boolean,
+    description: String,
+    color: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isDarkTheme by AppState.isDarkTheme.collectAsState()
+    var isFocused by remember { mutableStateOf(false) }
+
+    val scale by animateFloatAsState(if (isFocused) 1.06f else 1.0f)
+    val cardBg = if (isFocused) {
+        if (isDarkTheme) Color(0xFF2C2C2E) else Color(0xFFE5E5EA)
+    } else {
+        if (isDarkTheme) Color(0xFF252528) else Color(0xFFF2F2F7)
+    }
+
+    val finalOutlineColor = if (isFocused) AppConfig.PrimaryBlue else if (isSelected) color.copy(alpha = 0.5f) else Color.Transparent
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = cardBg),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(2.dp, finalOutlineColor),
+        modifier = modifier
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .onFocusChanged { isFocused = it.isFocused }
+            .focusable()
+            .clickable { onClick() }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(color.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = color,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text(
+                    text = title,
+                    color = if (isDarkTheme) Color.White else Color.Black,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = description,
+                    color = Color.Gray,
+                    fontSize = 10.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun TvDashboardScreen(
     modifier: Modifier = Modifier,
     onToggleServer: () -> Unit,
@@ -1385,18 +1631,8 @@ fun TvDashboardScreen(
     }
     var showAboutDialog by remember { mutableStateOf(false) }
 
-    var isSidebarVisible by remember { mutableStateOf(false) }
-    val sidebarFocusRequester = remember { FocusRequester() }
-    
-    // Automatic focus transfer when the sidebar is toggled open
-    LaunchedEffect(isSidebarVisible) {
-        if (isSidebarVisible) {
-            delay(150)
-            try {
-                sidebarFocusRequester.requestFocus()
-            } catch (e: Exception) {}
-        }
-    }
+    var showNavHub by remember { mutableStateOf(false) }
+    val sidebarFocusRequester = remember { FocusRequester() } // Keep to avoid broken references, but make it dummy or no-op
 
     var hasStandardPermissionState by remember { mutableStateOf(false) }
     var hasAndroidDataPermissionState by remember { mutableStateOf(false) }
@@ -1424,15 +1660,15 @@ fun TvDashboardScreen(
         }
     }
 
-    val isAnyTvDialogOpen = showChangelogOverlay || showAboutDialog || isSidebarVisible
+    val isAnyTvDialogOpen = showChangelogOverlay || showAboutDialog || showNavHub
     BackHandler(enabled = isAnyTvDialogOpen) {
         if (showChangelogOverlay) {
             showChangelogOverlay = false
             ChangelogManager.markChangelogAsShown(context, currentVersionCode)
         } else if (showAboutDialog) {
             showAboutDialog = false
-        } else if (isSidebarVisible) {
-            isSidebarVisible = false
+        } else if (showNavHub) {
+            showNavHub = false
         }
     }
 
@@ -1460,124 +1696,15 @@ fun TvDashboardScreen(
     val textColor = if (isDarkTheme) Color.White else Color.Black
     val textMutedColor = if (isDarkTheme) Color.Gray else Color.DarkGray
 
-    Row(
+    Box(
         modifier = modifier
             .fillMaxSize()
             .background(bgColor)
     ) {
-        // --- Sidebar (Locations) with modern liquid glass styling & auto-slide ---
-        androidx.compose.animation.AnimatedVisibility(
-            visible = isSidebarVisible,
-            enter = slideInHorizontally { -it } + fadeIn(),
-            exit = slideOutHorizontally { -it } + fadeOut()
-        ) {
-            Column(
-                modifier = Modifier
-                    .width(260.dp)
-                    .fillMaxHeight()
-                    .background(
-                        if (isDarkTheme) Color(0xE6151517) else Color(0xE6EFEFF4)
-                    )
-                    .border(
-                        border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.15f)),
-                        shape = RoundedCornerShape(0.dp)
-                    )
-                    .padding(20.dp)
-            ) {
-                Text(
-                    text = "Locais",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = textColor,
-                    modifier = Modifier.padding(bottom = 16.dp, start = 8.dp)
-                )
-
-                TvSidebarItem(
-                    text = "Na minha TV",
-                    icon = Icons.Default.Home,
-                    isSelected = selectedSidebarItem == "On My TV",
-                    onClick = { 
-                        tvBrowsingPath = null 
-                        selectedSidebarItem = "On My TV"
-                        isSidebarVisible = false
-                    },
-                    modifier = Modifier.focusRequester(sidebarFocusRequester)
-                )
-                
-                externalDirs.forEachIndexed { index, path ->
-                    if (path != "/storage/emulated/0") {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        TvSidebarItem(
-                            text = "USB ${index}",
-                            icon = Icons.Default.List,
-                            isSelected = selectedSidebarItem == "USB_$index",
-                            onClick = { 
-                                selectedSidebarItem = "USB_$index" 
-                                tvBrowsingPath = path
-                                isSidebarVisible = false
-                            }
-                        )
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                TvSidebarItem(
-                    text = "Buscar",
-                    icon = Icons.Default.Search,
-                    isSelected = selectedSidebarItem == "Search",
-                    onClick = { 
-                        selectedSidebarItem = "Search"
-                        isSidebarVisible = false
-                    }
-                )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                TvSidebarItem(
-                    text = "Servidor Host",
-                    icon = Icons.Default.Share,
-                    isSelected = selectedSidebarItem == "Host Server",
-                    onClick = { 
-                        selectedSidebarItem = "Host Server"
-                        isSidebarVisible = false
-                    }
-                )
-                
-                Spacer(modifier = Modifier.weight(1f))
-                
-                TvSidebarItem(
-                    text = "Configurações",
-                    icon = Icons.Default.Settings,
-                    isSelected = selectedSidebarItem == "Settings",
-                    onClick = { 
-                        selectedSidebarItem = "Settings"
-                        isSidebarVisible = false
-                    }
-                )
-                
-                Spacer(modifier = Modifier.height(24.dp))
-                Divider(color = Color.DarkGray)
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                var metrics by remember { mutableStateOf(getSystemMetrics(context)) }
-                LaunchedEffect(Unit) {
-                    while (true) {
-                        delay(5000)
-                        metrics = getSystemMetrics(context)
-                    }
-                }
-                Text(metrics.ramUsed, color = textMutedColor, fontSize = 11.sp, maxLines = 1)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(metrics.storageUsed, color = textMutedColor, fontSize = 11.sp, maxLines = 1)
-            }
-        }
-
         // --- Main Content Area ---
         Box(
             modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight()
+                .fillMaxSize()
                 .background(bgColor)
         ) {
             when {
@@ -1618,11 +1745,9 @@ fun TvDashboardScreen(
                                     }
                                     tvBrowsingPath = null
                                 },
-                                isSidebarVisible = isSidebarVisible,
+                                isSidebarVisible = false,
                                 onRequestSidebarFocus = {
-                                    try {
-                                        sidebarFocusRequester.requestFocus()
-                                    } catch (e: Exception) {}
+                                    showNavHub = true
                                 },
                                 onPathChanged = { newPath ->
                                     tvBrowsingPath = newPath
@@ -1775,7 +1900,7 @@ fun TvDashboardScreen(
                 }
             }
 
-            // Floating "Menu Locais 🧭" Pill styled as Liquid Glass
+            // Representative Floating Explore Icon Button to access all extra functions
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -1784,40 +1909,51 @@ fun TvDashboardScreen(
                 var isMenuBtnFocused by remember { mutableStateOf(false) }
                 val scale by animateFloatAsState(if (isMenuBtnFocused) 1.08f else 1.0f)
                 
-                Row(
+                Box(
                     modifier = Modifier
                         .graphicsLayer { scaleX = scale; scaleY = scale }
-                        .clip(RoundedCornerShape(16.dp))
+                        .size(46.dp)
+                        .clip(CircleShape)
                         .background(
-                            if (isMenuBtnFocused) AppConfig.PrimaryBlue.copy(alpha = 0.9f)
+                            if (isMenuBtnFocused) AppConfig.PrimaryBlue.copy(alpha = 0.95f)
                             else if (isDarkTheme) Color.White.copy(alpha = 0.08f)
                             else Color.Black.copy(alpha = 0.05f)
                         )
                         .border(
                             width = if (isMenuBtnFocused) 2.dp else 1.dp,
                             color = if (isMenuBtnFocused) Color.White else Color.White.copy(alpha = 0.15f),
-                            shape = RoundedCornerShape(16.dp)
+                            shape = CircleShape
                         )
                         .onFocusChanged { isMenuBtnFocused = it.isFocused }
                         .focusable()
-                        .clickable { isSidebarVisible = !isSidebarVisible }
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .clickable { showNavHub = true },
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Menu,
-                        contentDescription = "Menu Locais",
+                        contentDescription = "Navegação e Extras",
                         tint = if (isMenuBtnFocused) Color.White else if (isDarkTheme) Color.White else Color.Black,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Menu Locais",
-                        color = if (isMenuBtnFocused) Color.White else if (isDarkTheme) Color.White else Color.Black,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold
+                        modifier = Modifier.size(24.dp)
                     )
                 }
+            }
+
+            if (showNavHub) {
+                TvNavigationHubDialog(
+                    context = context,
+                    selectedItem = selectedSidebarItem,
+                    externalDirs = externalDirs,
+                    onSelect = { itemType, path ->
+                        selectedSidebarItem = itemType
+                        if (itemType == "On My TV") {
+                            tvBrowsingPath = null
+                        } else if (itemType.startsWith("USB_") && path != null) {
+                            tvBrowsingPath = path
+                        }
+                        showNavHub = false
+                    },
+                    onDismiss = { showNavHub = false }
+                )
             }
 
             androidx.compose.animation.AnimatedVisibility(

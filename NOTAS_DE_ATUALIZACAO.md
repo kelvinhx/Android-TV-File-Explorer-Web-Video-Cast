@@ -2,6 +2,14 @@
 
 Aqui você encontra o registro histórico de atualizações e aperfeiçoamentos do Nexus Explorer Pro.
 
+## [1.3.1] - 13/06/2026 00:51
+* **Versão do Aplicativo**: 1.3.1
+* **Versão da Build**: 23
+* **Data e Hora do Envio**: 13/06/2026 às 00:51 (Horário de Sincronização)
+- **Remoção Completa da Barra Lateral da TV**: Otimização profunda na interface do usuário do Android TV, removendo permanentemente a barra lateral redundante para redistribuição limpa de recursos em telas horizontais (layout expandido e 16:9).
+- **Substituição do Menu Locais**: A antiga barra lateral e botões redundantes foram substituídos por um inovador e elegante botão flutuante com ícone representativo dinâmico que abre uma janela modal no estilo Hub Central de Controle.
+- **Navegação & Extras Centralizados**: Desenvolvimento e integração de uma janela modal de diálogo moderna que centraliza de forma limpa o acesso às partições físicas da TV (como a memória principal e conexões USB), ferramenta de busca de arquivos global, console de estatísticas de performance (RAM e Armazenamento em tempo real) e atalho direto para as configurações gerais.
+
 ## [1.3.0] - 13/06/2026 00:40
 * **Versão do Aplicativo**: 1.3.0
 * **Versão da Build**: 22
