@@ -1,11 +1,11 @@
 {
-  "versionCode": 20,
-  "versionName": "1.2.8",
-  "buildDate": "12/06/2026",
-  "buildTime": "21:30",
-  "buildDateTime": "2026-06-12T21:30:00Z",
+  "versionCode": 21,
+  "versionName": "1.2.9",
+  "buildDate": "13/06/2026",
+  "buildTime": "00:10",
+  "buildDateTime": "2026-06-13T00:10:00Z",
   "changelog": [
-    "Otimização do Backup do Instalador APK: Redução de consumo de memória física ao manter o instalador de segurança de forma exclusiva na pasta principal do aplicativo (Nexus Explorer), removendo a duplicata desnecessária no diretório geral de Downloads.",
-    "Preservação do Histórico de Manutenção de Backups: Ajuste de detecção do motor de limpeza profunda de logs e arquivos temporários antigos mantendo preservados os backups manuais na pasta do app."
+    "Remoção Total do Navegador Web Cast: Conclusão da desativação e remoção integral de toda infraestrutura do navegador web no cliente e servidor, deixando a versão móvel focada única e exclusivamente como um explorador de arquivos de alta fidelidade e complexidade técnica intocada.",
+    "Aperfeiçoamento Crítico das Verificações de Atualização: Correção definitiva do loop de instalação redundante ao comparar estritamente códigos de compilação maiores (remoteCode > localCode), garantindo que se o aplicativo estiver na versão mais atualizada, as caixas de avisos sejam silenciadas."
   ]
 }

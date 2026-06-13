@@ -67,7 +67,6 @@ import androidx.compose.foundation.combinedClickable
 import androidx.activity.compose.BackHandler
 
 object AppState {
-    val browserUrl = MutableStateFlow<String?>(null)
     val castVideoUrl = MutableStateFlow<String?>(null)
     val isDarkTheme = MutableStateFlow(true)
     val isGridLayout = MutableStateFlow(true)
@@ -140,7 +139,6 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            val browserUrl by AppState.browserUrl.collectAsState()
             val castVideoUrl by AppState.castVideoUrl.collectAsState()
             val discoveredIp by nsdHelper?.discoveredIp?.collectAsState(initial = null) ?: remember { mutableStateOf(null) }
             var showSplash by remember { mutableStateOf(isTv) }
@@ -176,11 +174,6 @@ class MainActivity : ComponentActivity() {
                             InternalMediaViewer(
                                 file = virtualFile,
                                 onClose = { AppState.castVideoUrl.value = null }
-                            )
-                        } else if (browserUrl != null) {
-                            BrowserScreen(
-                                initialUrl = browserUrl!!,
-                                onClose = { AppState.browserUrl.value = null }
                             )
                         } else {
                             TvDashboardScreen(
@@ -1519,7 +1512,6 @@ fun TvDashboardScreen(
                             icon = Icons.Default.List,
                             isSelected = selectedSidebarItem == "USB_$index",
                             onClick = { 
-                                AppState.browserUrl.value = null 
                                 selectedSidebarItem = "USB_$index" 
                                 tvBrowsingPath = path
                                 isSidebarVisible = false

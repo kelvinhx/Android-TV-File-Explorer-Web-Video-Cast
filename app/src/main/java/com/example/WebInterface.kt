@@ -303,7 +303,7 @@ object WebInterface {
         .main-content {
             flex: 1;
             overflow-y: auto;
-            padding-bottom: 90px;
+            padding-bottom: 24px;
         }
 
         .search-bar {
@@ -499,82 +499,6 @@ object WebInterface {
             </div>
         </div>
 
-        <!-- Tab 3: Browser Cast -->
-        <div id="view-browser" class="hidden flex-col fixed inset-0 z-[150] bg-[#1E1E1E]">
-            
-            <!-- Safari Top Address Bar -->
-            <div class="bg-[#1E1E1E] pt-[max(env(safe-area-inset-top),32px)] pb-2 px-3 w-full shrink-0 flex items-center justify-between z-10 shadow-sm border-b border-[rgba(255,255,255,0.05)]">
-                <div class="flex items-center bg-[#2C2C2E] rounded-xl h-10 w-full px-3">
-                    <button onclick="toggleStartPage()" class="text-white text-sm active:opacity-50 flex items-center justify-center w-8 h-full font-serif tracking-normal">
-                        <span class="text-[10px]">a</span><span class="text-[14px]">A</span>
-                    </button>
-                    <div class="flex-1 h-full flex items-center justify-center relative">
-                        <i class="fa-solid fa-lock text-[10px] text-gray-400 absolute left-2 top-1/2 -translate-y-1/2" id="browser-lock-icon"></i>
-                        <input type="text" id="browser-url" class="bg-transparent text-white w-full h-full outline-none text-center focus:text-left text-[15px] font-medium pl-6 pr-2" value="" placeholder="Pesquisar ou digitar site">
-                    </div>
-                    <button onclick="loadInternalBrowser()" class="text-gray-400 text-lg active:opacity-50 flex items-center justify-center w-8 h-full">
-                        <i class="fa-solid fa-rotate-right text-sm"></i>
-                    </button>
-                </div>
-            </div>
-
-            <div id="video-sniffer-bar" class="hidden bg-[#ff3b30] text-white px-4 py-3 text-sm flex justify-between items-center shadow-lg shrink-0 w-full border-b border-[#ff3b30] z-20 relative">
-                <span class="font-bold flex items-center"><i class="fa-solid fa-play-circle mr-2 animate-pulse text-lg"></i> Vídeo Encontrado!</span>
-                <button onclick="castSniffedVideo()" class="bg-white text-[#ff3b30] px-4 py-2 rounded-full font-bold shadow-sm active:opacity-70 flex items-center gap-2"><i class="fa-solid fa-tv"></i> Cast TV</button>
-            </div>
-
-            <!-- Start Page (Bookmarks/History) -->
-            <div id="browser-start-page" class="flex-1 w-full bg-[#1E1E1E] p-6 overflow-y-auto hidden relative z-10">
-                <div class="max-w-md mx-auto">
-                    <h2 class="text-3xl font-bold mb-6 text-white text-center mt-4">Navegador</h2>
-                    
-                    <div class="grid grid-cols-4 gap-4 mb-8" id="favorite-icons">
-                        <!-- Example quick icons -->
-                        <div class="flex flex-col items-center gap-2 cursor-pointer" onclick="openUrl('https://google.com')">
-                            <div class="w-14 h-14 bg-white rounded-xl flex items-center justify-center shadow-sm">
-                                <i class="fa-brands fa-google text-2xl text-black"></i>
-                            </div>
-                            <span class="text-xs text-white">Google</span>
-                        </div>
-                        <div class="flex flex-col items-center gap-2 cursor-pointer" onclick="openUrl('https://youtube.com')">
-                            <div class="w-14 h-14 bg-white rounded-xl flex items-center justify-center shadow-sm">
-                                <i class="fa-brands fa-youtube text-2xl text-red-600"></i>
-                            </div>
-                            <span class="text-xs text-white">YouTube</span>
-                        </div>
-                    </div>
-
-                    <h3 class="font-bold text-gray-400 mb-3 text-sm uppercase px-2">Favoritos</h3>
-                    <div class="liquid-list mb-8 bg-[#2C2C2E] rounded-xl overflow-hidden" id="bookmarks-list">
-                        <!-- Populated by JS -->
-                    </div>
-
-                    <h3 class="font-bold text-gray-400 mb-3 text-sm uppercase px-2">Histórico Recente</h3>
-                    <div class="liquid-list bg-[#2C2C2E] rounded-xl overflow-hidden" id="history-list">
-                        <!-- Populated by JS -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Web Frame -->
-            <div class="flex-1 relative bg-white w-full h-full overflow-hidden" id="browser-frame-container">
-                <iframe id="internal-browser" class="w-full h-full border-none absolute inset-0 bg-[#1E1E1E]" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-presentation"></iframe>
-                <div id="browser-loading" class="absolute inset-0 bg-[rgba(30,30,30,0.8)] flex flex-col items-center justify-center hidden z-20 backdrop-blur-md">
-                    <i class="fa-solid fa-circle-notch fa-spin text-5xl text-blue-500 mb-4"></i>
-                    <span class="text-[10px] font-bold tracking-widest text-blue-500 mt-2">CARREGANDO</span>
-                </div>
-            </div>
-            
-            <!-- Safari-style Bottom Bar -->
-            <div class="bg-[#1C1C1E] border-t border-[rgba(255,255,255,0.05)] h-[83px] w-full shrink-0 flex items-start justify-between px-6 pt-2 pb-[max(env(safe-area-inset-bottom),20px)] z-10 transition-transform duration-300">
-                <button onclick="document.getElementById('internal-browser').contentWindow.history.back()" class="text-blue-500 text-3xl active:opacity-50 disabled:opacity-30"><i class="fa-solid fa-angle-left"></i></button>
-                <button onclick="document.getElementById('internal-browser').contentWindow.history.forward()" class="text-blue-500 text-3xl active:opacity-50 disabled:opacity-30"><i class="fa-solid fa-angle-right"></i></button>
-                <button onclick="castCurrentPage()" class="text-blue-500 text-2xl active:opacity-50"><i class="fa-regular fa-share-from-square"></i></button>
-                <button onclick="addBookmark()" class="text-blue-500 text-2xl active:opacity-50"><i class="fa-solid fa-book-open" id="bookmark-icon"></i></button>
-                <button onclick="toggleView('files')" class="text-blue-500 text-[22px] active:opacity-50 mt-0.5"><i class="fa-regular fa-clone"></i></button>
-            </div>
-        </div>
-
     </div>
 
     <!-- PWA Add to Home Screen Suggestion Banner -->
@@ -607,18 +531,6 @@ object WebInterface {
                 <li>Toque em <strong class="text-blue-400">Adicionar</strong> no canto superior direito para finalizar.</li>
             </ol>
         </div>
-    </div>
-
-    <!-- Tab Bar -->
-    <div class="tab-bar" id="main-tab-bar">
-        <button id="tab-files" onclick="toggleView('files')" class="tab-item active" style="width: 50%;">
-            <i class="fa-solid fa-folder"></i>
-            <span>Navegar</span>
-        </button>
-        <button id="tab-browser" onclick="toggleView('browser')" class="tab-item" style="width: 50%;">
-            <i class="fa-solid fa-compass"></i>
-            <span>Browser Cast</span>
-        </button>
     </div>
 
     <!-- Context Menu -->
@@ -994,209 +906,16 @@ object WebInterface {
 
         function toggleView(view) {
             doVibrate(30);
-            activeView = view;
+            activeView = 'files';
             
-            document.getElementById('view-files').classList.add('hidden');
-            document.getElementById('view-browser').classList.add('hidden');
-            document.getElementById('view-browser').classList.remove('flex');
+            document.getElementById('view-files').classList.remove('hidden');
             
-            document.getElementById('tab-files').classList.remove('active');
-            document.getElementById('tab-browser').classList.remove('active');
-
-            if (view === 'files') {
-                document.getElementById('view-files').classList.remove('hidden');
-                document.getElementById('tab-files').classList.add('active');
-                
-                const headingSpan = document.getElementById('main-header').querySelector('span');
-                if (headingSpan) headingSpan.textContent = "Navegar";
-                
-                document.getElementById('main-header').style.display = "flex";
-                document.getElementById('files-toolbar').style.display = "flex";
-                document.getElementById('main-tab-bar').style.display = "flex";
-                fetchFiles();
-            } else if (view === 'browser') {
-                document.getElementById('view-browser').classList.remove('hidden');
-                document.getElementById('view-browser').classList.add('flex');
-                document.getElementById('tab-browser').classList.add('active');
-                document.getElementById('main-header').style.display = "none";
-                document.getElementById('files-toolbar').style.display = "none";
-                document.getElementById('main-tab-bar').style.display = "none";
-                
-                const iframe = document.getElementById('internal-browser');
-                if (!iframe.src || iframe.src === window.location.href) {
-                    toggleStartPage(true);
-                }
-            }
-        }
-
-        let sniffedVideoUrl = null;
-        let isStartPage = false;
-        
-        function toggleStartPage(forceShow = null) {
-            if (forceShow === true) {
-                isStartPage = true;
-            } else if (forceShow === false) {
-                isStartPage = false;
-            } else {
-                isStartPage = !isStartPage;
-            }
-            if (isStartPage) {
-                document.getElementById('browser-frame-container').classList.add('hidden');
-                document.getElementById('browser-start-page').classList.remove('hidden');
-                loadStartPage();
-            } else {
-                document.getElementById('browser-frame-container').classList.remove('hidden');
-                document.getElementById('browser-start-page').classList.add('hidden');
-            }
-        }
-
-        function loadInternalBrowser() {
-            let url = document.getElementById('browser-url').value.trim();
-            if(!url) return;
+            const headingSpan = document.getElementById('main-header').querySelector('span');
+            if (headingSpan) headingSpan.textContent = "Navegar";
             
-            // Allow searching with google
-            if (!url.startsWith('http://') && !url.startsWith('https://')) {
-                if(url.includes('.') && !url.includes(' ')) {
-                    url = 'https://' + url;
-                } else {
-                    url = 'https://www.google.com/search?q=' + encodeURIComponent(url);
-                }
-            }
-            
-            document.getElementById('browser-url').value = url;
-            
-            toggleStartPage(false);
-            
-            document.getElementById('browser-loading').classList.remove('hidden');
-            document.getElementById('internal-browser').src = '/api/proxy?url=' + encodeURIComponent(url);
-            
-            saveToHistory(url);
-        }
-
-        function saveToHistory(url) {
-            fetch('/api/history', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url: url })
-            }).catch(console.error);
-        }
-
-        function addBookmark() {
-            let url = document.getElementById('browser-url').value.trim();
-            if(!url || !url.startsWith('http')) return;
-            
-            fetch('/api/bookmarks')
-                .then(res => res.json())
-                .then(data => {
-                    const bookmarks = data.bookmarks || [];
-                    const isBookmarked = bookmarks.includes(url);
-                    const method = isBookmarked ? 'DELETE' : 'POST';
-                    const msg = isBookmarked ? "Removido dos favoritos" : "Adicionado aos favoritos!";
-                    
-                    fetch('/api/bookmarks', {
-                        method: method,
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ url: url })
-                    })
-                    .then(r => r.json())
-                    .then(() => {
-                        showNotification(msg);
-                        loadStartPage();
-                    });
-                });
-        }
-
-        function loadStartPage() {
-            fetch('/api/bookmarks')
-                .then(res => res.json())
-                .then(data => {
-                    const bookmarks = data.bookmarks || [];
-                    const bList = document.getElementById('bookmarks-list');
-                    bList.innerHTML = bookmarks.length === 0 ? '<div class="p-4 text-center text-gray-500 text-sm">Nenhum favorito</div>' : '';
-                    bookmarks.forEach(url => {
-                        bList.innerHTML += '<div onclick="openUrl(\'' + url + '\')" class="liquid-list-item justify-between cursor-pointer"><span class="truncate pr-4 text-sm font-semibold text-white/95">' + url + '</span><i class="fa-solid fa-angle-right text-white/40"></i></div>';
-                    });
-                }).catch(console.error);
-
-            fetch('/api/history')
-                .then(res => res.json())
-                .then(data => {
-                    const history = data.history || [];
-                    const hList = document.getElementById('history-list');
-                    hList.innerHTML = history.length === 0 ? '<div class="p-4 text-center text-gray-500 text-sm">Nenhum histórico</div>' : '';
-                    history.forEach(url => {
-                        hList.innerHTML += '<div onclick="openUrl(\'' + url + '\')" class="liquid-list-item justify-between cursor-pointer"><span class="truncate pr-4 text-sm text-white/70">' + url + '</span><i class="fa-solid fa-angle-right text-white/30"></i></div>';
-                    });
-                }).catch(console.error);
-        }
-        
-        function openUrl(url) {
-            document.getElementById('browser-url').value = url;
-            loadInternalBrowser();
-        }
-
-        document.getElementById('internal-browser').addEventListener('load', function() {
-            document.getElementById('browser-loading').classList.add('hidden');
-        });
-
-        document.getElementById('browser-url').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.target.blur();
-                loadInternalBrowser();
-            }
-        });
-
-        window.addEventListener('message', function(e) {
-            if (e.data) {
-                if (e.data.type === 'video_found') {
-                    sniffedVideoUrl = e.data.url;
-                    document.getElementById('video-sniffer-bar').classList.remove('hidden');
-                    doVibrate(60);
-                } else if (e.data.type === 'navigate') {
-                    document.getElementById('browser-url').value = e.data.url;
-                    loadInternalBrowser();
-                }
-            }
-        });
-
-        function castSniffedVideo() {
-            if (sniffedVideoUrl) {
-                doVibrate(50);
-                fetch('/api/cast', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url: sniffedVideoUrl })
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        document.getElementById('video-sniffer-bar').classList.add('hidden');
-                        showNotification("O vídeo foi enviado à sua TV!");
-                    } else {
-                        showNotification("Falha na transmissão: " + data.message, true);
-                    }
-                }).catch(err => showNotification("Erro de conexão", true));
-            }
-        }
-        
-        function castCurrentPage() {
-            let url = document.getElementById('browser-url').value;
-            if (!url) return;
-            if (!url.startsWith('http')) url = 'https://' + url;
-            
-            fetch('/api/cast', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url: url })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    showNotification("Página aberta na TV!");
-                } else {
-                    showNotification('Falha: ' + data.message, true);
-                }
-            }).catch(err => showNotification('Erro na conexão', true));
+            document.getElementById('main-header').style.display = "flex";
+            document.getElementById('files-toolbar').style.display = "flex";
+            fetchFiles();
         }
 
         function fetchFiles() {

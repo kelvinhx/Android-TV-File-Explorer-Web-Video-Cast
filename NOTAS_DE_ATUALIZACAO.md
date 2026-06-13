@@ -2,6 +2,14 @@
 
 Aqui você encontra o registro histórico de atualizações e aperfeiçoamentos do Nexus Explorer Pro.
 
+## [1.2.9] - 13/06/2026 00:10
+* **Versão do Aplicativo**: 1.2.9
+* **Versão da Build**: 21
+* **Data e Hora do Envio**: 13/06/2026 às 00:10 (Horário de Sincronização)
+- **Remoção Total do Navegador Web Cast**: Conclusão da desativação e remoção integral de toda infraestrutura do navegador web no cliente e servidor, deixando a versão móvel focada única e exclusivamente como um explorador de arquivos de alta fidelidade e complexidade técnica intocada.
+- **Aperfeiçoamento Crítico das Verificações de Atualização**: Correção definitiva do loop de instalação redundante ao comparar estritamente códigos de compilação maiores (`remoteCode > localCode`), garantindo que se o aplicativo estiver na versão mais atualizada, as caixas de avisos sejam silenciadas.
+- **Integração do Sistema de Monitor de Atualizações**: Novo monitoramento em tempo real de logs de verificação (`UpdateMonitor`), possibilitando auditorias rápidas sobre a última resposta JSON do repositório no GitHub.
+
 ## [1.2.8] - 12/06/2026 21:30
 * **Versão do Aplicativo**: 1.2.8
 * **Versão da Build**: 20

@@ -341,23 +341,23 @@ class FileServer(private val context: Context) {
                                 }
                                 Logger.log("Casting video natively to TV: $cleanTitle -> $url")
                                 AppState.castVideoUrl.value = "$cleanTitle|$url"
+                                call.respondText(JSONObject().put("status", "success").toString(), ContentType.Application.Json)
                             } else {
-                                Logger.log("Casting webpage to TV browser: $url")
-                                AppState.browserUrl.value = url
+                                Logger.log("Casting webpage requested but browser is disabled: $url")
+                                call.respondText(JSONObject().put("status", "error").put("message", "Navegação Web e Cast de páginas desativados nesta versão.").toString(), ContentType.Application.Json)
                             }
-                            call.respondText(JSONObject().put("status", "success").toString(), ContentType.Application.Json)
                         } else {
                             call.respondText(JSONObject().put("status", "error").put("message", "URL missing").toString(), ContentType.Application.Json)
                         }
                     }
 
-                    // Browse proxy for sniffing videos
+                    // Browse proxy is disabled in this version
                     get("/api/proxy") {
+                        call.respondText("Navegação Web e Cast de páginas desativados nesta versão.", ContentType.Text.Plain, HttpStatusCode.Forbidden)
+                    }
+
+                    get("/api/obsolete_proxy_fallback") {
                         val urlStr = call.request.queryParameters["url"] ?: ""
-                        if (urlStr.isEmpty()) {
-                            call.respondText("Missing URL", ContentType.Text.Plain)
-                            return@get
-                        }
                         
                         val reqReferer = call.request.header(HttpHeaders.Referrer) ?: ""
                         var proxyReferer = urlStr
@@ -867,62 +867,28 @@ class FileServer(private val context: Context) {
                         }
                     }
 
-                    // Bookmarks management sync
+                    // Bookmarks & History stubbed out as disabled
                     get("/api/bookmarks") {
-                        val bookmarks = BookmarkHistoryManager.getBookmarks(this@FileServer.context)
-                        val arr = JSONArray()
-                        bookmarks.forEach { arr.put(it) }
-                        val res = JSONObject().put("status", "success").put("bookmarks", arr)
-                        call.respondText(res.toString(), ContentType.Application.Json)
+                        call.respondText(JSONObject().put("status", "success").put("bookmarks", JSONArray()).toString(), ContentType.Application.Json)
                     }
 
                     post("/api/bookmarks") {
-                        val requestBody = call.receiveText()
-                        val json = JSONObject(requestBody)
-                        val url = json.optString("url")
-                        if (url.isNotEmpty()) {
-                            BookmarkHistoryManager.addBookmark(this@FileServer.context, url)
-                            call.respondText(JSONObject().put("status", "success").toString(), ContentType.Application.Json)
-                        } else {
-                            call.respondText(JSONObject().put("status", "error").put("message", "URL is empty").toString(), ContentType.Application.Json)
-                        }
+                        call.respondText(JSONObject().put("status", "success").toString(), ContentType.Application.Json)
                     }
 
                     delete("/api/bookmarks") {
-                        val requestBody = call.receiveText()
-                        val json = JSONObject(requestBody)
-                        val url = json.optString("url")
-                        if (url.isNotEmpty()) {
-                            BookmarkHistoryManager.removeBookmark(this@FileServer.context, url)
-                            call.respondText(JSONObject().put("status", "success").toString(), ContentType.Application.Json)
-                        } else {
-                            call.respondText(JSONObject().put("status", "error").put("message", "URL is empty").toString(), ContentType.Application.Json)
-                        }
+                        call.respondText(JSONObject().put("status", "success").toString(), ContentType.Application.Json)
                     }
 
-                    // History management sync
                     get("/api/history") {
-                        val history = BookmarkHistoryManager.getHistory(this@FileServer.context)
-                        val arr = JSONArray()
-                        history.forEach { arr.put(it) }
-                        val res = JSONObject().put("status", "success").put("history", arr)
-                        call.respondText(res.toString(), ContentType.Application.Json)
+                        call.respondText(JSONObject().put("status", "success").put("history", JSONArray()).toString(), ContentType.Application.Json)
                     }
 
                     post("/api/history") {
-                        val requestBody = call.receiveText()
-                        val json = JSONObject(requestBody)
-                        val url = json.optString("url")
-                        if (url.isNotEmpty()) {
-                            BookmarkHistoryManager.addHistory(this@FileServer.context, url)
-                            call.respondText(JSONObject().put("status", "success").toString(), ContentType.Application.Json)
-                        } else {
-                            call.respondText(JSONObject().put("status", "error").put("message", "URL is empty").toString(), ContentType.Application.Json)
-                        }
+                        call.respondText(JSONObject().put("status", "success").toString(), ContentType.Application.Json)
                     }
 
                     post("/api/history/clear") {
-                        BookmarkHistoryManager.clearHistory(this@FileServer.context)
                         call.respondText(JSONObject().put("status", "success").toString(), ContentType.Application.Json)
                     }
 

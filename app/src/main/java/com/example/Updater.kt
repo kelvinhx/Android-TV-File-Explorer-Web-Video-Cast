@@ -69,18 +69,15 @@ object Updater {
                 val local = getLocalVersionInfo(context)
                 val remote = getRemoteVersionInfo(repoOwner, repoName) ?: return@withContext false
                 
-                val localCode = local.optLong("versionCode", 5L)
-                val remoteCode = remote.optLong("versionCode", 6L)
+                val localCode = local.optLong("versionCode", 15L)
+                val remoteCode = remote.optLong("versionCode", 16L)
+                val remoteName = remote.optString("versionName", "1.2.8")
                 
-                if (remoteCode > localCode) {
+                val isNew = remoteCode > localCode
+                UpdateMonitor.registerCheck(remoteCode, remoteName, isNew)
+                
+                if (isNew) {
                     return@withContext true
-                } else if (remoteCode == localCode) {
-                    val localDateTime = local.optString("buildDateTime", "")
-                    val remoteDateTime = remote.optString("buildDateTime", "")
-                    if (remoteDateTime.isNotEmpty() && localDateTime.isNotEmpty()) {
-                        // Compare raw strings such as ISO-8601 lexicographically (e.g. "2026-06-11T15:20:00Z" > "2026-06-11T15:10:00Z")
-                        return@withContext remoteDateTime > localDateTime
-                    }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -298,5 +295,25 @@ object Updater {
         
         intent.setDataAndType(apkUri, "application/vnd.android.package-archive")
         context.startActivity(intent)
+    }
+}
+
+object UpdateMonitor {
+    var lastCheckedTime: Long = 0L
+    var checkCount: Int = 0
+    var status: String = "Não verificado"
+    var lastKnownRemoteVersion: String? = null
+    var lastKnownRemoteCode: Long = 0L
+
+    fun registerCheck(remoteCode: Long, remoteVersion: String, isNew: Boolean) {
+        lastCheckedTime = System.currentTimeMillis()
+        checkCount++
+        lastKnownRemoteVersion = remoteVersion
+        lastKnownRemoteCode = remoteCode
+        status = if (isNew) {
+            "Nova versão disponível no repositório: v$remoteVersion (Build $remoteCode)"
+        } else {
+            "Aplicativo totalmente atualizado: v$remoteVersion (Build $remoteCode)"
+        }
     }
 }
